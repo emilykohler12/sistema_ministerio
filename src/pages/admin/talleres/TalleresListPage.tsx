@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { NIVELES_FILTRO, type Nivel } from '@/features/talleres/types'
+import { NIVELES_FILTRO, destinatarioLabel, nivelLabel, type Nivel } from '@/features/talleres/types'
 import { useCategoria } from '@/features/talleres/hooks/useCategorias'
 import { useTalleres } from '@/features/talleres/hooks/useTalleres'
 import { TallerBuscador } from '@/features/talleres/components/TallerBuscador'
@@ -39,7 +39,7 @@ export function TalleresListPage() {
           <h1 className="text-2xl font-bold text-primary-800">{categoria.data?.nombre ?? 'Cargando...'}</h1>
           {categoria.data && (
             <Badge variant="primary" className="mt-2">
-              Nivel {categoria.data.nivel === 'todos' ? 'todos' : categoria.data.nivel}
+              Nivel {nivelLabel(categoria.data.nivel).toLowerCase()}
             </Badge>
           )}
         </div>
@@ -82,7 +82,7 @@ export function TalleresListPage() {
                 {talleres.data.map((t) => (
                   <tr key={t.id}>
                     <td className="px-4 py-3 font-medium text-gray-800">{t.titulo}</td>
-                    <td className="px-4 py-3 capitalize text-gray-600">{t.destinatarios.join(', ')}</td>
+                    <td className="px-4 py-3 text-gray-600">{t.destinatarios.map(destinatarioLabel).join(', ')}</td>
                     <td className="px-4 py-3 text-gray-600">{formatFechaCorta(t.fecha)}</td>
                     <td className="px-4 py-3 text-gray-600">{t.recursos.length}</td>
                     <td className="px-4 py-3 text-gray-600">{t.descargas}</td>

@@ -1,5 +1,5 @@
-import { LayoutGrid, LogOut, ScrollText, Settings, BookOpen } from 'lucide-react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { Home, LayoutGrid, LogOut, ScrollText, Settings, BookOpen } from 'lucide-react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/shared/lib/utils'
 
@@ -50,6 +50,15 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
           </NavLink>
         ))}
       </nav>
+
+      <Link
+        to="/"
+        onClick={onNavigate}
+        className="mx-3 mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-primary-100 hover:bg-primary-800"
+      >
+        <Home className="h-5 w-5" aria-hidden="true" />
+        Ir a inicio
+      </Link>
 
       <button
         type="button"

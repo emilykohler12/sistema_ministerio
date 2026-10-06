@@ -1,29 +1,25 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useNormativa } from '@/features/normativas/hooks/useNormativas'
-import { TIPOS_NORMATIVA } from '@/features/normativas/types'
-import { NIVELES, type Nivel } from '@/features/talleres/types'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
 import { Label } from '@/shared/components/ui/Label'
 import { Input } from '@/shared/components/ui/Input'
 import { Textarea } from '@/shared/components/ui/Textarea'
 import { FieldError } from '@/shared/components/ui/FieldError'
-import { Select } from '@/shared/components/ui/Select'
-import { ToggleGroup } from '@/shared/components/ui/ToggleGroup'
+import { TagInput } from '@/shared/components/ui/TagInput'
 import { FileDropzone } from '@/shared/components/ui/FileDropzone'
 import { Button } from '@/shared/components/ui/Button'
 
 const schema = z.object({
   titulo: z.string().min(2, 'Ingresá el título de la normativa'),
   descripcion: z.string().optional(),
-  tipo: z.string().min(1, 'Seleccioná un tipo'),
+  etiquetas: z.array(z.string()),
   numero: z.string().min(1, 'Ingresá el número'),
-  fecha: z.string().min(1, 'Ingresá una fecha'),
-  nivel: z.enum(['inicial', 'primario', 'secundario', 'terciario', 'todos']),
+  anio: z.string().regex(/^\d{4}$/, 'Ingresá un año de 4 dígitos'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -39,8 +35,7 @@ export function NormativaFormPage() {
   const {
     register,
     handleSubmit,
-    watch,
-    setValue,
+    control,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -49,18 +44,16 @@ export function NormativaFormPage() {
       ? {
           titulo: normativaExistente.data.titulo,
           descripcion: normativaExistente.data.descripcion,
-          tipo: normativaExistente.data.tipo,
+          etiquetas: normativaExistente.data.etiquetas,
           numero: normativaExistente.data.numero,
-          fecha: normativaExistente.data.fecha,
-          nivel: normativaExistente.data.nivel,
+          anio: normativaExistente.data.anio,
         }
       : {
           titulo: '',
           descripcion: '',
-          tipo: '',
+          etiquetas: [],
           numero: '',
-          fecha: '',
-          nivel: 'inicial' as Nivel,
+          anio: '',
         },
   })
 
@@ -81,7 +74,7 @@ export function NormativaFormPage() {
 
       <h1 className="text-2xl font-bold text-primary-800">{editarId ? 'Editar normativa' : 'Nueva Normativa'}</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 max-w-2xl space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 space-y-5">
         <div>
           <Label htmlFor="titulo">Título</Label>
           <Input id="titulo" placeholder="Nombre de la normativa" error={!!errors.titulo} {...register('titulo')} />
@@ -99,16 +92,18 @@ export function NormativaFormPage() {
         </div>
 
         <div>
-          <Label htmlFor="tipo">Tipo de normativa</Label>
-          <Select id="tipo" error={!!errors.tipo} {...register('tipo')}>
-            <option value="">Seleccione un tipo</option>
-            {TIPOS_NORMATIVA.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </Select>
-          <FieldError id="tipo-error" message={errors.tipo?.message} />
+          <Label>Etiquetas</Label>
+          <Controller
+            control={control}
+            name="etiquetas"
+            render={({ field }) => (
+              <TagInput
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Escribí una palabra clave y presioná Enter"
+              />
+            )}
+          />
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
@@ -118,20 +113,17 @@ export function NormativaFormPage() {
             <FieldError id="numero-error" message={errors.numero?.message} />
           </div>
           <div>
-            <Label htmlFor="fecha">Fecha</Label>
-            <Input id="fecha" type="date" error={!!errors.fecha} {...register('fecha')} />
-            <FieldError id="fecha-error" message={errors.fecha?.message} />
+            <Label htmlFor="anio">Año</Label>
+            <Input
+              id="anio"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="Ej: 2024"
+              error={!!errors.anio}
+              {...register('anio')}
+            />
+            <FieldError id="anio-error" message={errors.anio?.message} />
           </div>
-        </div>
-
-        <div>
-          <Label>Nivel</Label>
-          <ToggleGroup
-            name="Nivel"
-            options={NIVELES.filter((n) => n.value !== 'todos').map((n) => ({ value: n.value, label: n.label }))}
-            value={watch('nivel')}
-            onChange={(v) => setValue('nivel', v, { shouldValidate: true })}
-          />
         </div>
 
         <div>

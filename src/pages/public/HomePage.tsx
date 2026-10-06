@@ -6,7 +6,6 @@ import { useNormativas } from '@/features/normativas/hooks/useNormativas'
 import { NIVELES_FILTRO } from '@/features/talleres/types'
 import { useTalleres } from '@/features/talleres/hooks/useTalleres'
 import { TallerCard } from '@/features/talleres/components/TallerCard'
-import { formatFecha } from '@/shared/lib/date'
 import { Button } from '@/shared/components/ui/Button'
 import { CardSkeleton } from '@/shared/components/ui/Skeleton'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
@@ -27,7 +26,7 @@ export function HomePage() {
   return (
     <div>
       <section className="bg-primary-800 px-4 py-12 text-white sm:px-6">
-        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-2 lg:items-start">
+        <div className="mx-auto grid gap-10 lg:grid-cols-2 lg:items-start">
           <div>
             <h1 className="text-4xl font-bold leading-tight sm:text-5xl">
               {config?.nombre || 'Sitio institucional'}
@@ -61,7 +60,7 @@ export function HomePage() {
         <form
           role="search"
           onSubmit={(e) => e.preventDefault()}
-          className="mx-auto mt-10 flex max-w-6xl flex-col gap-2 rounded-xl bg-white p-2 shadow-lg sm:flex-row"
+          className="mx-auto mt-10 flex flex-col gap-2 rounded-xl bg-white p-2 shadow-lg sm:flex-row"
         >
           <label htmlFor="home-search" className="sr-only">
             Buscar recursos
@@ -82,7 +81,7 @@ export function HomePage() {
         </form>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <section className="px-4 py-10 sm:px-6">
         <h2 className="mb-4 text-xl font-bold text-primary-800">Destacados</h2>
         {talleres.isLoading && (
           <div className="grid gap-4 sm:grid-cols-3">
@@ -105,7 +104,7 @@ export function HomePage() {
       </section>
 
       <section className="border-t border-gray-100 bg-gray-50 px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-6xl">
+        <div className="">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-bold text-primary-800">Normativas</h2>
             <Link to="/normativas" className="text-sm font-medium text-primary-600 hover:underline">
@@ -123,14 +122,14 @@ export function HomePage() {
                 <li key={n.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-semibold text-primary-800">{n.titulo}</p>
-                    <p className="text-sm text-gray-500">
-                      {formatFecha(n.fecha)}
-                    </p>
+                    <p className="text-sm text-gray-500">{n.anio}</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="rounded-md bg-primary-700 px-2.5 py-1 text-xs font-semibold text-white">
-                      {n.nivel === 'todos' ? 'Todos los niveles' : `Nivel ${n.nivel}`}
-                    </span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {n.etiquetas.map((e) => (
+                      <span key={e} className="rounded-md bg-primary-700 px-2.5 py-1 text-xs font-semibold text-white">
+                        {e}
+                      </span>
+                    ))}
                     <Button variant="outline" size="sm">
                       Descargar
                     </Button>
@@ -142,7 +141,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <section className="px-4 py-10 sm:px-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-primary-800">Talleres</h2>
           <Link to="/talleres" className="text-sm font-medium text-primary-600 hover:underline">

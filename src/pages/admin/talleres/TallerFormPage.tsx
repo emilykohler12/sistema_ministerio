@@ -6,7 +6,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useCategoria } from '@/features/talleres/hooks/useCategorias'
 import { useEtiquetasSugeridas, useTaller } from '@/features/talleres/hooks/useTalleres'
-import { DESTINATARIOS, NIVELES, type Nivel, type Destinatario } from '@/features/talleres/types'
+import { DESTINATARIOS, NIVELES, NIVEL_VALUES, type Nivel, type Destinatario } from '@/features/talleres/types'
 import { NIVELES_FILTRO } from '@/features/talleres/types'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
 import { Label } from '@/shared/components/ui/Label'
@@ -21,7 +21,7 @@ import { Button } from '@/shared/components/ui/Button'
 const schema = z.object({
   titulo: z.string().min(2, 'Ingresá el título del taller'),
   descripcion: z.string().min(2, 'Ingresá una breve descripción'),
-  nivel: z.enum(['inicial', 'primario', 'secundario', 'terciario', 'todos']),
+  nivel: z.enum(NIVEL_VALUES),
   destinatarios: z.array(z.string()).min(1, 'Elegí al menos un destinatario'),
   etiquetas: z.array(z.string()),
   fecha: z.string().min(1, 'Ingresá una fecha'),
@@ -85,7 +85,7 @@ export function TallerFormPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <Breadcrumb
         items={[
           { label: 'Talleres', to: '/admin/talleres' },

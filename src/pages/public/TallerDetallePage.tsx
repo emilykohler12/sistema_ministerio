@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ChevronLeft, Share2 } from 'lucide-react'
 import { useTaller, useTalleres } from '@/features/talleres/hooks/useTalleres'
+import { destinatarioLabel, nivelLabel } from '@/features/talleres/types'
 import { TallerCard } from '@/features/talleres/components/TallerCard'
 import { DescargaModal } from '@/features/descargas/DescargaModal'
 import { Badge } from '@/shared/components/ui/Badge'
@@ -18,7 +19,7 @@ export function TallerDetallePage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <div className="px-4 py-10 sm:px-6">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="mt-4 h-8 w-80" />
         <Skeleton className="mt-4 h-40 w-full" />
@@ -28,7 +29,7 @@ export function TallerDetallePage() {
 
   if (isError || !taller) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <div className="px-4 py-10 sm:px-6">
         <ErrorFallback message="No pudimos cargar este recurso." onRetry={() => refetch()} />
       </div>
     )
@@ -38,7 +39,7 @@ export function TallerDetallePage() {
 
   return (
     <div>
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <div className="px-4 py-10 sm:px-6">
         <Link to="/talleres" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:underline">
           <ChevronLeft className="h-4 w-4" /> Volver
         </Link>
@@ -50,10 +51,10 @@ export function TallerDetallePage() {
             </p>
             <h1 className="mt-1 text-2xl font-bold text-primary-800 sm:text-3xl">{taller.titulo}</h1>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              <Badge variant="primary">Nivel {taller.nivel}</Badge>
+              <Badge variant="primary">Nivel {nivelLabel(taller.nivel).toLowerCase()}</Badge>
               {taller.destinatarios.map((d) => (
-                <Badge key={d} variant="secondary" className="capitalize">
-                  {d}
+                <Badge key={d} variant="secondary">
+                  {destinatarioLabel(d)}
                 </Badge>
               ))}
             </div>
@@ -87,7 +88,7 @@ export function TallerDetallePage() {
       </div>
 
       <div className="border-t border-gray-100 bg-gray-50 px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-6xl">
+        <div className="">
           <h2 className="mb-4 text-xl font-bold text-primary-800">Recursos similares</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             {(relacionados.data ?? [])

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { NIVELES_FILTRO, type Nivel } from '@/features/talleres/types'
+import { NIVELES_FILTRO, nivelLabel, type Nivel } from '@/features/talleres/types'
 import { useCategorias } from '@/features/talleres/hooks/useCategorias'
 import { useTalleres } from '@/features/talleres/hooks/useTalleres'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
@@ -59,7 +59,7 @@ export function CategoriasPage() {
             {categorias.data.map((cat) => (
               <div key={cat.id} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                  Nivel {cat.nivel === 'todos' ? 'todos' : cat.nivel}
+                  Nivel {nivelLabel(cat.nivel).toLowerCase()}
                 </p>
                 <Link
                   to={`/admin/talleres/${nivel}/${cat.id}`}

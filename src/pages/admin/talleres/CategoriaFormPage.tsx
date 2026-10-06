@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { NIVELES_FILTRO, type Nivel } from '@/features/talleres/types'
+import { NIVELES_FILTRO, NIVEL_VALUES, type Nivel } from '@/features/talleres/types'
 import { useCategoria } from '@/features/talleres/hooks/useCategorias'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
 import { Label } from '@/shared/components/ui/Label'
@@ -13,7 +13,7 @@ import { Button } from '@/shared/components/ui/Button'
 
 const schema = z.object({
   nombre: z.string().min(2, 'Ingresá el nombre de la categoría'),
-  nivel: z.enum(['inicial', 'primario', 'secundario', 'terciario', 'todos']),
+  nivel: z.enum(NIVEL_VALUES),
   descripcion: z.string().optional(),
 })
 
@@ -64,7 +64,7 @@ export function CategoriaFormPage() {
 
       <h1 className="text-2xl font-bold text-primary-800">{editarId ? 'Editar categoría' : 'Nueva categoría'}</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 max-w-2xl space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 space-y-5">
         <div>
           <Label htmlFor="nombre">Nombre de la categoría</Label>
           <Input id="nombre" placeholder="Ej: Salud mental" error={!!errors.nombre} {...register('nombre')} />

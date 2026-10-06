@@ -19,7 +19,7 @@ export function PublicHeader() {
 
   return (
     <header className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link to="/" className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded-md">
           {config?.logoUrl ? (
             <img src={config.logoUrl} alt={`Logo de ${nombre}`} className="h-9 w-9 rounded-md object-cover" />

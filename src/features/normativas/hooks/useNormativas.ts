@@ -1,19 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
-import type { Nivel } from '@/features/talleres/types'
 import { normativasMock } from '../mocks/normativas.mock'
 
 export interface NormativasFiltro {
-  nivel?: Nivel
   busqueda?: string
 }
 
 async function fetchNormativas(filtro: NormativasFiltro) {
   await new Promise((r) => setTimeout(r, 300))
   return normativasMock.filter((n) => {
-    if (filtro.nivel && n.nivel !== filtro.nivel) return false
     if (filtro.busqueda) {
       const q = filtro.busqueda.toLowerCase()
-      if (!n.titulo.toLowerCase().includes(q) && !n.numero.toLowerCase().includes(q)) return false
+      const coincide =
+        n.titulo.toLowerCase().includes(q) ||
+        n.numero.toLowerCase().includes(q) ||
+        n.etiquetas.some((e) => e.toLowerCase().includes(q))
+      if (!coincide) return false
     }
     return true
   })
