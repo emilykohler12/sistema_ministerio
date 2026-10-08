@@ -4,3 +4,7 @@ dist-ssr
 *.local
 .env
 .DS_Store
+
+# Claude Code: archivos personales
+CLAUDE.local.md
+.claude/settings.local.json
