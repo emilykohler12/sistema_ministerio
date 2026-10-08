@@ -13,7 +13,8 @@ sin pedirlos individualmente al Ministerio.
 ## Estado actual
 - Solo frontend. Los datos salen de mocks (`src/features/*/mocks/`) a través de hooks de React Query.
 - Supabase (Postgres, Auth, Storage, Edge Functions) está decidido pero NO integrado todavía. Sin API propia
-  (decisión 0004): al integrarlo, reemplazar el cuerpo de los hooks en `src/features/*/hooks/` sin cambiar su firma.
+  (decisión 0004). Se migra un dominio por vez (0012): tipos derivados de la base, `consultas.ts` y hook delgado;
+  la firma del hook se ajusta una vez al migrar su dominio y después queda estable.
 
 ## Stack
 Vite · React 19 · TypeScript · Tailwind 4 · React Router 7 · React Query · react-hook-form + zod · Vitest · oxlint
