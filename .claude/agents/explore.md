@@ -3,6 +3,7 @@ name: Explore
 description: Busca contexto en el repo (código, specs, decisiones) sin modificar nada. Usar antes de planificar o implementar.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+effort: medium
 color: cyan
 ---
 

@@ -3,6 +3,7 @@ name: critico
 description: Abogado del diablo del diseño. Busca formas más simples o mejores de una spec, un plan o la estructura de un código. Usar sobre la spec antes de aprobarla y sobre el código al terminar.
 tools: Read, Grep, Glob, Bash
 model: opus
+effort: high
 color: purple
 memory: project
 ---

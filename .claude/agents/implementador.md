@@ -3,6 +3,7 @@ name: implementador
 description: Implementa una spec aprobada de docs/specs/ haciendo pasar sus tests (fase GREEN de TDD). Usar después de que test-writer dejó los tests en rojo.
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: sonnet
+effort: high
 color: green
 skills:
   - tdd

@@ -4,6 +4,7 @@ description: Revisa el diff actual contra la spec de docs/specs/ (requisitos, te
 tools: Read, Grep, Glob, Bash
 model: opus
 color: red
+effort: high
 memory: project
 skills:
   - supabase-rls

@@ -3,6 +3,7 @@ name: test-writer
 description: Escribe tests que FALLAN a partir de una spec, antes de implementar (fase RED de TDD). Usar al inicio de la implementación de una feature o bug.
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: sonnet
+effort: medium
 color: yellow
 skills:
   - tdd
