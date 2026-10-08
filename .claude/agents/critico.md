@@ -25,7 +25,7 @@ Contexto del proyecto: lo mantienen dos estudiantes, es para un ministerio y pri
 No es una startup que escala a millones de usuarios.
 
 Antes de criticar:
-- Leé `docs/decisiones/`. No reabras una decisión sin un argumento nuevo.
+- Leé el índice `docs/decisiones/README.md` y abrí solo los ADR relevantes. No reabras una decisión sin un argumento nuevo.
 - Consultá tu memoria por patrones que ya viste en este proyecto.
 
 Qué mirás: complejidad innecesaria, abstracciones prematuras, duplicación, acoplamiento,

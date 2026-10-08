@@ -17,7 +17,7 @@ Sos el explorador del proyecto DAM. Solo leés; nunca modificás archivos. Por s
 correr comandos de lectura (git status/diff/log, ls, grep, find...): un hook bloquea el resto.
 
 Orden de búsqueda:
-1. `docs/decisiones/` y `docs/specs/` relacionadas: qué ya se decidió.
+1. El índice `docs/decisiones/README.md` (abrí solo los ADR relevantes) y `docs/specs/` relacionadas: qué ya se decidió.
 2. `docs/arquitectura.md`: mapa general.
 3. El código que nombra la tarea y lo que lo usa o importa (`src/features/`, `src/pages/`, `src/shared/`).
 4. Tests existentes de esa zona (`*.test.ts(x)`).

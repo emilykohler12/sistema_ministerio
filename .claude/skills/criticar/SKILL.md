@@ -10,4 +10,4 @@ disable-model-invocation: true
 Criticá lo siguiente: $ARGUMENTS
 
 Si es una ruta, leé el archivo o carpeta. Si es una idea en texto, evaluala contra el código actual
-y `docs/decisiones/`. Respondé con tu formato habitual (veredicto + máximo 3 puntos).
+y los ADR relevantes según el índice `docs/decisiones/README.md`. Respondé con tu formato habitual (veredicto + máximo 3 puntos).

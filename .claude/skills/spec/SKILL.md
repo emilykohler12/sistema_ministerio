@@ -6,7 +6,8 @@ argument-hint: [nombre-feature]
 
 Escribí la spec de la feature "$ARGUMENTS".
 
-1. Leé `docs/decisiones/`, `docs/arquitectura.md` y specs relacionadas.
+1. Leé el índice `docs/decisiones/README.md` (y solo los ADR relevantes), la sección pertinente de
+   `docs/definicion-dam.md`, `docs/arquitectura.md` y specs relacionadas.
 2. Pedile al subagente `Explore` el contexto del código involucrado.
 3. Entrevistá al usuario con AskUserQuestion: casos borde, quién puede hacer qué, datos,
    estados vacíos y de error, UI, qué queda fuera de alcance. Nada obvio: buscá lo difícil.
