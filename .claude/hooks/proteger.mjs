@@ -11,6 +11,10 @@ if (name.startsWith('.env')) {
   block(`Bloqueado: ${file} contiene secretos. Editalo vos a mano o usá .claude/settings.local.json.`)
 }
 
+if (file === 'src/shared/types/database.ts') {
+  block('Bloqueado: src/shared/types/database.ts es generado y se regenera con npm run db:types.')
+}
+
 if (name === 'package-lock.json') {
   block('Bloqueado: package-lock.json no se edita a mano. Usá npm install / npm uninstall.')
 }

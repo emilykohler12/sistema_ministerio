@@ -13,8 +13,26 @@ for (const m of cmd.matchAll(/(?:^|[^\w.])\.env(?:\.([\w.-]+))?(?![\w-])/g)) {
   }
 }
 
-// Escrituras por shell sobre archivos que no se editan a mano.
+// Supabase solo local (CLAUDE.md: nunca conectar agentes a la base de producción).
+// Una regex sobre el comando crudo: una invocación de `supabase` o de `npm run db:*`/`test:db`, seguida en el
+// mismo comando simple de una marca remota (flag --linked/--db-url/--project-ref/--project-id, o un subcomando
+// suelto link/login/push/pull/dump/repair/inspect). Cubre npx, npm exec, rutas a node_modules/.bin, variables
+// de entorno, bash -c '...', comillas, `=` y $(...). Falso positivo aceptado: git commit -m "supabase link".
+// Límite aceptado: `| xargs npx supabase` con argumentos por stdin no se puede detectar. La barrera real es que
+// el contenedor no tenga credenciales remotas; bloquear login y link evita que el agente las consiga.
+const SUPABASE_REMOTO =
+  /(?:\bsupabase(?![\w-])|\bnpm\s+run\s+(?:db:|test:db))[^;&|\n]*?[\s"'=(](?:--(?:linked|db-url|project-ref|project-id)\b|(?:link|login|push|pull|dump|repair|inspect)(?![\w-]))/
+if (SUPABASE_REMOTO.test(cmd)) {
+  block(
+    'Bloqueado: Supabase solo se usa en local. No se permiten --linked, --db-url, --project-ref, link, login, ' +
+      'push, pull, dump, repair ni inspect: los agentes no se conectan a bases remotas. ' +
+      'Usá los scripts npm db:* contra la base local.',
+  )
+}
+
 const { segmentos } = analizarComando(cmd)
+
+// Escrituras por shell sobre archivos que no se editan a mano.
 const muta = (s) => escribeArchivo(s) || /^(sed\s+.*-i|tee|rm|mv|cp|truncate)\b/.test(s)
 
 for (const s of segmentos.filter(muta)) {

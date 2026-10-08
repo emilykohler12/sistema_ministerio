@@ -1,11 +1,11 @@
 // PreToolUse (Edit|Write) de subagentes: cada uno solo escribe los archivos de su rol.
-//   node limitar-escritura.mjs tests     → test-writer: *.test.ts(x) y snapshots
+//   node limitar-escritura.mjs tests     → test-writer: *.test.ts(x), snapshots y pgTAP (supabase/tests/*.sql)
 //   node limitar-escritura.mjs critico   → su memoria y docs/specs/<feature>/critica.md
 //   node limitar-escritura.mjs revisor   → su memoria y docs/specs/<feature>/revision.md
 import { block, readInput, relPath } from './lib.mjs'
 
 const PERFILES = {
-  tests: [/\.test\.tsx?$/, /\/__snapshots__\//],
+  tests: [/\.test\.tsx?$/, /\/__snapshots__\//, /^supabase\/tests\/.+\.sql$/],
   critico: [/^\.claude\/agent-memory\/critico\//, /^docs\/specs\/[^/]+\/critica\.md$/],
   revisor: [/^\.claude\/agent-memory\/revisor\//, /^docs\/specs\/[^/]+\/revision\.md$/],
 }

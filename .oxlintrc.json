@@ -5,6 +5,7 @@
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
   },
+  "ignorePatterns": ["src/shared/types/database.ts"],
   "overrides": [
     {
       "files": ["src/test/**", "**/*.test.ts", "**/*.test.tsx"],
