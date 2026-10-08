@@ -4,15 +4,16 @@ Plataforma web donde las escuelas consultan y descargan recursos educativos (tal
 sin pedirlos individualmente al Ministerio.
 
 ## Dominio
-- Catálogo: nivel → categoría → taller → recursos (PDF, video, imagen). También hay normativas.
-- Las instituciones NO hacen login. Al descargar completan escuela, localidad y rol (`DescargaModal`).
-- Único rol autenticado: administrador. Gestiona catálogo, normativas, configuración y ve el dashboard.
+- Catálogo: nivel → categoría → taller → recursos (archivos o enlaces). También hay normativas.
+- Las instituciones NO hacen login. Al descargar completan cargo, localidad e institución (`DescargaModal`).
+- Único rol autenticado: administrador (un usuario por persona). Gestiona catálogo, normativas, padrón, configuración y ve el dashboard.
 - Tipos del dominio: `src/features/*/types.ts`. Mapa completo: @docs/arquitectura.md
+- Diseño funcional (requisitos y modelo de datos): `docs/definicion-dam.md`. Leelo antes de una feature o migración.
 
 ## Estado actual
 - Solo frontend. Los datos salen de mocks (`src/features/*/mocks/`) a través de hooks de React Query.
-- Supabase (Postgres, Auth, Storage) está decidido pero NO integrado todavía. Al integrarlo,
-  reemplazar el cuerpo de los hooks en `src/features/*/hooks/` sin cambiar su firma.
+- Supabase (Postgres, Auth, Storage, Edge Functions) está decidido pero NO integrado todavía. Sin API propia
+  (decisión 0004): al integrarlo, reemplazar el cuerpo de los hooks en `src/features/*/hooks/` sin cambiar su firma.
 
 ## Stack
 Vite · React 19 · TypeScript · Tailwind 4 · React Router 7 · React Query · react-hook-form + zod · Vitest · oxlint
@@ -34,9 +35,11 @@ Vite · React 19 · TypeScript · Tailwind 4 · React Router 7 · React Query ·
 - Alias `@/` → `src/`
 - Tests junto al código: `archivo.test.ts` · utilidades de test en `src/test/`
 - `docs/specs/<feature>/` una carpeta por feature o tarea · `docs/decisiones/` decisiones tomadas
+- Mapa de la documentación: `docs/README.md`
 
 ## Reglas
-- IMPORTANT: Antes de proponer un diseño, leé `docs/decisiones/`. No reabras decisiones sin un argumento nuevo.
+- IMPORTANT: Antes de proponer un diseño, leé el índice `docs/decisiones/README.md` y abrí solo los ADR relevantes.
+  No reabras decisiones sin un argumento nuevo.
 - Reutilizá componentes de `src/shared/components/ui/` antes de crear uno nuevo.
 - Validá formularios con zod + react-hook-form, como en los existentes.
 - Nunca conectes agentes a la base de producción.

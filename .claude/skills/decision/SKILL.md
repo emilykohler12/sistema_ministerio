@@ -23,3 +23,5 @@ Registrá la decisión sobre "$ARGUMENTS".
 ```
 
 4. Si reemplaza una decisión anterior, marcá la vieja como `reemplazada por 000N`.
+5. Agregá una fila a `docs/decisiones/README.md` (número, decisión en una línea, estado, "Leer si vas a tocar…").
+   Si reemplazó a otra, actualizá también el estado de esa fila.

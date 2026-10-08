@@ -35,7 +35,7 @@ Herramienta: Claude Code · Todo vive dentro del repositorio y se comparte por g
 - Simplicidad como norte. No suma dependencias salvo que eliminen más código del que agregan.
 - Máximo 3 puntos, priorizados, cada uno con una alternativa concreta.
 - Puede (y debe) decir "está bien así" cuando no hay algo claramente mejor.
-- Lee `docs/decisiones/` y no reabre decisiones sin un argumento nuevo.
+- Lee el índice `docs/decisiones/README.md`, abre solo los ADR relevantes y no reabre decisiones sin un argumento nuevo.
 - Una sola ronda por fase. Los desacuerdos los decide una persona.
 
 ---

@@ -21,4 +21,4 @@ entorno, no por instrucciones: hooks y comandos no saben que existe Docker. Adem
 - `node_modules` y el login de Claude viven en volúmenes. En Windows, Vite y vitest usan polling.
 - `.gitattributes` fuerza LF para que el git de Linux y el de Windows vean los mismos cambios.
 - Supabase local también usa Docker: al integrarlo hay que decidir entre darle al contenedor acceso
-  al Docker del host (pierde aislamiento) o levantar Supabase desde el host.
+  al Docker del host (pierde aislamiento) o levantar Supabase desde el host. Resuelto en 0011 (Docker-in-Docker).
