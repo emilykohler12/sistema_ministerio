@@ -26,6 +26,11 @@ shared/components/ui  (UI base reutilizable)
 - Públicas: `/`, `/talleres`, `/talleres/:id`, `/normativas`, `/contacto`
 - Admin: `/admin/login`, `/admin` (dashboard), `/admin/talleres/...`, `/admin/normativas`, `/admin/configuracion`
 
+## Entorno
+
+Todo el desarrollo corre en el Dev Container (`.devcontainer/`, decisión 0003): Node, dependencias,
+tests (Vitest + jsdom + Testing Library, setup en `src/test/`), hooks y Claude Code.
+
 ## Pendiente
 
 - Integrar Supabase (Auth del admin, tablas del catálogo, Storage para archivos, registro de descargas).

@@ -22,11 +22,11 @@ Herramienta: Claude Code · Todo vive dentro del repositorio y se comparte por g
 | Rol | Tipo | Modelo | Responsabilidad | Herramientas |
 |---|---|---|---|---|
 | **Ingeniero en Sistemas** | Sesión principal (output style) | Opus | Discute, planifica, enseña, orquesta, decide el carril | Todas |
-| **Explore** | Subagente (reemplaza al incluido) | Sonnet | Busca contexto en el repo: código, specs, decisiones | Solo lectura |
-| **test-writer** | Subagente | Sonnet | Escribe tests que fallan a partir de la spec (fase RED) | Solo crea/edita `*.test.ts(x)` (hook) |
-| **implementador** | Subagente | Sonnet | Implementa la spec con TDD (fase GREEN). Si duda, se detiene y devuelve `BLOQUEADO` | Edición + MCP Supabase |
-| **crítico** | Subagente | Opus | ¿Hay una forma más simple o mejor? Revisa la propuesta y la estructura del código | Solo lectura |
-| **revisor** | Subagente | Opus | ¿Está bien hecho? Revisa requisitos, tests, seguridad y RLS | Solo lectura |
+| **Explore** | Subagente (reemplaza al incluido) | Sonnet | Busca contexto en el repo: código, specs, decisiones | Solo lectura (hook `limitar-bash lectura`) |
+| **test-writer** | Subagente | Sonnet | Escribe tests que fallan a partir de la spec (fase RED) | Solo `*.test.ts(x)`; shell solo para checks (hooks) |
+| **implementador** | Subagente | Sonnet | Implementa la spec o el plan con TDD. Si duda, se detiene y devuelve `BLOQUEADO` | Edición + MCP Supabase |
+| **crítico** | Subagente | Opus | ¿Hay una forma más simple o mejor? Revisa la propuesta y la estructura del código | Lectura; escribe solo `critica.md` y su memoria (hooks) |
+| **revisor** | Subagente | Opus | ¿Está bien hecho? Revisa requisitos, tests, seguridad y RLS | Lectura + checks; escribe solo `revision.md` y su memoria (hooks) |
 
 **Crítico ≠ revisor.** El crítico cuestiona el *diseño*. El revisor verifica la *corrección*. Separados para no mezclar "esto tiene un bug" con "yo lo haría distinto".
 
@@ -64,7 +64,8 @@ VOS ◄──► INGENIERO
 | Carril | Ejemplos | Flujo |
 |---|---|---|
 | **Directo** | Typo, texto, estilo, una línea | El ingeniero lo hace y corre los checks |
-| **Chico** | Un endpoint, un componente, un bug acotado | Plan breve → implementador → revisor |
+| **Consulta** | Preguntas, análisis, revisar configuración | El ingeniero responde sin modificar archivos |
+| **Chico** | Un endpoint, un componente, un bug acotado | Plan breve en `docs/specs/<tarea>/plan.md` → implementador (test primero) → revisor |
 | **Feature** | Panel de talleres, sistema de descargas | Flujo completo con spec y crítico |
 
 ---
@@ -99,8 +100,14 @@ VOS ◄──► INGENIERO
 |---|---|---|
 | `formatear.mjs` | Después de editar | `oxlint --fix` en el archivo editado |
 | `proteger.mjs` | Antes de editar | Nadie toca `.env*`, `package-lock.json` ni migraciones ya commiteadas |
-| `checks-stop.mjs` | Al terminar un turno | Si hubo cambios: lint + typecheck deben pasar |
-| `contexto.mjs` | Después de compactar | Reinyecta la rama y la spec activa |
+| `proteger-bash.mjs` | Antes de cada comando | Lo mismo que `proteger.mjs`, pero por shell (`cat .env`, `sed -i`, `>`) |
+| `checks-stop.mjs` | Al terminar un turno | Si hubo cambios: lint + typecheck + tests deben pasar. Sin `node_modules` avisa que falta el Dev Container |
+| `contexto.mjs` | Después de compactar | Reinyecta la rama y la spec activa (deducida de la rama `feat/<x>`) |
+| `limitar-escritura.mjs <perfil>` | Antes de editar (frontmatter del agente) | Cada subagente solo escribe lo de su rol: tests, `critica.md` o `revision.md` |
+| `limitar-bash.mjs <perfil>` | Antes de cada comando (frontmatter del agente) | Lista blanca de comandos: `lectura` (Explore, crítico) o `checks` (test-writer, revisor) |
+
+Límite honesto: los hooks frenan errores y atajos, no a un agente malicioso. Por ejemplo, un test
+puede escribir archivos al ejecutarse. Para eso está la revisión humana del PR.
 
 Scripts en Node para que funcionen igual en Linux y Windows.
 
@@ -126,7 +133,7 @@ CLAUDE.local.md               personal (gitignored)
 ├── agents/                   Explore · test-writer · implementador · critico · revisor
 ├── skills/                   spec · tdd · supabase-rls · criticar · decision · pr · verify
 ├── rules/                    react.md · migraciones.md
-├── hooks/                    formatear · proteger · checks-stop · contexto
+├── hooks/                    formatear · proteger · proteger-bash · checks-stop · contexto · limitar-*
 └── agent-memory/             critico/ · revisor/  (memoria compartida por git)
 docs/
 ├── arquitectura.md           mapa del sistema

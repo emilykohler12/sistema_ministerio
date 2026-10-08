@@ -7,21 +7,32 @@ Para el porqué de cada decisión, ver [diseno-arquitectura-agentes.md](diseno-a
 
 ## 1. Primera vez (cada uno, una sola vez)
 
-1. Instalar Claude Code e iniciar sesión con tu cuenta.
-2. Clonar el repo y abrir Claude Code en la raíz: `claude`.
-3. Aceptar el diálogo de confianza del proyecto (habilita hooks y skills del repo).
-4. `npm install`.
-5. Crear tus archivos personales (no se commitean):
+Todo corre dentro del Dev Container (decisión 0003). En tu máquina solo hacen falta Docker y VS Code.
+
+1. Instalar Docker Desktop (con WSL2 en Windows), VS Code y la extensión **Dev Containers**.
+2. Clonar el repo. Recomendado en Windows: VS Code → *Dev Containers: Clone Repository in Container Volume*
+   (mucho más rápido que montar una carpeta de `C:\`). Si ya lo tenés clonado: abrilo y elegí *Reopen in Container*.
+3. Esperar el primer build: instala Node, Claude Code, `gh` y corre `npm ci`. No se instala nada en tu máquina.
+4. Abrir Claude Code (panel o `claude` en la terminal del contenedor) e iniciar sesión. Queda guardada en un volumen.
+5. Aceptar el diálogo de confianza del proyecto (habilita hooks y skills del repo).
+6. Crear tus archivos personales (no se commitean):
    - `CLAUDE.local.md`: tus URLs locales, datos de prueba.
    - `.claude/settings.local.json`: claves y variables de Supabase (cuando se integre).
-6. Cuando Supabase esté integrado: levantar Supabase local con `npx supabase start`.
-7. Verificar que todo cargó:
+7. Una vez: `/run-skill-generator` para que `/run` y `/verify` sepan levantar el DAM.
+8. Verificar que todo cargó:
    - `/context` → aparece `CLAUDE.md`.
    - `/output-style` → está activo **Ingeniero en Sistemas**.
    - `@` en el prompt → aparecen los 5 agentes del proyecto.
-   - `/hooks` → aparecen los 4 hooks.
+   - `/hooks` → aparecen los hooks del proyecto.
    - `/skills` → aparecen las skills del proyecto.
-8. Opcional: agregar en tu `~/.claude/settings.json` un hook de notificación para que te avise cuando Claude necesita respuesta.
+   - `npm test` en la terminal → pasan los tests.
+9. Opcional: agregar en tu `~/.claude/settings.json` un hook de notificación para que te avise cuando Claude necesita respuesta.
+
+Si cambia `.devcontainer/` o `package.json`: *Dev Containers: Rebuild Container*.
+
+Si *Reopen in Container* falla con `\wsl.localhost\...\wayland-0 is not a valid Windows path`: la extensión
+intenta montar el socket gráfico de WSL y Docker Desktop lo rechaza. En tu `settings.json` de usuario de VS Code
+agregá `"dev.containers.mountWaylandSocket": false` y reintentá.
 
 ---
 

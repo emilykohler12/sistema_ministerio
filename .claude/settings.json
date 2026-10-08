@@ -33,6 +33,10 @@
       {
         "matcher": "Edit|Write",
         "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/proteger.mjs\"" }]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/proteger-bash.mjs\"" }]
       }
     ],
     "PostToolUse": [

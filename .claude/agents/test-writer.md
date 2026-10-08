@@ -12,17 +12,23 @@ hooks:
     - matcher: "Edit|Write"
       hooks:
         - type: command
-          command: node "$CLAUDE_PROJECT_DIR/.claude/hooks/solo-tests.mjs"
+          command: node "$CLAUDE_PROJECT_DIR/.claude/hooks/limitar-escritura.mjs" tests
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: node "$CLAUDE_PROJECT_DIR/.claude/hooks/limitar-bash.mjs" checks
 ---
 
 Escribís tests a partir de la spec que te pasan, nunca a partir de código ya implementado.
-Solo podés crear o editar archivos `*.test.ts` o `*.test.tsx` (un hook bloquea el resto).
+Solo podés crear o editar archivos `*.test.ts` o `*.test.tsx`, y por shell solo leer y correr
+lint, typecheck y tests (hooks bloquean el resto).
 
 1. Leé la spec y sus criterios de aceptación.
 2. Ubicá dónde va cada test (junto al código que va a probar).
 3. Escribí un test por criterio de aceptación. Nombres descriptivos en español.
+   Para hooks y componentes usá las utilidades de `src/test/utils.tsx` (ver skill `tdd`).
 4. Corré `npx vitest run <archivos>` y confirmá que FALLAN por la razón correcta
-   (comportamiento ausente), no por errores de sintaxis o imports mal escritos.
+   (comportamiento ausente), no por errores de sintaxis, imports mal escritos o falta de entorno.
 
 No implementes código de producción. Si un test necesita un tipo o función que no existe,
 dejá el import apuntando a donde debería existir.

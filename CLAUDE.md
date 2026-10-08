@@ -17,7 +17,12 @@ sin pedirlos individualmente al Ministerio.
 ## Stack
 Vite · React 19 · TypeScript · Tailwind 4 · React Router 7 · React Query · react-hook-form + zod · Vitest · oxlint
 
-## Comandos
+## Entorno
+- Todo corre dentro del Dev Container (`.devcontainer/`, decisión 0003): Node, dependencias, tests,
+  hooks y Claude Code. No se instala nada en el host.
+- Si no existe `node_modules`, estás fuera del contenedor: avisá en lugar de instalar.
+
+## Comandos (dentro del Dev Container)
 - Dev: `npm run dev`
 - Tests: `npx vitest run <archivo>` (uno) · `npm test` (todos)
 - Checks: `npm run lint` · `npm run typecheck`
@@ -27,16 +32,19 @@ Vite · React 19 · TypeScript · Tailwind 4 · React Router 7 · React Query ·
 - `src/features/<dominio>/` types, hooks, mocks, componentes del dominio
 - `src/pages/public/` y `src/pages/admin/` pantallas · `src/shared/` UI y utilidades reutilizables
 - Alias `@/` → `src/`
-- Tests junto al código: `archivo.test.ts`
-- `docs/specs/<feature>/` una carpeta por feature · `docs/decisiones/` decisiones tomadas
+- Tests junto al código: `archivo.test.ts` · utilidades de test en `src/test/`
+- `docs/specs/<feature>/` una carpeta por feature o tarea · `docs/decisiones/` decisiones tomadas
 
 ## Reglas
 - IMPORTANT: Antes de proponer un diseño, leé `docs/decisiones/`. No reabras decisiones sin un argumento nuevo.
 - Reutilizá componentes de `src/shared/components/ui/` antes de crear uno nuevo.
 - Validá formularios con zod + react-hook-form, como en los existentes.
 - Nunca conectes agentes a la base de producción.
+- Editá archivos con Edit/Write, no con comandos de shell: los hooks de protección y formato solo ven esas herramientas.
 - Ramas: `feat/<feature>`, `fix/<bug>`, `chore/<tema>`. Commits: Conventional Commits en español.
 - Al compactar, preservá: lista de archivos modificados, spec activa y comandos de test.
 
 ## Flujo de trabajo
-Carriles directo / chico / feature (definidos en el output style). Arquitectura de agentes: `docs/agentes/`.
+Carriles consulta / directo / chico / feature (definidos en el output style). Arquitectura de agentes: `docs/agentes/`.
+Autorizamos al agente principal a delegar en los subagentes del proyecto (`.claude/agents/`) según el carril,
+sin pedir permiso cada vez: el flujo de carriles es nuestro pedido explícito de usarlos.

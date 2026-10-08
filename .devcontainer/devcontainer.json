@@ -1,0 +1,33 @@
+// Entorno de desarrollo del DAM. Todo corre acá adentro: Node, dependencias, tests, hooks y Claude Code.
+// Decisión: docs/decisiones/0003-dev-container.md
+{
+  "name": "DAM",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm",
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "remoteUser": "node",
+  "mounts": [
+    // Login y configuración de Claude Code: sobreviven a "Rebuild Container".
+    "source=dam-claude-config-${devcontainerId},target=/home/node/.claude,type=volume",
+    // node_modules en un volumen Linux: npm, vitest y tsc mucho más rápidos que sobre la carpeta de Windows.
+    "source=dam-node-modules-${devcontainerId},target=${containerWorkspaceFolder}/node_modules,type=volume"
+  ],
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    // Los cambios hechos desde Windows no generan eventos dentro del contenedor: Vite y vitest usan polling.
+    "DAM_WATCH_POLLING": "1"
+  },
+  // Los volúmenes se crean como root: se los damos al usuario node antes de instalar.
+  "postCreateCommand": "sudo chown node:node node_modules /home/node/.claude && npm ci",
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": { "label": "DAM (Vite)", "onAutoForward": "notify" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["oxc.oxc-vscode", "vitest.explorer", "bradlc.vscode-tailwindcss"]
+    }
+  }
+}
