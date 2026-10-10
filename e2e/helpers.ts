@@ -12,3 +12,31 @@ export async function loginAdmin(page: Page) {
   await expect(page).toHaveURL(/\/admin$/)
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
 }
+
+export const sufijoUnico = () => `${Date.now().toString().slice(-7)}${Math.floor(Math.random() * 100)}`
+
+/**
+ * Crea por la UI una categoría en el nivel Inicial (id 1) y un taller dentro de ella.
+ * Devuelve el id del taller (sale de la URL de "Recursos", adonde navega el alta).
+ */
+export async function crearTaller(
+  page: Page,
+  datos: { nombre: string; categoria: string; estado: 'Borrador' | 'Publicado'; etiqueta?: string },
+) {
+  await page.goto('/admin/talleres/1/nueva-categoria')
+  await page.getByLabel('Nombre de la categoría').fill(datos.categoria)
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  await page.getByRole('link', { name: datos.categoria }).click()
+  await page.getByRole('link', { name: '+ Nuevo taller' }).first().click()
+  await page.getByLabel('Nombre', { exact: true }).fill(datos.nombre)
+  await page.getByLabel('Descripción').fill(`Descripción de ${datos.nombre}`)
+  await page.getByLabel('Estado').selectOption({ label: datos.estado })
+  await page.getByRole('group', { name: 'Destinado a' }).getByRole('button', { name: 'Docentes' }).click()
+  if (datos.etiqueta) {
+    await page.getByPlaceholder('Ej: lectura, evaluación').fill(datos.etiqueta)
+    await page.getByPlaceholder('Ej: lectura, evaluación').press('Enter')
+  }
+  await page.getByRole('button', { name: 'Crear taller' }).click()
+  await expect(page).toHaveURL(/\/(\d+)\/recursos$/)
+  return Number(/\/(\d+)\/recursos$/.exec(page.url())![1])
+}

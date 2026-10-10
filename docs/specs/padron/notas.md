@@ -49,7 +49,8 @@ Spec: `fase-b.md`. Decisión: ADR 0019.
 - No se aplicó el menor 1 (evasión del hook con comillas o escapes): coincide con el límite que ya acepta el comentario de `SUPABASE_REMOTO`.
 - Límite conocido (menor 5): `normalizar` (NFD y diacríticos) no equivale a `unaccent` de la base (`Ø`, `Æ`, `ß`) y el script junta espacios internos que el índice no junta. Ambas direcciones terminan en un rechazo, en el plan o por 23505, sin pérdida de datos.
 - Cómo se verificó el 23505 al escribir (criterio 5): lo probó la revisión con el par `Escuela Ø` / `Escuela O`, que pasa el plan y choca en el índice. El orquestador no tiene test automatizado.
-- Pendiente de verificar en el navegador (paso 4 de la spec): que las altas aparezcan en `/admin/establecimientos`. No se hizo en esta ronda.
+- Verificado en el navegador el 2026-10-10 (paso 4 de la spec), con Playwright: después de `--aplicar` con `ejemplo.csv`, Oberá muestra las dos
+  altas con su CUE. Fue una prueba puntual y no quedó como test. La fase A la verificó el agente `qa` (`qa.md`, `e2e/padron.spec.ts`).
 
 ## Desvíos
 - Ninguno respecto de la spec. El ejemplo termina con exit 1 porque tiene rechazos a propósito.
