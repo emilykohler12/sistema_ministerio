@@ -44,6 +44,20 @@ description: Cómo escribir y testear migraciones y políticas RLS de Supabase e
   anon y authenticated por privilegios por defecto; no hace falta repetirlo por tabla.
 - Supabase da a anon y authenticated los demás privilegios sobre cada tabla nueva: la RLS es la única barrera.
 
+## Storage
+- El bucket se crea **en la migración** (`insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)`),
+  no en `config.toml`, que solo aplica a la base local. El bucket es la autoridad de tamaño y formato: rechaza con 413/415.
+- Las políticas van sobre `storage.objects`, con `bucket_id = '<bucket>'` y `(select public.es_admin())`. `upload` con `upsert: false` solo
+  necesita insert; `remove()` y `createSignedUrl()` necesitan select; sin update si nunca se hace `upsert`. Sin políticas para `anon`
+  (un bucket privado no se lee por URL pública).
+- **No se borra por SQL**: el trigger `protect_delete` de `storage.objects` lo bloquea. En un test, `set local storage.allow_delete_query = 'true'`
+  (storage-api lo fija en cada request). Un DELETE con WHERE también necesita que la política de **select** deje ver la fila: sin el select
+  abierto, la política de delete no se prueba sola (el test crea un select temporal y lo borra).
+- `remove()` devuelve `data: []` sin error si no borró nada (la RLS lo oculta o no existe): tratarlo como falla.
+- En storage-js el error trae `status` = HTTP (400) y `statusCode` = código real (`'413'`, `'415'`, `'404'`): mirar los dos.
+- Un trigger `BEFORE` corre antes que la RLS: si lee `storage.objects`, `anon` recibe el error del trigger en lugar de `42501` y no distingue "no
+  existe" de "no lo veo". No validar contra `storage.objects` desde la base; sostener el invariante con el orden de las operaciones.
+
 ## Nube
 - `supabase/config.toml` solo aplica a la base local. En el proyecto de demos hay que deshabilitar el registro
   de usuarios en el dashboard (Authentication > Sign In / Providers).

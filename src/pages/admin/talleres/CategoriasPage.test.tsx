@@ -45,6 +45,7 @@ function taller(id: number, categoria_id: number, estado: Taller['estado']): Tal
     categoria: { nivel_id: 3 },
     destinatario: [],
     etiqueta: [],
+    recurso: [],
   }
 }
 

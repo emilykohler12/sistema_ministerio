@@ -471,13 +471,15 @@ migrar su dominio.
 | id | int | PK | Identificador. |
 | taller_id | int | FK → taller, NOT NULL | Taller al que pertenece. |
 | nombre | varchar(200) | NOT NULL | Nombre visible. |
-| tipo | varchar(20) | NOT NULL | PDF, PPTX, DOCX, IMAGEN, VIDEO o ENLACE. Define el ícono. |
-| ruta_archivo | varchar(500) | | Ubicación en el bucket privado. Obligatoria salvo en ENLACE. |
-| url | varchar(500) | | Dirección externa. Obligatoria solo en ENLACE. |
+| tipo | enum `tipo_recurso` | NOT NULL | PDF, PPTX, DOCX, IMAGEN, VIDEO o ENLACE. Define el ícono. |
+| ruta_archivo | varchar(500) | UNIQUE | Ubicación en el bucket privado (`<taller_id>/<uuid>.<ext>`). Obligatoria salvo en ENLACE. |
+| url | varchar(500) | | Dirección externa (`https://`). Obligatoria solo en ENLACE. |
 | tamanio_bytes | bigint | | Tamaño del archivo; nulo en ENLACE. |
 | orden | smallint | NOT NULL | Orden dentro del taller. |
 
-CHECK: `(tipo = 'ENLACE') = (url IS NOT NULL AND ruta_archivo IS NULL)` y, si no es ENLACE, `ruta_archivo` y `tamanio_bytes` no nulos.
+CHECK: archivo xor enlace (`tipo = 'ENLACE'` con `url` no nulo y `ruta_archivo` y `tamanio_bytes` nulos; si no es ENLACE, al revés),
+`url ~ '^https://'`, `tamanio_bytes > 0` y `ruta_archivo` bajo el prefijo `<taller_id>/`. El tope de 50 MiB por archivo no es un CHECK: lo
+hace cumplir el bucket `talleres` (`file_size_limit`), que también fija los formatos admitidos. La FK a `taller` no tiene cascada.
 
 **destinatario** y **etiqueta**
 

@@ -28,13 +28,16 @@ export async function actualizarCategoria(id: number, cambios: CategoriaCambios)
 
 /**
  * Todos los talleres visibles para el rol: anon y los usuarios sin la marca de admin solo ven los publicados;
- * el admin ve también borradores e inactivos. El nivel viene de la categoría (`categoria.nivel_id`).
+ * el admin ve también borradores e inactivos. El nivel viene de la categoría (`categoria.nivel_id`). Los recursos
+ * vienen ordenados por `orden` y `id` (el desempate muestra bien dos recursos con el mismo `orden`).
  */
 export async function obtenerTalleres(): Promise<Taller[]> {
   const { data, error } = await supabase
     .from('taller')
-    .select('*, categoria(nivel_id), destinatario(*), etiqueta(*)')
+    .select('*, categoria(nivel_id), destinatario(*), etiqueta(*), recurso(*)')
     .order('created_at', { ascending: false })
+    .order('orden', { referencedTable: 'recurso' })
+    .order('id', { referencedTable: 'recurso' })
   if (error) throw error
   return data
 }

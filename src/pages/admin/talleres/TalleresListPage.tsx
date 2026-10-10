@@ -90,12 +90,13 @@ export function TalleresListPage() {
         )}
         {talleres.isSuccess && visibles.length > 0 && (
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[820px] text-left text-sm">
               <thead className="border-b border-gray-100 text-gray-500">
                 <tr>
                   <th className="px-4 py-3 font-medium">Nombre</th>
                   <th className="px-4 py-3 font-medium">Destinatarios</th>
                   <th className="px-4 py-3 font-medium">Estado</th>
+                  <th className="px-4 py-3 font-medium">Recursos</th>
                   <th className="px-4 py-3 font-medium">Última modificación</th>
                   <th className="px-4 py-3 font-medium">Acciones</th>
                 </tr>
@@ -108,6 +109,7 @@ export function TalleresListPage() {
                     <td className="px-4 py-3">
                       <Badge variant={VARIANTE_ESTADO[t.estado]}>{ETIQUETA_ESTADO[t.estado]}</Badge>
                     </td>
+                    <td className="px-4 py-3 text-gray-600">{t.recurso.length}</td>
                     <td className="px-4 py-3 text-gray-600">{formatFechaDeTimestamp(t.updated_at)}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-3 font-medium">
@@ -116,6 +118,12 @@ export function TalleresListPage() {
                           className="text-primary-600 hover:underline"
                         >
                           Editar
+                        </Link>
+                        <Link
+                          to={`/admin/talleres/${nivel}/${categoriaId}/${t.id}/recursos`}
+                          className="text-primary-600 hover:underline"
+                        >
+                          Recursos
                         </Link>
                         {t.estado === 'INACTIVO' ? (
                           <button

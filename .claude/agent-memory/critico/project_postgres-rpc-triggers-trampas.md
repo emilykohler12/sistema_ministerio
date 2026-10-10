@@ -27,6 +27,11 @@ En la crítica del código de la fase A (2026-10-10) aparecieron más cosas:
 - El crítico **sí** puede correr `npm run test:db` y `docker exec -i supabase_db_sistema_ministerio psql -U postgres` con
   `begin ... rollback`. Después, volver a correr `test:db`, porque los tests suponen que no hay categorías.
 
+En la crítica del código de la fase A de recursos (2026-10-10), con `ordenar_recursos`:
+- Un `update ... where col is distinct from nuevo` en READ COMMITTED no es "gana el último": descarta, sin esperar el lock, las filas
+  que en su snapshot ya coinciden. Dos llamadas simultáneas pueden dejar una mezcla. Si hace falta serializar, se usa
+  `pg_advisory_xact_lock(id)`. Un `FOR UPDATE` bajo RLS filtra filas para quien no tiene la marca, y eso cambia los errores que esperan los tests.
+
 Se repitió por tercera vez: una función pura en `consultas.ts` (`filtrarTalleres`) y un catálogo fijo leído con un hook
 (destinatarios, igual que `NIVELES`).
 

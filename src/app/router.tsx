@@ -28,6 +28,9 @@ const TalleresListPage = lazy(() =>
 const TallerFormPage = lazy(() =>
   import('@/pages/admin/talleres/TallerFormPage').then((m) => ({ default: m.TallerFormPage })),
 )
+const RecursosPage = lazy(() =>
+  import('@/pages/admin/talleres/RecursosPage').then((m) => ({ default: m.RecursosPage })),
+)
 const NormativasAdminPage = lazy(() =>
   import('@/pages/admin/normativas/NormativasAdminPage').then((m) => ({ default: m.NormativasAdminPage })),
 )
@@ -88,6 +91,11 @@ const router = createBrowserRouter([
         path: 'talleres/:nivelId/:categoriaId/:tallerId/editar',
         element: <TallerFormPage />,
         handle: { title: 'Editar taller' },
+      },
+      {
+        path: 'talleres/:nivelId/:categoriaId/:tallerId/recursos',
+        element: <RecursosPage />,
+        handle: { title: 'Recursos del taller' },
       },
       { path: 'normativas', element: <NormativasAdminPage />, handle: { title: 'Normativas' } },
       { path: 'normativas/nueva', element: <NormativaFormPage />, handle: { title: 'Nueva normativa' } },

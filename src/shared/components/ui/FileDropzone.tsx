@@ -7,8 +7,11 @@ interface FileDropzoneProps {
   hint?: string
   multiple?: boolean
   accept?: string
-  files: string[]
-  onChange: (files: string[]) => void
+  /** Nombres de los archivos elegidos, para mostrarlos como lista (uso de normativas). */
+  files?: string[]
+  onChange?: (files: string[]) => void
+  /** Recibe los `File` elegidos o soltados. Para quien necesita los archivos y no solo sus nombres. */
+  onFiles?: (files: File[]) => void
 }
 
 export function FileDropzone({
@@ -16,8 +19,9 @@ export function FileDropzone({
   hint = 'PDF, video o imagen',
   multiple = false,
   accept,
-  files,
+  files = [],
   onChange,
+  onFiles,
 }: FileDropzoneProps) {
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -25,8 +29,10 @@ export function FileDropzone({
 
   function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return
-    const names = Array.from(list).map((f) => f.name)
-    onChange(multiple ? [...files, ...names] : [names[0]])
+    const elegidos = Array.from(list)
+    onFiles?.(multiple ? elegidos : [elegidos[0]])
+    const names = elegidos.map((f) => f.name)
+    onChange?.(multiple ? [...files, ...names] : [names[0]])
   }
 
   function handleDrop(e: DragEvent<HTMLDivElement>) {
@@ -41,7 +47,7 @@ export function FileDropzone({
   }
 
   function removeFile(name: string) {
-    onChange(files.filter((f) => f !== name))
+    onChange?.(files.filter((f) => f !== name))
   }
 
   return (

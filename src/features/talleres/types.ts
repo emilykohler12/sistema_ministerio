@@ -1,3 +1,4 @@
+import type { Recurso } from '@/features/recursos/types'
 import type { Database, Enums, Tables, TablesInsert } from '@/shared/types/database'
 
 export type NivelEducativo = Tables<'nivel_educativo'>
@@ -54,11 +55,12 @@ export const DESTINATARIOS = [
 
 export type Etiqueta = Tables<'etiqueta'>
 
-/** Taller con lo que el portal y el panel necesitan: el nivel (vía la categoría), sus destinatarios y sus etiquetas. */
+/** Taller con lo que el portal y el panel necesitan: el nivel (vía la categoría), sus destinatarios, etiquetas y recursos (por `orden`, `id`). */
 export type Taller = Tables<'taller'> & {
   categoria: Pick<Categoria, 'nivel_id'>
   destinatario: Destinatario[]
   etiqueta: Etiqueta[]
+  recurso: Recurso[]
 }
 
 /** Argumentos de la RPC `guardar_taller`: el alta omite `p_id`, la edición lo manda. */
