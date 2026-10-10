@@ -1,54 +1,63 @@
-import { useQuery } from '@tanstack/react-query'
-import { talleresMock } from '../mocks/talleres.mock'
-import type { Destinatario } from '../types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { cambiarEstadoTaller, guardarTaller, obtenerTalleres } from '../consultas'
+import { filtrarTalleres, type FiltrosTalleres } from '../filtrar'
+import type { EstadoTaller, Taller, TallerGuardado } from '../types'
 
-export interface TalleresFiltro {
-  categoriaId?: number
-  destinatario?: Destinatario
-  busqueda?: string
+// Una sola clave para todos los hooks: la lista completa se consulta una vez y cada hook filtra con `select`.
+// La RLS decide qué ve cada rol (la caché se limpia al cambiar de usuario, 0014): el admin recibe también
+// borradores e inactivos, así que el portal filtra los publicados en `soloPublicados`.
+const CLAVE = ['talleres'] as const
+
+const soloPublicados = (todos: Taller[]) => todos.filter((t) => t.estado === 'PUBLICADO')
+
+function useTodosLosTalleres<T>(select: (todos: Taller[]) => T) {
+  return useQuery({ queryKey: CLAVE, queryFn: obtenerTalleres, select })
 }
 
-async function fetchTalleres(filtro: TalleresFiltro) {
-  await new Promise((r) => setTimeout(r, 300))
-  return talleresMock.filter((t) => {
-    if (filtro.categoriaId !== undefined && t.categoriaId !== filtro.categoriaId) return false
-    if (filtro.destinatario && !t.destinatarios.includes(filtro.destinatario)) return false
-    if (filtro.busqueda) {
-      const q = filtro.busqueda.toLowerCase()
-      const matches =
-        t.titulo.toLowerCase().includes(q) || t.etiquetas.some((e) => e.toLowerCase().includes(q))
-      if (!matches) return false
-    }
-    return true
+/** Panel: todos los talleres, de cualquier estado, o solo los de una categoría. */
+export function useTalleres(categoriaId?: number) {
+  return useTodosLosTalleres((todos) =>
+    categoriaId === undefined ? todos : todos.filter((t) => t.categoria_id === categoriaId),
+  )
+}
+
+/** Panel: un taller de cualquier estado, o `null` si no está. Para el portal usar `useTallerPublicado`. */
+export function useTaller(id: number | null) {
+  return useTodosLosTalleres((todos) => todos.find((t) => t.id === id) ?? null)
+}
+
+/** Panel: nombres únicos de las etiquetas que ya usan los talleres, ordenados, para sugerir en el formulario. */
+export function useEtiquetasSugeridas(): string[] {
+  const { data } = useTodosLosTalleres((todos) =>
+    Array.from(new Set(todos.flatMap((t) => t.etiqueta.map((e) => e.nombre)))).sort((a, b) =>
+      a.localeCompare(b, 'es'),
+    ),
+  )
+  return data ?? []
+}
+
+/** Portal: solo los talleres publicados (también con sesión de admin), con los filtros aplicados. */
+export function useCatalogo(filtros: FiltrosTalleres) {
+  return useTodosLosTalleres((todos) => filtrarTalleres(soloPublicados(todos), filtros))
+}
+
+/** Portal: un taller publicado, o `null` si no existe o no está publicado. */
+export function useTallerPublicado(id: number | null) {
+  return useTodosLosTalleres((todos) => soloPublicados(todos).find((t) => t.id === id) ?? null)
+}
+
+export function useGuardarTaller() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (datos: TallerGuardado) => guardarTaller(datos),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE }),
   })
 }
 
-export function useTalleres(filtro: TalleresFiltro = {}) {
-  return useQuery({
-    queryKey: ['talleres', filtro],
-    queryFn: () => fetchTalleres(filtro),
+export function useCambiarEstadoTaller() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, estado }: { id: number; estado: EstadoTaller }) => cambiarEstadoTaller(id, estado),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE }),
   })
-}
-
-export function useTaller(id: string | undefined) {
-  return useQuery({
-    queryKey: ['talleres', 'detalle', id],
-    queryFn: async () => {
-      await new Promise((r) => setTimeout(r, 200))
-      return talleresMock.find((t) => t.id === id) ?? null
-    },
-    enabled: !!id,
-  })
-}
-
-export function useNombresInstitucionSugeridos() {
-  return [] as string[]
-}
-
-export function useEtiquetasSugeridas() {
-  const set = new Set<string>()
-  for (const t of talleresMock) {
-    for (const e of t.etiquetas) set.add(e)
-  }
-  return Array.from(set)
 }

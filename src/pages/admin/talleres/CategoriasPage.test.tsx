@@ -2,8 +2,8 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { actualizarCategoria, obtenerCategorias } from '@/features/talleres/consultas'
-import type { Categoria } from '@/features/talleres/types'
+import { actualizarCategoria, obtenerCategorias, obtenerTalleres } from '@/features/talleres/consultas'
+import type { Categoria, Taller } from '@/features/talleres/types'
 import { renderConProviders } from '@/test/utils'
 import { CategoriasPage } from './CategoriasPage'
 
@@ -16,6 +16,9 @@ vi.mock('@/features/talleres/consultas', () => ({
   obtenerCategorias: vi.fn(),
   crearCategoria: vi.fn(),
   actualizarCategoria: vi.fn(),
+  obtenerTalleres: vi.fn(),
+  guardarTaller: vi.fn(),
+  cambiarEstadoTaller: vi.fn(),
 }))
 
 function categoria(id: number, nivel_id: number, nombre: string, activo: boolean): Categoria {
@@ -27,6 +30,21 @@ function categoria(id: number, nivel_id: number, nombre: string, activo: boolean
     activo,
     created_at: '2026-10-10T00:00:00Z',
     updated_at: '2026-10-10T00:00:00Z',
+  }
+}
+
+function taller(id: number, categoria_id: number, estado: Taller['estado']): Taller {
+  return {
+    id,
+    categoria_id,
+    nombre: `Taller ${id}`,
+    descripcion: 'Desc',
+    estado,
+    created_at: '2026-10-10T00:00:00Z',
+    updated_at: '2026-10-10T00:00:00Z',
+    categoria: { nivel_id: 3 },
+    destinatario: [],
+    etiqueta: [],
   }
 }
 
@@ -54,6 +72,7 @@ const tarjeta = (nombre: string) => {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(obtenerCategorias).mockResolvedValue(todas)
+  vi.mocked(obtenerTalleres).mockResolvedValue([])
 })
 
 describe('CategoriasPage', () => {
@@ -152,5 +171,46 @@ describe('CategoriasPage: errores al actualizar', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/no pudimos/i)
     expect(tarjeta('Salud').getByText('Inactiva')).toBeInTheDocument()
+  })
+})
+
+describe('CategoriasPage: talleres de cada categoría', () => {
+  it('cuenta solo los talleres no inactivos (borrador y publicado) de cada categoría', async () => {
+    vi.mocked(obtenerTalleres).mockResolvedValue([
+      taller(1, 1, 'PUBLICADO'),
+      taller(2, 1, 'BORRADOR'),
+      taller(3, 1, 'INACTIVO'),
+      taller(4, 3, 'PUBLICADO'),
+    ])
+    renderPagina()
+    await screen.findByText('Ciencia')
+    await waitFor(() => expect(tarjeta('Ciencia').getByText('2 talleres')).toBeInTheDocument())
+    expect(tarjeta('Salud').getByText('0 talleres')).toBeInTheDocument()
+  })
+
+  it('si la baja falla con DA001 muestra cuántos talleres en borrador o publicados tiene', async () => {
+    vi.mocked(actualizarCategoria).mockRejectedValue({ code: 'DA001', details: '3', message: 'tiene talleres' })
+    renderPagina()
+    await screen.findByText('Ciencia')
+
+    await userEvent.click(tarjeta('Ciencia').getByRole('button', { name: 'Dar de baja' }))
+    const dialogo = await screen.findByRole('dialog')
+    await userEvent.click(within(dialogo).getAllByRole('button').at(-1)!)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No se puede dar de baja: tiene 3 talleres en borrador o publicados',
+    )
+    expect(tarjeta('Ciencia').queryByText('Inactiva')).not.toBeInTheDocument()
+  })
+
+  it('si falla la carga de talleres no muestra "0 talleres" y ofrece reintentar', async () => {
+    vi.mocked(obtenerTalleres).mockRejectedValueOnce(new Error('sin red'))
+    renderPagina()
+    await screen.findByText('Ciencia')
+    expect(await screen.findByRole('alert')).toHaveTextContent(/no pudimos cargar los talleres/i)
+    expect(screen.queryByText(/\d+ talleres?$/)).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+    await waitFor(() => expect(tarjeta('Ciencia').getByText('0 talleres')).toBeInTheDocument())
   })
 })

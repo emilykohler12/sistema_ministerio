@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as tipos from './types'
-import { destinatarioLabel, idDeRuta, NIVELES, nombreNivel } from './types'
+import { DESTINATARIOS, idDeRuta, NIVELES, nombreNivel } from './types'
 
 describe('NIVELES', () => {
   it('tiene los 5 niveles de la base con ids 1-5, nombre y orden', () => {
@@ -46,8 +46,20 @@ describe('exports retirados', () => {
   })
 })
 
-describe('destinatarioLabel', () => {
-  it('devuelve la etiqueta legible de un destinatario', () => {
-    expect(destinatarioLabel('comunidad')).toBe('Comunidad educativa')
+describe('DESTINATARIOS', () => {
+  it('tiene los 5 destinatarios de la base con ids 1-5 y su nombre', () => {
+    expect(DESTINATARIOS.map((d) => [d.id, d.nombre])).toEqual([
+      [1, 'Directivos'],
+      [2, 'Familias'],
+      [3, 'Estudiantes'],
+      [4, 'Docentes'],
+      [5, 'Comunidad educativa'],
+    ])
+  })
+})
+
+describe('exports retirados del dominio talleres', () => {
+  it('ya no existen destinatarioLabel', () => {
+    expect(tipos).not.toHaveProperty('destinatarioLabel')
   })
 })

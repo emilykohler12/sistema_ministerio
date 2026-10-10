@@ -33,6 +33,15 @@ Para no reportar falsos positivos:
 - La RLS por fila no restringe columnas: el admin puede cambiar columnas que la UI fija (por ejemplo `nivel_id`). Si un
   criterio dice "no se puede cambiar X", mirá si alcanza con la UI o si hace falta un `revoke update (col)` o un trigger.
 
+En talleres (2026-10-10) se repitió el olvido del `revoke execute` en las funciones de trigger nuevas
+(`taller_validar_categoria`, `categoria_validar_baja`), aunque `tocar_updated_at` sí lo tiene. No se puede explotar
+(`rpc/<fn trigger>` da 404), es menor. `guardar_taller` revoca a public y anon, pero no a service_role.
+
+**Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
+creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
+REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay
+que correr `db:reset`. No escribir por la API sin un plan de limpieza.
+
 **Why:** el criterio 6 pedía que nadie de la API escriba, y el contrato de auditoría es "NULL = sistema" con falla cerrada.
 Si solo se mira `has_table_privilege` sobre la tabla, el hueco de la secuencia no aparece.
 **How to apply:** en cada migración, consultá los privilegios reales con psql (`docker exec supabase_db_sistema_ministerio

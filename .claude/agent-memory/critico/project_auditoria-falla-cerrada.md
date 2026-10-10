@@ -23,6 +23,6 @@ igual que el error tragado.
   la respuesta a la ronda 2.
 - Las guardias (RLS, auditar, truncate) quedaron en ADR 0013. Cada transversal nueva que haya que repetir por tabla
   (por ejemplo `tocar_updated_at`, Fase B de auth-configuracion) pide su guardia `*_global.test.sql`, igual que esas.
-- El perfil `lectura` del crítico no puede correr `npm run test:db`: decirlo y criticar leyendo el código.
+- En la crítica de código el crítico puede correr `npm run test:db` (talleres fase A, 2026-10-10). Si el perfil no lo permite, decirlo.
 
 Relacionado: [[permisos-agentes-vs-spec]].

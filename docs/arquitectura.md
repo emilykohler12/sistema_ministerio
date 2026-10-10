@@ -21,9 +21,9 @@ los datos. Solo la descarga de talleres (y luego la gestión de usuarios) pasa p
 
 | Dominio | Qué contiene |
 |---|---|
-| `talleres` | Niveles, categorías, talleres y sus recursos. Catálogo público y gestión admin. **Niveles y categorías migrados a Supabase** (segundo corte, 0012): `types.ts` derivado (`NIVELES` es una constante con los 5 niveles de 0008, sin hook), `consultas.ts`, `errores.ts` (puro) y hooks de categorías con la clave única `['categorias']`. Talleres y recursos siguen en mock |
+| `talleres` | Niveles, categorías, talleres y sus destinatarios y etiquetas. Catálogo público y gestión admin. **Niveles, categorías y talleres migrados a Supabase** (0012; cortes 2 y 3): `types.ts` derivado (`NIVELES` y `DESTINATARIOS` son constantes con las filas fijas de la base, sin hook; `Taller` = fila + `categoria.nivel_id` + destinatarios + etiquetas), `consultas.ts` (solo supabase; talleres con embeds y escritura con la RPC `guardar_taller`), `errores.ts` y `filtrar.ts` (puros, sin imports de supabase: `DA001`/`DA002`, normalización y filtros del catálogo) y hooks sobre las claves únicas `['categorias']` y `['talleres']`. El portal lee solo publicados (`useCatalogo`, `useTallerPublicado`); el panel, todos (`useTalleres`, `useTaller`). Recursos (archivos, Storage, descarga) pendientes |
 | `normativas` | Normativas con número, año, etiquetas y archivo |
-| `descargas` | Modal de descarga. Hoy: escuela, localidad y rol. Destino (0010): cargo, localidad, institución del padrón |
+| `descargas` | Modal de descarga. Hoy: escuela, localidad y rol, sin pantalla que lo use hasta el corte de recursos (el detalle del taller ya no lo abre); `useNombresInstitucionSugeridos` vive aquí. Destino (0010): cargo, localidad, institución del padrón |
 | `dashboard` | KPIs y métricas para el administrador |
 | `configuracion` | Datos institucionales del sitio. **Migrado a Supabase** (primer corte, 0012): `types.ts` derivado, `consultas.ts`, hooks delgados; sin mocks. Logo pendiente (Storage) |
 | `auth` | Sesión del administrador con Supabase Auth (0005). `AuthContext` escucha solo `onAuthStateChange`; `esAdmin.ts` (puro, solo UX) exige `app_metadata.admin`; sesión en `sessionStorage`. Limpia la caché de React Query cuando cambia el usuario derivado (anon/admin), porque la RLS hace que los datos dependan del rol |
@@ -55,6 +55,12 @@ usuarios con `scripts/seed-usuarios.mjs`), `test:db` (pgTAP en `supabase/tests/`
 - `migrations/<ts>_niveles_categorias.sql`: `nivel_educativo` (5 filas fijas de 0008 con ids 1-5, solo SELECT, sin timestamps) y `categoria`
   (baja lógica con `activo`; nombre único por nivel sin distinguir mayúsculas, tildes ni espacios, también contra las inactivas;
   select `activo or es_admin()`, insert/update solo admin, sin delete).
+- `migrations/<ts>_talleres.sql`: enum `estado_taller`, `taller` (RLS: select `PUBLICADO` o admin; sin delete), `destinatario` (5 filas fijas,
+  solo SELECT), `etiqueta` (select público, nombre único normalizado) y los puentes `taller_destinatario` y `taller_etiqueta` (heredan la
+  visibilidad de `taller`). La RPC `guardar_taller` (security invoker, solo `authenticated`) guarda taller, destinatarios y etiquetas en
+  una transacción. Dos triggers sostienen el invariante "una categoría inactiva solo tiene talleres inactivos": `DA001` al dar de baja
+  una categoría con talleres en borrador o publicados (cantidad en `details`) y `DA002` al crear, publicar, reactivar o mover un taller
+  a una categoría inactiva. `categoria.nivel_id` ya no se puede modificar (grant de UPDATE por columna).
 - Cada corte de dominio agrega su migración, sus tablas con RLS, el trigger `auditar()`, el trigger
   `tocar_updated_at()` si la tabla tiene `updated_at`, y sus tests. Las guardias globales de `supabase/tests/`
   (`rls_global`, `auditoria_global`, `truncate_global`, `updated_at_global`) fallan si se olvida alguno.
@@ -62,15 +68,9 @@ usuarios con `scripts/seed-usuarios.mjs`), `test:db` (pgTAP en `supabase/tests/`
 ## Brechas entre el código y la definición v2
 
 - Integrar Supabase: la base transversal, el cliente (`src/shared/lib/supabase.ts`, variables `VITE_SUPABASE_URL` y
-  `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`) y el login real están listos; faltan tablas de dominio, Storage y la
+  `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`) y el login real están listos; faltan las tablas de normativas, recursos y padrón, Storage y la
   Edge Function `descargar-taller` (0004–0006). Recuperación de contraseña y cierre por inactividad (§5.2) pendientes.
-- Reglas taller↔categoría diferidas al corte de talleres (necesitan la tabla `taller`; definición §5.3 y §8.4), como triggers:
-  1. No se puede dar de baja una categoría con talleres no inactivos; el error informa cuántos tiene (por ejemplo en `detail`,
-     con un SQLSTATE propio).
-  2. No se puede publicar un taller en una categoría inactiva ni mover un taller publicado a una. Sin esta regla el portal
-     mostraría talleres cuya categoría `anon` no puede leer.
-- Quitar los contadores `descargas` de `Taller`; el portal debe filtrar talleres publicados.
 - Recursos: id, ruta/url, tamaño, orden, tipos PPTX/DOCX/ENLACE y límite de 50 MB (0009).
 - Formulario de descarga y modal con lista de enlaces (0006, 0010).
 - Nuevas pantallas: establecimientos, instituciones sin vincular, historial; luego usuarios.
-- Búsqueda: incluir descripción e ignorar tildes. Mejoras del dashboard (definición §5.4).
+- Búsqueda: en talleres ya incluye la descripción e ignora tildes (`filtrar.ts`); falta en normativas. Mejoras del dashboard (definición §5.4).

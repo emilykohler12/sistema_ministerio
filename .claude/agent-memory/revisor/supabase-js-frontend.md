@@ -35,6 +35,10 @@ el navegador en `notas.md` (por tercera vez).
 - El script de la API en el scratchpad (24 comprobaciones de RLS por REST) sirve de molde. Cubre `.single()` para
   PATCH bloqueados (406/PGRST116) y 23505/23514/22001/23503 por REST.
 
+En talleres (2026-10-10, cuarta vez) la verificación en el navegador volvió a quedar pendiente en `notas.md`. Las ramas de
+error de carga quedaron implementadas (`TallerFormPage` en edición), pero sin test. `CategoriasPage` muestra "0 talleres" si
+falla la carga. Para sacar cantidades de `details`, cuidado con `Number(null) === 0`: PostgREST manda `details: null`.
+
 Datos de la librería, para no reportar falsos positivos:
 - En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF
   y `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema de una edición por shell:

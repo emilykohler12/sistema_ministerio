@@ -10,7 +10,7 @@
 --   empezar (la migracion no siembra categorias).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(33);
 
 -- (RLS habilitado en las dos tablas: lo verifica la guardia rls_global.)
 
@@ -49,7 +49,9 @@ select results_eq($$select nombre::text from public.categoria order by nombre$$,
 select throws_ok(
   $$insert into public.categoria (nivel_id, nombre) values (1, 'Hack')$$,
   '42501', null, 'anon: INSERT en categoria da 42501');
-update public.categoria set descripcion = 'hack';
+-- Desde el corte talleres anon no tiene privilegio UPDATE sobre categoria: el UPDATE da 42501 (antes afectaba 0 filas).
+select throws_ok($$update public.categoria set descripcion = 'hack'$$,
+  '42501', null, 'anon: UPDATE en categoria da 42501 (sin privilegio)');
 delete from public.categoria;
 reset role;
 select results_eq(
