@@ -162,3 +162,74 @@ guardia de auditoría del punto 4, después la fase A y después la B. Lo del pu
 8. **Acepto.** Un corte con tres pasos: ADR + guardia, fase A y fase B.
 
 Sin desacuerdos de fondo.
+
+# Crítica de código
+
+Crítico de diseño, 2026-10-10, sobre `git diff main...HEAD` (fases A y B), `notas.md` y 0022. Leí la migración, `descargas`,
+`auditoria_global`, `recursos` y `storage_global.test.sql`, todo `src/features/descargas/`, `recursos/archivos.ts`, `ListaRecursos` y
+`TallerDetallePage`. No corrí `test:db` ni e2e.
+
+## Veredicto
+Hay mejoras, todas del frontend. **La parte SQL está bien así.**
+- La RPC cumple los puntos 2 y 5 de la crítica de la spec: normaliza por discriminador, la firma tiene los `default null` al final,
+  DA003 se comprueba en forma explícita y DA004 solo aplica a `PADRON`.
+- La política usa `objects.name` y cubre los cuatro casos en pgTAP. También prueba que un `authenticated` sin marca no ve nada.
+- La guardia de auditoría quedó con una sola consulta (`pg_temp.sin_cobertura()`) y una autoverificación por cada forma de cobertura
+  incompleta. Es más simple que la que había.
+
+No encontré riesgos de seguridad que salgan del diseño, más allá de las pérdidas que 0022 ya acepta.
+
+## Puntos
+
+### 1. `useDescargarTaller` mezcla una escritura con una lectura, y el modal lo compensa con un efecto, un ref y estado fuera de React (severidad: media)
+- **Problema:** la mutación hace dos cosas, registrar (escritura, una vez por taller) y firmar (lectura idempotente, en cada apertura).
+  Como la firma va dentro de una mutación, el código necesita varias piezas que solo existen para compensar eso:
+  - `datos?` es opcional en `Variables`, y si falta se lanza `throw new Error('Faltan los datos…')` en tiempo de ejecución;
+  - `Contenido` dispara la mutación en un `useEffect` con el ref `iniciado`, para que el modo estricto no la dispare dos veces;
+  - el render vuelve a leer `tallerRegistrado(taller.id)` (el `Set` y `sessionStorage`) para decidir si un error vino de la firma o del
+    registro. Esa decisión depende de estado que React no ve. Funciona solo porque el cambio de estado de la mutación provoca un nuevo render.
+- **Alternativa:** separar las dos operaciones.
+  - `useRegistrarDescarga()`: una mutación que solo llama a la RPC. En `onSuccess` hace `marcarTallerRegistrado`, y en `onError`
+    invalida por DA003 o DA004, igual que hoy.
+  - `useEnlacesDescarga(taller, habilitado)`: un `useQuery` con clave `['descargas', 'enlaces', taller.id]`, `enabled: habilitado`,
+    `gcTime: 0` (firma en cada apertura y no guarda URLs de 1 h) y `retry: 1` (una firma rechazada no tiene que esperar tres reintentos).
+  - `Contenido`: `const [registrado, setRegistrado] = useState(() => tallerRegistrado(taller.id))`.
+    - Si `registrado` es verdadero, muestra los estados de la query: cargando, error con `refetch` como "Reintentar", o la lista.
+    - Si no, muestra el formulario, y en el `onSuccess` del `mutate` hace `setRegistrado(true)`.
+- **Qué se gana:**
+  - Desaparecen el efecto, el ref, el `datos?` con su `throw` y la segunda lectura de `visita` en el render.
+  - "Reintentar solo vuelve a firmar" deja de depender de una convención y pasa a estar en la estructura: el botón llama a `refetch`, que
+    no puede registrar.
+  - La firma queda como una lectura más del proyecto (`useQuery`), como el resto de los datos.
+  - `visita.ts` y `consultas.ts` no cambian.
+  - Los tests del hook se parten en dos, más cortos.
+
+### 2. La normalización está en tres lugares, y en el envío se parsea dos veces (severidad: baja)
+- **Problema:** la regla "solo los campos de cada discriminador" la fija la RPC (criterio 6, con su pgTAP). El esquema la tolera a propósito
+  (acepta los campos residuales). Aun así, el modal tiene una tercera copia (`limpiar`). Además, `enviar` vuelve a correr
+  `esquemaDescarga.parse(valores)` sobre datos que el `zodResolver` ya validó, porque el `as unknown as Resolver<Valores>` le borra el tipo
+  de salida a `handleSubmit`.
+- **Alternativa:**
+  - Quitar `limpiar`. Un formulario recordado con un `cargo_otro` residual no hace daño: `safeParse` lo acepta, la RPC lo anula y, como
+    mucho, el campo vuelve precargado si el usuario elige "Otro".
+  - Tipar el formulario con los tres genéricos de react-hook-form 7.89, como `EstablecimientoFormPage` con `z.input`/`z.output`:
+    `useForm<Valores, unknown, DatosDescarga>`. Así `handleSubmit` entrega la salida del resolver ya parseada.
+  - Si el cast hace falta por los `setValue(..., undefined)`, dejarlo en un solo lugar, pero sin el segundo `parse`.
+- **Qué se gana:** la regla queda en un solo dueño (la base, probada en pgTAP), y desaparecen unas 15 líneas y un parse redundante.
+
+### 3. Dos piezas que ya existen o que alcanzaron el umbral para ir a `shared` (severidad: baja)
+- **`TIPOS_INSTITUCION` escrito a mano** en `esquema.ts`, cuando `db:types` ya genera `Constants.public.Enums.tipo_institucion` y
+  `TallerFormPage` usa ese molde (`z.enum(Constants.public.Enums.estado_taller)`). Con un enum agregado en la base, el esquema no se
+  enteraría. Alternativa: `z.enum(Constants.public.Enums.tipo_institucion, …)`. Se gana una línea y que la lista salga de la base, como pide 0012.
+  `CARGOS` sí tiene que ir a mano, porque es un CHECK (0015).
+- **`codigoDe(error)`:** en la crítica del padrón quedó descartado "sin una cuarta copia". Con `descargas`, la guarda
+  `typeof error === 'object' && … .code` ya está en cuatro dominios (talleres, normativas, establecimientos y descargas, y en talleres dos
+  veces). Alternativa: mover `codigoDe` a `src/shared/lib/` (junto a `codigosDeError` de `erroresStorage.ts`, o en un `errores.ts` hermano)
+  y usarlo en los cuatro `errores.ts`. Se gana una sola guarda, y los `errores.ts` quedan como tablas código → mensaje. Puede ir en un `chore`
+  aparte si no quieren tocar otros dominios en esta rama.
+
+## Respuesta
+
+1. **Acepto.** `useRegistrarDescarga` (mutación) y `useEnlacesDescarga` (query, `gcTime: 0`, `retry: 1`, sin refetch al recuperar el foco) pasan a ser dos hooks. "Reintentar" llama a `refetch`. Se van el efecto, el ref y el `throw`. Así las responsabilidades quedan separadas: la escritura no se reintenta sola y la lectura sí.
+2. **Acepto.** Se quita `limpiar`, porque la regla vive en la RPC y el pgTAP la prueba. El formulario se tipa con `useForm<Valores, unknown, DatosDescarga>`, sin parsear dos veces.
+3. **Acepto `Constants.public.Enums.tipo_institucion`. Rechazo mover `codigoDe` en esta rama:** toca cuatro dominios que no son de este corte. Va en un `chore/codigo-de-error` aparte.
