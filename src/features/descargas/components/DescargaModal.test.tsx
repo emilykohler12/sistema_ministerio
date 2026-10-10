@@ -1,11 +1,13 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { obtenerEstablecimientos, obtenerLocalidades } from '@/features/establecimientos/consultas'
 import type { Establecimiento } from '@/features/establecimientos/types'
 import { ETIQUETA_TIPO_RECURSO, type Recurso } from '@/features/recursos/types'
 import type { Taller } from '@/features/talleres/types'
-import { renderConProviders } from '@/test/utils'
+import { crearQueryClient, renderConProviders } from '@/test/utils'
 import { firmarEnlaces, registrarDescarga } from '../consultas'
 import { marcarTallerRegistrado } from '../visita'
 import { DescargaModal } from './DescargaModal'
@@ -414,17 +416,132 @@ describe('DescargaModal: errores', () => {
   })
 
   it('si falla la firma después de registrar muestra "Reintentar", que solo vuelve a firmar', async () => {
-    vi.mocked(firmarEnlaces).mockRejectedValueOnce(new Error('firma'))
+    // La consulta de enlaces reintenta una vez antes de dar el error (useEnlacesDescarga).
+    vi.mocked(firmarEnlaces).mockRejectedValueOnce(new Error('firma')).mockRejectedValueOnce(new Error('firma'))
     const user = userEvent.setup()
     abrir()
     await enviarSinInstitucion(user)
 
-    const reintentar = await screen.findByRole('button', { name: 'Reintentar' })
+    const reintentar = await screen.findByRole('button', { name: 'Reintentar' }, { timeout: 4000 })
     expect(registrarDescarga).toHaveBeenCalledTimes(1)
 
     await user.click(reintentar)
     expect(await screen.findByRole('link', { name: /Guía de huerta/ })).toBeInTheDocument()
     expect(registrarDescarga).toHaveBeenCalledTimes(1)
-    expect(firmarEnlaces).toHaveBeenCalledTimes(2)
+    expect(firmarEnlaces).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe('DescargaModal: accesibilidad', () => {
+  it('cada campo con error se describe con su mensaje (aria-describedby)', async () => {
+    const user = userEvent.setup()
+    abrir()
+    await user.click(enviar())
+    await screen.findAllByRole('alert')
+    expect(cargo()).toHaveAccessibleDescription('Elegí tu cargo')
+    expect(localidad()).toHaveAccessibleDescription('Elegí tu localidad')
+  })
+
+  it('el campo del nombre de la institución también se describe con su error', async () => {
+    const user = userEvent.setup()
+    abrir()
+    await user.selectOptions(cargo(), 'Docente')
+    await elegirLocalidad(user, 'Posadas')
+    await user.selectOptions(institucion(), 'Otra')
+    await user.click(enviar())
+    await screen.findAllByRole('alert')
+    expect(screen.getByLabelText('Nombre de la institución')).toHaveAccessibleDescription(
+      'Ingresá el nombre de la institución',
+    )
+  })
+})
+
+describe('DescargaModal: errores de carga y lista recargada', () => {
+  it('si fallan las localidades avisa', async () => {
+    vi.mocked(obtenerLocalidades).mockRejectedValue(new Error('sin red'))
+    abrir()
+    expect(await screen.findByText(/No pudimos cargar las localidades/)).toBeInTheDocument()
+    expect(localidad()).toHaveAccessibleDescription(/No pudimos cargar las localidades/)
+  })
+
+  it('si fallan los establecimientos avisa y todavía ofrece "Otra" y "Sin institución"', async () => {
+    vi.mocked(obtenerEstablecimientos).mockRejectedValue(new Error('sin red'))
+    const user = userEvent.setup()
+    abrir()
+    await within(localidad()).findByRole('option', { name: 'Posadas' })
+    await user.selectOptions(localidad(), 'Posadas')
+    expect(await screen.findByText(/No pudimos cargar las instituciones/)).toBeInTheDocument()
+    const nombres = within(institucion()).getAllByRole('option').map((o) => o.textContent)
+    expect(nombres).toContain('Otra')
+    expect(nombres).toContain('Sin institución')
+    expect(nombres).not.toContain('Escuela Activa Uno')
+  })
+
+  it('tras DA004, si la lista recargada ya no trae el establecimiento elegido, la institución queda vacía', async () => {
+    vi.mocked(registrarDescarga).mockRejectedValue({ code: 'DA004', message: 'x' })
+    const user = userEvent.setup()
+    abrir()
+    await user.selectOptions(cargo(), 'Docente')
+    await elegirLocalidad(user, 'Posadas')
+    await user.selectOptions(institucion(), 'Escuela Activa Uno')
+    vi.mocked(obtenerEstablecimientos).mockImplementation(async () => [])
+    await user.click(enviar())
+
+    expect(await screen.findByText('La institución elegida ya no está disponible')).toBeInTheDocument()
+    await waitFor(() => expect(institucion()).toHaveValue(''))
+    expect(within(institucion()).queryByRole('option', { name: 'Escuela Activa Uno' })).not.toBeInTheDocument()
+  })
+})
+
+describe('DescargaModal: cierre tras un taller no disponible', () => {
+  function abrirConCliente(taller: Taller) {
+    const client = crearQueryClient()
+    client.setQueryData(['talleres'], [])
+    const ui = (open: boolean) => (
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <DescargaModal taller={taller} open={open} onClose={() => {}} />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+    const { rerender } = render(ui(true))
+    return { client, cerrar: () => rerender(ui(false)) }
+  }
+
+  it('DA003 deja el mensaje a la vista y recién al cerrar invalida los talleres', async () => {
+    vi.mocked(registrarDescarga).mockRejectedValue({ code: 'DA003', message: 'x' })
+    const user = userEvent.setup()
+    const { client, cerrar } = abrirConCliente(unTaller())
+    await user.selectOptions(cargo(), 'Docente')
+    await elegirLocalidad(user, 'Posadas')
+    await user.selectOptions(institucion(), 'Sin institución')
+    await user.click(enviar())
+
+    expect(await screen.findByText('Este taller ya no está disponible')).toBeInTheDocument()
+    expect(client.getQueryState(['talleres'])?.isInvalidated).toBe(false)
+
+    cerrar()
+    expect(client.getQueryState(['talleres'])?.isInvalidated).toBe(true)
+  })
+
+  it('si un taller ya registrado se despublicó y la firma falla, el error permite cerrar y al cerrar invalida los talleres', async () => {
+    const taller = unTaller()
+    marcarTallerRegistrado(taller.id)
+    vi.mocked(firmarEnlaces).mockRejectedValue(new Error('Object not found'))
+    const { client, cerrar } = abrirConCliente(taller)
+
+    await screen.findByRole('button', { name: 'Reintentar' }, { timeout: 4000 })
+    expect(screen.getByRole('button', { name: 'Cerrar' })).toBeInTheDocument()
+    expect(client.getQueryState(['talleres'])?.isInvalidated).toBe(false)
+
+    cerrar()
+    expect(client.getQueryState(['talleres'])?.isInvalidated).toBe(true)
+  })
+
+  it('un cierre sin error no invalida los talleres', async () => {
+    const { client, cerrar } = abrirConCliente(unTaller())
+    await screen.findByLabelText('Cargo')
+    cerrar()
+    expect(client.getQueryState(['talleres'])?.isInvalidated).toBe(false)
   })
 })

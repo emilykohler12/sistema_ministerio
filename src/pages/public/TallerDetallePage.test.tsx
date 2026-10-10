@@ -2,6 +2,8 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { registrarDescarga } from '@/features/descargas/consultas'
+import { obtenerEstablecimientos, obtenerLocalidades } from '@/features/establecimientos/consultas'
 import { obtenerTalleres } from '@/features/talleres/consultas'
 import { ETIQUETA_TIPO_RECURSO, type Recurso } from '@/features/recursos/types'
 import type { Taller } from '@/features/talleres/types'
@@ -15,6 +17,18 @@ vi.mock('@/features/talleres/consultas', () => ({
   obtenerTalleres: vi.fn(),
   guardarTaller: vi.fn(),
   cambiarEstadoTaller: vi.fn(),
+}))
+
+vi.mock('@/features/descargas/consultas', () => ({
+  registrarDescarga: vi.fn(),
+  firmarEnlaces: vi.fn(),
+}))
+vi.mock('@/features/establecimientos/consultas', () => ({
+  obtenerLocalidades: vi.fn(),
+  obtenerEstablecimientos: vi.fn(),
+  obtenerEstablecimiento: vi.fn(),
+  crearEstablecimiento: vi.fn(),
+  actualizarEstablecimiento: vi.fn(),
 }))
 
 function taller(id: number, nombre: string, p: Partial<Taller> = {}): Taller {
@@ -88,6 +102,8 @@ function renderPagina(id: string) {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(obtenerTalleres).mockResolvedValue(datos)
+  vi.mocked(obtenerLocalidades).mockResolvedValue([{ id: 1, nombre: 'Posadas' }])
+  vi.mocked(obtenerEstablecimientos).mockResolvedValue([])
 })
 
 describe('TallerDetallePage', () => {
@@ -118,6 +134,29 @@ describe('TallerDetallePage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Descargar' }))
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
     expect(screen.getByLabelText('Cargo')).toBeInTheDocument()
+  })
+
+  it('si el taller deja de estar publicado al descargar, el mensaje se ve y la página pasa a "no encontrado" al cerrar el modal', async () => {
+    vi.mocked(registrarDescarga).mockRejectedValue({ code: 'DA003', message: 'no disponible' })
+    const user = userEvent.setup()
+    renderPagina('7')
+    await user.click(await screen.findByRole('button', { name: 'Descargar' }))
+    await user.selectOptions(screen.getByLabelText('Cargo'), 'Docente')
+    await within(screen.getByLabelText('Localidad')).findByRole('option', { name: 'Posadas' })
+    await user.selectOptions(screen.getByLabelText('Localidad'), 'Posadas')
+    await screen.findByRole('option', { name: 'Sin institución' })
+    await user.selectOptions(screen.getByLabelText('Institución'), 'Sin institución')
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Descargar' }))
+
+    // El mensaje queda a la vista: la página sigue mostrando el taller hasta que se cierre el modal.
+    expect(await screen.findByText('Este taller ya no está disponible')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Taller completo' })).toBeInTheDocument()
+
+    // Al cerrar se invalidan los talleres; el taller ya no está publicado y el modal no se vuelve a abrir.
+    vi.mocked(obtenerTalleres).mockResolvedValue(datos.filter((t) => t.id !== 7))
+    await user.click(screen.getByRole('button', { name: 'Cerrar' }))
+    expect(await screen.findByText('Taller no encontrado')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('un taller sin recursos no muestra la sección "Recursos"', async () => {

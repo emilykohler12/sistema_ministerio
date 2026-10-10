@@ -77,7 +77,7 @@ export function nombreDeDescarga(recurso: Pick<Recurso, 'nombre' | 'ruta_archivo
   return ext === null ? base : `${base}.${ext}`
 }
 
-const ID_YOUTUBE =/^[A-Za-z0-9_-]{11}$/
+const ID_YOUTUBE = /^[A-Za-z0-9_-]{11}$/
 const HOSTS_YOUTUBE = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com'])
 
 /** Id de 11 caracteres de un video de YouTube (watch, youtu.be, shorts o embed), o `null`. */

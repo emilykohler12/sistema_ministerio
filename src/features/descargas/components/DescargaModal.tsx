@@ -1,10 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Download, ExternalLink } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
-import { type Resolver, useForm } from 'react-hook-form'
+import { useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import type { z } from 'zod'
 import { useEstablecimientos, useLocalidades } from '@/features/establecimientos/hooks/useEstablecimientos'
 import { formatearTamanio } from '@/features/recursos/archivos'
 import { ETIQUETA_TIPO_RECURSO } from '@/features/recursos/types'
+import { CLAVE_TALLERES } from '@/features/talleres/hooks/useTalleres'
 import type { Taller } from '@/features/talleres/types'
 import { Badge } from '@/shared/components/ui/Badge'
 import { Button } from '@/shared/components/ui/Button'
@@ -13,10 +16,11 @@ import { FieldError } from '@/shared/components/ui/FieldError'
 import { Input } from '@/shared/components/ui/Input'
 import { Label } from '@/shared/components/ui/Label'
 import { Select } from '@/shared/components/ui/Select'
-import { mensajeDeErrorDescarga } from '../errores'
+import { esTallerNoDisponible, mensajeDeErrorDescarga } from '../errores'
 import { esquemaDescarga } from '../esquema'
-import { useDescargarTaller } from '../hooks/useDescargarTaller'
-import { CARGOS, type Cargo, type DatosDescarga, type EnlaceDescarga, type TipoInstitucion } from '../types'
+import { useEnlacesDescarga } from '../hooks/useEnlacesDescarga'
+import { useRegistrarDescarga } from '../hooks/useRegistrarDescarga'
+import { CARGOS, type DatosDescarga, type EnlaceDescarga } from '../types'
 import { formularioRecordado, recordarFormulario, tallerRegistrado } from '../visita'
 
 interface DescargaModalProps {
@@ -39,29 +43,36 @@ export function DescargaModal({ taller, open, onClose }: DescargaModalProps) {
 }
 
 function Contenido({ taller }: { taller: DescargaModalProps['taller'] }) {
-  const descarga = useDescargarTaller()
-  const { mutate } = descarga
-  const [yaRegistrado] = useState(() => tallerRegistrado(taller.id))
-  const iniciado = useRef(false)
-
+  const queryClient = useQueryClient()
+  const registrar = useRegistrarDescarga()
   // Un taller ya registrado en la visita no pide el formulario: se firman enlaces nuevos y se muestra la lista.
+  const [registrado, setRegistrado] = useState(() => tallerRegistrado(taller.id))
+  const enlaces = useEnlacesDescarga(taller, registrado)
+
+  // Si el taller dejó de estar disponible (DA003) o no se pudo firmar (por ejemplo, se despublicó después de registrarlo), los
+  // talleres se invalidan al cerrar y no antes: la página reemplazaría el detalle por "Taller no encontrado" y se llevaría
+  // el modal con el mensaje.
+  const errorDeTaller = esTallerNoDisponible(registrar.error) || (registrado && enlaces.isError)
+  const invalidarAlCerrar = useRef(false)
   useEffect(() => {
-    if (yaRegistrado && !iniciado.current) {
-      iniciado.current = true
-      mutate({ taller })
-    }
-  }, [yaRegistrado, mutate, taller])
+    if (errorDeTaller) invalidarAlCerrar.current = true
+  }, [errorDeTaller])
+  useEffect(
+    () => () => {
+      if (invalidarAlCerrar.current) void queryClient.invalidateQueries({ queryKey: CLAVE_TALLERES })
+    },
+    [queryClient],
+  )
 
-  if (descarga.isSuccess) return <ListaDescarga enlaces={descarga.data} />
-
-  // Si el taller ya figura como registrado, lo que falló fue la firma: reintentar solo vuelve a firmar.
-  if (yaRegistrado || tallerRegistrado(taller.id)) {
-    if (descarga.isError) {
+  if (registrado) {
+    if (enlaces.isSuccess) return <ListaDescarga enlaces={enlaces.data} />
+    // Reintentar solo vuelve a firmar: el registro ya está hecho.
+    if (enlaces.isError && !enlaces.isFetching) {
       return (
         <div className="space-y-4">
-          <FieldError id="descarga-error" message={mensajeDeErrorDescarga(descarga.error)} />
+          <FieldError id="descarga-error" message={mensajeDeErrorDescarga(enlaces.error)} />
           <div className="flex justify-end">
-            <Button type="button" onClick={() => mutate({ taller })}>
+            <Button type="button" onClick={() => void enlaces.refetch()}>
               Reintentar
             </Button>
           </div>
@@ -77,30 +88,20 @@ function Contenido({ taller }: { taller: DescargaModalProps['taller'] }) {
 
   return (
     <Formulario
-      pendiente={descarga.isPending}
-      error={descarga.isError ? descarga.error : null}
-      onEnviar={(datos) => mutate({ taller, datos })}
+      pendiente={registrar.isPending}
+      error={registrar.isError ? registrar.error : null}
+      onEnviar={(datos) => registrar.mutate({ tallerId: taller.id, datos }, { onSuccess: () => setRegistrado(true) })}
     />
   )
 }
 
-// El estado del formulario admite lo que todavía no se eligió; el esquema decide si se puede enviar.
-type Valores = Omit<DatosDescarga, 'cargo' | 'localidad_id' | 'institucion_tipo'> & {
-  cargo?: Cargo
-  localidad_id?: number
-  institucion_tipo?: TipoInstitucion
-}
+// Lo que el esquema recibe. Mientras no se elige, `cargo`, `localidad_id` e `institucion_tipo` están ausentes (`undefined`).
+type Valores = z.input<typeof esquemaDescarga>
 
-// Deja solo lo que corresponde a cada discriminador (la RPC igual lo anula; así se recuerda y se envía limpio).
-function limpiar(datos: DatosDescarga): DatosDescarga {
-  return {
-    cargo: datos.cargo,
-    cargo_otro: datos.cargo === 'Otro' ? datos.cargo_otro : null,
-    localidad_id: datos.localidad_id,
-    institucion_tipo: datos.institucion_tipo,
-    establecimiento_id: datos.institucion_tipo === 'PADRON' ? datos.establecimiento_id : null,
-    institucion_otra: datos.institucion_tipo === 'OTRA' ? datos.institucion_otra : null,
-  }
+// Ids de los avisos que describen un campo (solo los presentes), o `undefined` si no hay ninguno.
+function describedBy(...ids: (string | false | undefined)[]): string | undefined {
+  const presentes = ids.filter((id): id is string => !!id)
+  return presentes.length > 0 ? presentes.join(' ') : undefined
 }
 
 function Formulario({
@@ -124,8 +125,8 @@ function Formulario({
     setValue,
     watch,
     formState: { errors, isSubmitted },
-  } = useForm<Valores>({
-    resolver: zodResolver(esquemaDescarga) as unknown as Resolver<Valores>,
+  } = useForm<Valores, unknown, DatosDescarga>({
+    resolver: zodResolver(esquemaDescarga),
     defaultValues: inicial ?? {},
   })
 
@@ -139,27 +140,36 @@ function Formulario({
   // El admin también ve los inactivos por la RLS: elegirlos daría DA004.
   const activos = establecimientos.data?.filter((e) => e.activo)
 
+  // Vaciar una elección: el esquema exige el campo, así que "sin elegir" es `undefined` aunque el tipo de entrada no lo diga.
+  const vaciar = useCallback(
+    (campo: 'localidad_id' | 'institucion_tipo', opciones?: { shouldValidate: boolean }) => {
+      setValue(campo, undefined as never, opciones)
+    },
+    [setValue],
+  )
+
   // Si el establecimiento elegido ya no está en la lista (se dio de baja: DA004 recarga la lista), se vacía la elección.
   useEffect(() => {
     if (activos && tipo === 'PADRON' && !activos.some((e) => e.id === establecimientoId)) {
-      setValue('institucion_tipo', undefined)
+      vaciar('institucion_tipo')
       setValue('establecimiento_id', null)
     }
-  }, [activos, tipo, establecimientoId, setValue])
+  }, [activos, tipo, establecimientoId, setValue, vaciar])
 
   const validar = { shouldValidate: isSubmitted }
 
   function cambiarLocalidad(valor: string) {
-    setValue('localidad_id', valor === '' ? undefined : Number(valor), validar)
+    if (valor === '') vaciar('localidad_id', validar)
+    else setValue('localidad_id', Number(valor), validar)
     // Las instituciones son de una localidad: al cambiarla se vacía la elección.
-    setValue('institucion_tipo', undefined)
+    vaciar('institucion_tipo')
     setValue('establecimiento_id', null)
     setValue('institucion_otra', null)
   }
 
   function cambiarInstitucion(valor: string) {
     if (valor === '') {
-      setValue('institucion_tipo', undefined, validar)
+      vaciar('institucion_tipo', validar)
       setValue('establecimiento_id', null)
     } else if (valor === 'OTRA' || valor === 'SIN_INSTITUCION') {
       setValue('institucion_tipo', valor, validar)
@@ -173,8 +183,8 @@ function Formulario({
   const valorInstitucion = tipo === 'PADRON' ? String(establecimientoId ?? '') : (tipo ?? '')
   const errorInstitucion = errors.institucion_tipo?.message ?? errors.establecimiento_id?.message
 
-  function enviar(valores: Valores) {
-    const datos = limpiar(esquemaDescarga.parse(valores))
+  // La RPC anula los campos que no corresponden al discriminador: acá se envía lo que entregó el resolver.
+  function enviar(datos: DatosDescarga) {
     recordarFormulario(datos)
     onEnviar(datos)
   }
@@ -187,7 +197,13 @@ function Formulario({
 
       <div>
         <Label htmlFor={idCargo}>Cargo</Label>
-        <Select id={idCargo} error={!!errors.cargo} defaultValue="" {...register('cargo')}>
+        <Select
+          id={idCargo}
+          error={!!errors.cargo}
+          aria-describedby={describedBy(errors.cargo && `${idCargo}-error`)}
+          defaultValue=""
+          {...register('cargo')}
+        >
           <option value="">Elegí tu cargo</option>
           {CARGOS.map((c) => (
             <option key={c} value={c}>
@@ -201,7 +217,12 @@ function Formulario({
       {cargo === 'Otro' && (
         <div>
           <Label htmlFor={idCargoOtro}>Especificá tu cargo</Label>
-          <Input id={idCargoOtro} error={!!errors.cargo_otro} {...register('cargo_otro')} />
+          <Input
+            id={idCargoOtro}
+            error={!!errors.cargo_otro}
+            aria-describedby={describedBy(errors.cargo_otro && `${idCargoOtro}-error`)}
+            {...register('cargo_otro')}
+          />
           <FieldError id={`${idCargoOtro}-error`} message={errors.cargo_otro?.message} />
         </div>
       )}
@@ -211,6 +232,10 @@ function Formulario({
         <Select
           id={idLocalidad}
           error={!!errors.localidad_id}
+          aria-describedby={describedBy(
+            errors.localidad_id && `${idLocalidad}-error`,
+            localidades.isError && `${idLocalidad}-carga`,
+          )}
           value={localidadId === undefined ? '' : String(localidadId)}
           onChange={(e) => cambiarLocalidad(e.target.value)}
         >
@@ -232,6 +257,10 @@ function Formulario({
         <Select
           id={idInstitucion}
           error={!!errorInstitucion}
+          aria-describedby={describedBy(
+            errorInstitucion && `${idInstitucion}-error`,
+            establecimientos.isError && `${idInstitucion}-carga`,
+          )}
           disabled={localidadId === undefined}
           value={valorInstitucion}
           onChange={(e) => cambiarInstitucion(e.target.value)}
@@ -267,7 +296,12 @@ function Formulario({
       {tipo === 'OTRA' && (
         <div>
           <Label htmlFor={idInstitucionOtra}>Nombre de la institución</Label>
-          <Input id={idInstitucionOtra} error={!!errors.institucion_otra} {...register('institucion_otra')} />
+          <Input
+            id={idInstitucionOtra}
+            error={!!errors.institucion_otra}
+            aria-describedby={describedBy(errors.institucion_otra && `${idInstitucionOtra}-error`)}
+            {...register('institucion_otra')}
+          />
           <FieldError id={`${idInstitucionOtra}-error`} message={errors.institucion_otra?.message} />
         </div>
       )}

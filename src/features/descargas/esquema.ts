@@ -1,7 +1,6 @@
 import { z } from 'zod'
+import { Constants } from '@/shared/types/database'
 import { CARGOS } from './types'
-
-const TIPOS_INSTITUCION = ['PADRON', 'OTRA', 'SIN_INSTITUCION'] as const
 
 const MAXIMO_CARGO_OTRO = 100
 const MAXIMO_INSTITUCION_OTRA = 200
@@ -19,7 +18,7 @@ export const esquemaDescarga = z
       .number({ error: 'Elegí tu localidad' })
       .int('Elegí tu localidad')
       .positive('Elegí tu localidad'),
-    institucion_tipo: z.enum(TIPOS_INSTITUCION, { error: 'Elegí tu institución' }),
+    institucion_tipo: z.enum(Constants.public.Enums.tipo_institucion, { error: 'Elegí tu institución' }),
     establecimiento_id: z.number().int().positive().nullish(),
     institucion_otra: z.string().trim().nullish(),
   })
