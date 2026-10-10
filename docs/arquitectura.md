@@ -26,6 +26,7 @@ los datos. Solo la descarga de talleres (y luego la gestión de usuarios) pasa p
 | `normativas` | Normativas con número, año, etiquetas y un PDF en el bucket **público** `normativas`. **Migrado a Supabase** (0012; corte normativas): `types.ts` derivado (`Normativa` = fila + `etiqueta: Etiqueta[]` + `url` pública), `archivos.ts` (puro: `validarPdf`, tope de 20 MiB, `rutaNueva()` = `<uuid>.pdf`), `consultas.ts` (solo supabase: `getPublicUrl`, RPC `guardar_normativa` y `contar_descarga_normativa`), `secuencias.ts` (alta, reemplazo con la `ruta_anterior` que devuelve la RPC y baja, según 0016), `errores.ts` (23505, 413 y 415), `filtrar.ts` (título, número, descripción y etiquetas, sin tildes; orden año desc e `id` desc) y hooks sobre `['normativas']`. `useContarDescarga` cuenta una vez por normativa en la visita (`sessionStorage`), sin esperar la respuesta. `components/EnlaceDescarga` abre el PDF en otra pestaña |
 | `etiquetas` | Catálogo compartido por talleres y normativas: `types.ts`, `consultas.ts` (lee la tabla `etiqueta`) y `useEtiquetas` (`['etiquetas']`), que alimenta las sugerencias de ambos formularios. Los guardados de taller y de normativa invalidan esa clave |
 | `descargas` | Modal de descarga. Hoy: escuela, localidad y rol, sin pantalla que lo use hasta el corte descargas (el detalle del taller ya no lo abre); `useNombresInstitucionSugeridos` vive aquí. Destino (0010): cargo, localidad, institución del padrón |
+| `establecimientos` | Padrón de escuelas por localidad. **Fase A migrada a Supabase** (0010, 0012; corte padrón): `types.ts` derivado (`Localidad` = fila, 79 municipios; `Establecimiento` = fila; `DatosEstablecimiento`, `CambiosEstablecimiento`), `consultas.ts` (solo supabase; los establecimientos se piden por localidad por el tope de 1000 filas de PostgREST), `errores.ts` (puro: distingue `esCueDuplicado` de `esNombreDuplicado` por el nombre de la constraint dentro de `message`, porque PostgREST no expone `constraint_name`), `filtrar.ts` (nombre o CUE, sin tildes) y hooks: `useLocalidades` (`['localidades']`, `staleTime: Infinity`), `useEstablecimientos(localidadId)` (`['establecimientos', id]`), `useEstablecimiento(id)` (`['establecimientos', 'detalle', id]`) y mutaciones que invalidan `['establecimientos']`. El panel (`pages/admin/establecimientos`) elige la localidad por `?localidad=<id>`. Sin carga masiva (fase B) ni consumo público todavía |
 | `dashboard` | KPIs y métricas para el administrador |
 | `configuracion` | Datos institucionales del sitio. **Migrado a Supabase** (primer corte, 0012): `types.ts` derivado, `consultas.ts`, hooks delgados; sin mocks. Logo pendiente (Storage) |
 | `auth` | Sesión del administrador con Supabase Auth (0005). `AuthContext` escucha solo `onAuthStateChange`; `esAdmin.ts` (puro, solo UX) exige `app_metadata.admin`; sesión en `sessionStorage`. Limpia la caché de React Query cuando cambia el usuario derivado (anon/admin), porque la RLS hace que los datos dependan del rol |
@@ -33,7 +34,7 @@ los datos. Solo la descarga de talleres (y luego la gestión de usuarios) pasa p
 ## Rutas
 
 - Públicas: `/`, `/talleres`, `/talleres/:id`, `/normativas`, `/contacto`
-- Admin: `/admin/login`, `/admin` (dashboard), `/admin/normativas`, `/admin/configuracion` y el árbol de talleres, con ids numéricos
+- Admin: `/admin/login`, `/admin` (dashboard), `/admin/normativas`, `/admin/configuracion`, `/admin/establecimientos` (`?localidad=<id>`), `/admin/establecimientos/nuevo`, `/admin/establecimientos/:id/editar` y el árbol de talleres, con ids numéricos
   (un id inválido o inexistente muestra "no encontrado"):
   `/admin/talleres` (niveles) → `/admin/talleres/:nivelId` (categorías) → `/admin/talleres/:nivelId/:categoriaId` (talleres), más
   `/admin/talleres/:nivelId/nueva-categoria` (alta; edición con `?editar=<id>`) y `.../:categoriaId/nuevo`, `.../:tallerId/editar` y
@@ -76,6 +77,10 @@ usuarios con `scripts/seed-usuarios.mjs`), `test:db` (pgTAP en `supabase/tests/`
   update (`auditar()` y `tocar_updated_at()`) llevan un `WHEN` que omite el UPDATE que solo cambia el contador. RPC `guardar_normativa` (invoker,
   devuelve `id` y `ruta_anterior` solo si se reemplazó el archivo) y `contar_descarga_normativa` (security definer, `anon`). Bucket público
   `normativas` (20 MiB, solo PDF) con escritura solo del admin.
+- `migrations/<ts>_padron.sql`: `localidad` (79 municipios de `docs/specs/padron/localidades.md` con ids 1-79 en orden alfabético, nombre único normalizado, sin timestamps,
+  solo SELECT) y `establecimiento` (baja lógica con `activo`; `cue` opcional con `establecimiento_cue_key` y CHECK de solo dígitos; nombre único por localidad sin distinguir
+  mayúsculas, tildes ni espacios con el índice `establecimiento_localidad_nombre_uniq`, también contra los inactivos; select `activo or es_admin()`, insert/update solo admin,
+  sin delete; grant de UPDATE por columna sobre `(cue, nombre, localidad_id, activo)`). Los nombres de la constraint y del índice son contrato con `errores.ts`.
 - Cada corte de dominio agrega su migración, sus tablas con RLS, el trigger `auditar()`, el trigger
   `tocar_updated_at()` si la tabla tiene `updated_at`, y sus tests. Las guardias globales de `supabase/tests/`
   (`rls_global`, `auditoria_global`, `truncate_global`, `updated_at_global`) fallan si se olvida alguno. `storage_global` exige que toda
@@ -86,7 +91,7 @@ usuarios con `scripts/seed-usuarios.mjs`), `test:db` (pgTAP en `supabase/tests/`
 ## Brechas entre el código y la definición v2
 
 - Integrar Supabase: la base transversal, el cliente (`src/shared/lib/supabase.ts`, variables `VITE_SUPABASE_URL` y
-  `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`) y el login real están listos; faltan las tablas del padrón, el bucket del logo y la
+  `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`) y el login real están listos; faltan la carga del padrón por script (fase B, espera la muestra C-08), el bucket del logo y la
   Edge Function `descargar-taller` (0004–0006). Recuperación de contraseña y cierre por inactividad (§5.2) pendientes.
 - Recursos: faltan la descarga (enlaces firmados públicos, Edge Function) y el registro de descargas. Limpieza de archivos huérfanos en Storage
   (hoy solo un `console.warn`; vale también para normativas), subida reanudable (TUS) y barra de progreso. La baja y el reemplazo de un recurso

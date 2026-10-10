@@ -55,6 +55,12 @@ probablemente se repitan en padrón y logo:
 - La baja borra la ruta de Storage **de la caché** (`normativa.ruta_archivo`) y no la que devuelve el DELETE. Pedí
   `.delete().select('ruta_archivo').single()`. `recursos` tiene el mismo patrón.
 
+En padrón (fase A, 2026-10-10, séptima vez) la verificación en el navegador ni siquiera figura en `notas.md`. El resto salió bien. Huecos nuevos:
+- `idDeRuta` acepta cualquier entero seguro: un id fuera del rango de `int4` o `smallint` hace que PostgREST responda `400 22003`, y la pantalla muestra
+  `ErrorFallback` en lugar de "no encontrado" (criterio de "id inválido o inexistente"). Es transversal a todas las pantallas con `:id`. Se prueba con un GET anon
+  de solo lectura `?id=eq.99999999999`.
+- Otra vez, la rama `isError` de una query **secundaria** (`useLocalidades`) está implementada pero no tiene test. Solo se prueba la query principal.
+
 Datos de la librería, para no reportar falsos positivos:
 - En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF
   y `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema de una edición por shell:

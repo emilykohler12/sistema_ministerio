@@ -37,6 +37,14 @@ const NormativasAdminPage = lazy(() =>
 const NormativaFormPage = lazy(() =>
   import('@/pages/admin/normativas/NormativaFormPage').then((m) => ({ default: m.NormativaFormPage })),
 )
+const EstablecimientosPage = lazy(() =>
+  import('@/pages/admin/establecimientos/EstablecimientosPage').then((m) => ({ default: m.EstablecimientosPage })),
+)
+const EstablecimientoFormPage = lazy(() =>
+  import('@/pages/admin/establecimientos/EstablecimientoFormPage').then((m) => ({
+    default: m.EstablecimientoFormPage,
+  })),
+)
 const ConfiguracionPage = lazy(() =>
   import('@/pages/admin/ConfiguracionPage').then((m) => ({ default: m.ConfiguracionPage })),
 )
@@ -99,6 +107,17 @@ const router = createBrowserRouter([
       },
       { path: 'normativas', element: <NormativasAdminPage />, handle: { title: 'Normativas' } },
       { path: 'normativas/nueva', element: <NormativaFormPage />, handle: { title: 'Nueva normativa' } },
+      { path: 'establecimientos', element: <EstablecimientosPage />, handle: { title: 'Establecimientos' } },
+      {
+        path: 'establecimientos/nuevo',
+        element: <EstablecimientoFormPage />,
+        handle: { title: 'Nuevo establecimiento' },
+      },
+      {
+        path: 'establecimientos/:id/editar',
+        element: <EstablecimientoFormPage />,
+        handle: { title: 'Editar establecimiento' },
+      },
       { path: 'configuracion', element: <ConfiguracionPage />, handle: { title: 'Configuración' } },
     ],
   },
