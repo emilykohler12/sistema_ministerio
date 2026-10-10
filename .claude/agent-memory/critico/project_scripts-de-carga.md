@@ -20,6 +20,15 @@ En la crítica de la spec `padron` (2026-10-10, primer script de carga con servi
 - Hay un patrón de alcance que se repite: specs que construyen el parser de un formato externo todavía sin muestra (C-08). Propuse dejarlo
   para una fase B, cuando llegue el archivo real.
 
+En la crítica del código de la fase B (2026-10-10) apareció lo siguiente:
+- **Codificación del CSV:** `readFileSync(f, 'utf8')` no falla: cambia los bytes inválidos por U+FFFD (verificado). Excel en español
+  exporta "CSV (delimitado por comas)" en Windows-1252 y con `;`, y los nombres con `N°` pasan la validación rotos. La solución
+  verificada es `new TextDecoder('utf-8', { fatal: true })`, que además saca el BOM.
+- **Paginación con `range`:** cortar cuando `data.length < PAGINA` depende del `max_rows` del servidor (local 1000; en la nube se
+  configura en el dashboard). Conviene cortar cuando llega una página vacía.
+- **Guardia local copiada:** `supabase status` + `esUrlLocal` + `SERVICE_ROLE_KEY ?? SECRET_KEY` quedaron repetidos en
+  `seed-usuarios.mjs` y en `importar-padron.ts`. Ver si el próximo script (logo) suma una tercera copia.
+
 **Why:** los scripts quedan fuera de las redes que ya tiene el frontend (tsc, hooks de Bash, RLS, porque usan service_role), y sus
 fallas aparecen recién cuando el usuario los corre contra la nube.
 

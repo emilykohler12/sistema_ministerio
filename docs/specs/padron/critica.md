@@ -167,3 +167,82 @@ Sin hallazgos que aplicar. Coincido con los tres descartes:
 - el orden por `nombre` es el que quiere la UI, más allá de cómo queden los ids.
 
 El CHECK redundante con el largo del `varchar` queda como documentación.
+
+# Crítica del código (fase B)
+
+Crítico de diseño, 2026-10-10, sobre la fase B sin commitear (contra `9cc0e48`): `scripts/lib/entorno.ts`, `scripts/padron/*`,
+`scripts/importar-padron.ts`, `seed-usuarios.mjs`, `proteger-bash.mjs`, `tsconfig.node.json`, `package.json` y los tests. No ejecuté nada
+contra la base: lo **verificado** lo probé con Node 24 en el scratchpad.
+
+## Veredicto
+Hay mejoras, todas chicas. La Respuesta de la crítica de la spec (puntos 2-4) quedó aplicada: el nombre se limpia antes de comparar y de
+guardar, el 23505 rechaza la fila, el destino remoto exige `--confirmar=<host>`, el script está en `proteger-bash` y `scripts/` entra al
+typecheck. El plan es puro y conservador, y escribir fila por fila es lo correcto. Con la clave remota ausente o sin `--confirmar`, el script
+no puede escribir en la nube por accidente. Lo que encontré es un riesgo de datos al leer el archivo y una guardia local que quedó copiada.
+
+## Puntos
+
+### 1. Un CSV exportado desde Excel en Windows-1252 se escribe con los caracteres rotos (severidad: media)
+- **Problema:** `readFileSync(csv, 'utf8')` no falla con bytes que no son UTF-8: los cambia por U+FFFD. **Verificado:** `Oberá` en
+  Windows-1252 se lee como `Ober�`. Ese es justo el formato de "CSV (delimitado por comas)" de Excel en español, que además usa `;`, el caso
+  que `detectarSeparador` contempla. Las localidades con tilde terminan rechazadas, pero los nombres pasan la validación. Casi todos llevan
+  `N°` (0xB0 en 1252), así que en localidades sin tilde, como Posadas o Eldorado, se darían de alta como `Escuela N� 1`.
+  La idempotencia lo arregla en una segunda corrida con el archivo bien codificado, pero en la nube queda un lote de nombres rotos
+  auditados, que se ven en el formulario de descarga hasta corregirlos.
+- **Propuesta:** en `importar-padron.ts`, `new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(csv))`, con un `catch` que diga
+  "el archivo no es UTF-8: exportalo como «CSV UTF-8» o convertilo". **Verificado:** con `fatal` lanza `TypeError` ante el 0xE1 suelto, y
+  además saca el BOM (`"﻿cue"` → `"cue"`). El `startsWith` del BOM de `parsearCsv` puede quedar, porque es puro y ya tiene sus tests.
+- **Por qué:** una línea, sin dependencias. El archivo mal codificado se corta antes de leer la base, en vez de detectarse después de
+  escribir. Es el error más probable con la muestra real (C-08).
+
+### 2. La guardia "API_URL local" quedó copiada en los dos scripts (severidad: baja)
+- **Problema:** la crítica de la spec (punto 3) proponía compartir `leerEstado` y `esUrlLocal`, y solo se compartió `esUrlLocal`.
+  `conectarLocal` en `importar-padron.ts` repite `leerEstado` de `seed-usuarios.mjs`: el `execFileSync('npx', ['supabase', 'status', ...])`,
+  `SERVICE_ROLE_KEY ?? SECRET_KEY`, el `throw` si la URL no es local y el de la clave faltante, con los mismos mensajes. Es la defensa que
+  impide escribir en la nube por la rama local. Si la CLI cambia otra vez el nombre de la clave (ya pasó, de ahí el `??`), hay que
+  acordarse de corregirlo en dos lugares. Además, `--confirmar` lo interpretan `hostConfirmado` (en `entorno.ts`) y `leerArgumentos`, que
+  lo salta.
+- **Propuesta:** agregar en `scripts/lib/` un `supabaseLocal(): { url, clave }` con el status y las dos guardias, y que lo usen
+  `conectarLocal` y el `main` de `seed-usuarios.mjs`. Puede ir en otro archivo para que `entorno.ts` siga siendo puro. Opcional:
+  `leerArgumentos` devuelve también `confirmar`, y `resolverDestino(env, confirmar)` recibe el valor en lugar de `args`. Así un solo
+  lugar parsea los flags.
+- **Por qué:** la guardia de seguridad local queda escrita una vez, y suma unas 15 líneas menos.
+
+### 3. `traerTodo` corta cuando una página trae menos de 1000 filas, y eso depende de `max_rows` (severidad: baja)
+- **Problema:** `if (data.length < PAGINA) return` supone que el servidor devuelve 1000 filas por página. Local está en 1000
+  (`supabase/config.toml`), pero en la nube `max_rows` se configura desde el dashboard. Si queda más bajo (500, por ejemplo), la primera
+  página trae 500 filas y el script cree que no hay más. `existentes` llega truncado y no da error. Los CUE que ya existen se planifican
+  como altas: el 23505 los rechaza, pero sus cambios de nombre o de localidad se pierden y la simulación informa cosas falsas. Encima,
+  el criterio 2 ("la segunda corrida da 0 altas") deja de cumplirse justo en la nube.
+- **Propuesta:** cortar cuando llega una página vacía (`if (!data?.length) return filas`) y avanzar `desde` con `data.length`, en lugar
+  de con `PAGINA`. Cuesta una request más.
+- **Por qué:** el plan ya no depende de una configuración del servidor que no está en el repo. Son dos líneas.
+
+### Lo que está bien así (sin cambios)
+- **`proteger-bash`:** una regex sobre el comando completo, sin separar por segmentos, es lo que corresponde
+  ([[hooks-bash-regex-cruda]]). Se la puede evadir a propósito (`--confir""mar`, argumentos desde un archivo con `$(cat ...)`), pero
+  el comentario del bloque `SUPABASE_REMOTO` ya acepta ese límite: la barrera real es que el contenedor no tenga la clave remota. Para la
+  persona: pasar `SUPABASE_URL` y la clave en la misma línea del comando y no exportarlos en el perfil, porque la shell de los agentes
+  carga ese perfil. Aunque quedaran exportados, al agente le faltaría el `--confirmar`, que el hook bloquea: es un segundo requisito.
+- **Ignorar `VITE_SUPABASE_URL` y `.env.local`:** bien. Un `.env.local` que apunte a la nube no cambia el destino del script.
+- **Parser propio en lugar de `csv-parse`:** son 70 líneas con tests. Una dependencia ahorraría poco, y el formato real todavía puede
+  cambiar (XLSX).
+- **Choques contra la base tal cual, sin simular el estado final:** es conservador, y una segunda corrida resuelve el caso. Bien
+  documentado en `notas.md`.
+
+## Respuesta (fase B)
+
+1. **Acepto.** Leer con `TextDecoder('utf-8', { fatal: true })` y abortar antes de tocar la base. El revisor encontró lo mismo.
+2. **Acepto** `supabaseLocal()` en `scripts/lib/`, compartido por los dos scripts. Es la guardia de seguridad, así que conviene una sola copia.
+   No acepto lo opcional sobre `leerArgumentos`, porque no cambia el comportamiento.
+3. **Acepto**: cortar con una página vacía.
+
+Además, de `revision-fase-b.md` se aplican:
+- error con una comilla sin cerrar;
+- `Object.hasOwn` en las búsquedas;
+- con `--aplicar`, el resumen informa lo escrito.
+
+Se descartan:
+- esquivar el hook a propósito (límite aceptado);
+- la diferencia `Ø`/`Æ` entre `normalizar` y `unaccent` (termina en un rechazo 23505, sin pérdida);
+- los tests automáticos del orquestador (se verifica corriéndolo).

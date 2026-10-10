@@ -10,5 +10,5 @@ Patrones recurrentes del proyecto. La mantiene el subagente; se revisa en los PR
 - [Trampas Postgres en RPC y triggers](project_postgres-rpc-triggers-trampas.md): alta al vuelo, for share, execute anidado, WHEN con OLD en trigger combinado, args no nullable, update concurrente, RETURNS TABLE no nula, ruta "anterior" al conservar, collation, varchar antes que CHECK
 - [Patrones del frontend en cortes](project_frontend-cortes-patrones.md): isLoading vs isPending, enums vía Constants, mensajes repetidos, escaleras de ruta, imports entre dominios (a shared), ruta de caché en bajas
 - [Trampas de Supabase Storage](project_supabase-storage-trampas.md): subida, contentType ignorado, trigger BEFORE vs RLS, remove() mudo, download=attachment, guardia de escritura por es_admin
-- [Scripts de carga (Node + service_role)](project_scripts-de-carga.md): scripts/ fuera de tsconfig, imports .ts, trim vs btrim, --confirmar pasable por agentes, 23505 por nombre
+- [Scripts de carga (Node + service_role)](project_scripts-de-carga.md): tsconfig, imports .ts, trim vs btrim, --confirmar, 23505, UTF-8 fatal, paginación por max_rows, guardia local copiada
 - [Archivo de crítica fijo](feedback_archivo-de-critica.md): solo puedo escribir critica.md; si piden otro nombre, agrego una sección ahí y aviso

@@ -47,6 +47,11 @@ tests (Vitest + jsdom + Testing Library, setup en `src/test/`), hooks y Claude C
 Supabase local corre con Docker-in-Docker (0011): `npm run db:start`, `db:reset` (migraciones + seed de
 usuarios con `scripts/seed-usuarios.mjs`), `test:db` (pgTAP en `supabase/tests/`) y `db:types`
 (genera `src/shared/types/database.ts`, no se edita a mano).
+Carga del padrón (0019): `npm run padron:importar -- <csv> [--aplicar]` (`scripts/importar-padron.ts`). Sin `--aplicar` simula. Lee el CSV
+(`scripts/padron/csv.ts`), arma el plan puro (`planificar.ts`: altas, cambios y rechazos por fila; `equivalencias.ts` para localidades) y escribe con
+service_role. Por defecto apunta al Supabase local; un destino remoto exige `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `--confirmar=<host>`
+(`scripts/lib/entorno.ts`, que también usa `seed-usuarios.mjs`), y `proteger-bash` lo bloquea para los agentes. Los scripts en TypeScript corren con
+`node` directo (type stripping de Node 24) y `tsconfig.node.json` los tipa.
 
 ## Base de datos (`supabase/`)
 
@@ -91,7 +96,7 @@ usuarios con `scripts/seed-usuarios.mjs`), `test:db` (pgTAP en `supabase/tests/`
 ## Brechas entre el código y la definición v2
 
 - Integrar Supabase: la base transversal, el cliente (`src/shared/lib/supabase.ts`, variables `VITE_SUPABASE_URL` y
-  `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`) y el login real están listos; faltan la carga del padrón por script (fase B, espera la muestra C-08), el bucket del logo y la
+  `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`) y el login real están listos; falta la carga real del padrón con la muestra (C-08: el script ya existe, ver Entorno; faltan sus columnas, las equivalencias de localidad y correrlo contra la nube), el bucket del logo y la
   Edge Function `descargar-taller` (0004–0006). Recuperación de contraseña y cierre por inactividad (§5.2) pendientes.
 - Recursos: faltan la descarga (enlaces firmados públicos, Edge Function) y el registro de descargas. Limpieza de archivos huérfanos en Storage
   (hoy solo un `console.warn`; vale también para normativas), subida reanudable (TUS) y barra de progreso. La baja y el reemplazo de un recurso

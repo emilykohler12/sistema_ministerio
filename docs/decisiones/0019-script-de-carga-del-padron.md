@@ -1,6 +1,6 @@
 # 0019 · La carga del padrón es un script aparte que espera la muestra
 
-- **Estado:** aceptada (implementación pendiente de C-08)
+- **Estado:** aceptada. Implementada con supuestos; la carga real espera C-08
 - **Fecha:** 2026-10
 
 ## Contexto

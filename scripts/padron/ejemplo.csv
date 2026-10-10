@@ -1,0 +1,14 @@
+cue,nombre,localidad
+5800001,Escuela N° 1 Domingo Faustino Sarmiento,Posadas
+5800002,Escuela N° 2 Manuel Belgrano,Oberá
+5800003,Instituto Privado San José,OBERA
+5800004,Escuela N° 4  Bernardino  Rivadavia,apostoles
+5800005,Colegio Secundario Eldorado,Eldorado
+5800006,Escuela N° 6 de las Cataratas,Puerto Iguazú
+,Escuela sin CUE,Posadas
+58-0007,Escuela con CUE inválido,Posadas
+5800008,,Posadas
+5800009,Escuela XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX,Posadas
+5800010,Escuela de una localidad inexistente,Narnia
+5800001,Escuela con CUE repetido,Oberá
+5800011,escuela n° 2 manuel belgrano,OBERA

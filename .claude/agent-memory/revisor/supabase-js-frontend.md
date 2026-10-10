@@ -61,6 +61,8 @@ En padrón (fase A, 2026-10-10, séptima vez) la verificación en el navegador n
   de solo lectura `?id=eq.99999999999`.
 - Otra vez, la rama `isError` de una query **secundaria** (`useLocalidades`) está implementada pero no tiene test. Solo se prueba la query principal.
 
+En padrón (fase B, script de carga, 2026-10-10, octava vez) faltó registrar en `notas.md` el paso "las altas aparecen en `/admin/establecimientos`".
+
 Datos de la librería, para no reportar falsos positivos:
 - En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF
   y `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema de una edición por shell:
