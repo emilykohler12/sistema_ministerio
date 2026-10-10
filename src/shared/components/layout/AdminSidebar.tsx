@@ -1,4 +1,4 @@
-import { Home, LayoutGrid, LogOut, ScrollText, Settings, BookOpen } from 'lucide-react'
+import { Home, LayoutGrid, LogOut, ScrollText, School, Settings, BookOpen } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/shared/lib/utils'
@@ -7,6 +7,7 @@ const links = [
   { to: '/admin', label: 'Dashboard', icon: LayoutGrid, end: true },
   { to: '/admin/talleres', label: 'Talleres', icon: BookOpen },
   { to: '/admin/normativas', label: 'Normativas', icon: ScrollText },
+  { to: '/admin/establecimientos', label: 'Establecimientos', icon: School },
   { to: '/admin/configuracion', label: 'Configuración', icon: Settings },
 ]
 

@@ -51,6 +51,12 @@ En normativas (fase A, 2026-10-10) la base salió bien a la primera (394 asserts
 - `db:types` pierde la nulabilidad en `RETURNS TABLE` y en parámetros sin default (`ruta_anterior: string`): avisalo para la fase de frontend.
 - Las docs de estado (`arquitectura.md`: migraciones, guardias, brechas) quedan sin actualizar en la fase de base (ver [[supabase-js-frontend]]).
 
+En padrón (fase A, 2026-10-10) la base salió bien a la primera. Las tablas de catálogo fijo (`localidad`, `nivel_educativo`, `destinatario`) conservan
+`arwdxtm` para anon y authenticated, y la RLS sin políticas de escritura es la barrera. Es el patrón del proyecto: no lo reportes. Lo que se repite son los
+catálogos sembrados por migración donde el pgTAP solo fija la cantidad y algunos ids, y no todas las filas. Compará la migración con la fuente (`diff`) y
+pedí un `results_eq` con la lista completa. Postgres corta antes que la barrera que el test esperaba: `varchar(n)` da `22001` antes que el CHECK y
+`generated always` da `428C9` antes que el grant por columna.
+
 **Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
 creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
 REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay

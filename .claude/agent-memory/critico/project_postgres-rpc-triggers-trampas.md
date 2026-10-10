@@ -56,6 +56,12 @@ En la crítica del código de la fase A de normativas (2026-10-10):
   "la RPC es la única forma".
 - **Tests de "atomicidad" vacíos:** si el error salta antes del paso que dejaría rastro, el test pasa con cualquier implementación.
 
+En la crítica del código de la fase A del padrón (2026-10-10), sin hallazgos:
+- **La collation local es `en_US.UTF-8`:** `order by nombre` coincide con el orden alfabético a mano. Con `C`, en cambio, las tildes y
+  las mayúsculas se van al final (`Caá`, `Dos de Mayo`). Si un catálogo fijo tiene ids en orden, `order('id')` no depende de la collation.
+- **`varchar(n)` corta antes que el CHECK** (22001 y no 23514). Y un UPDATE de un `id` identity da 428C9 antes que el grant por columna (42501).
+- **Descartado, no reabrir sin una cuarta copia:** un `codigoDe(error)` compartido para la guarda `code === X` de los `errores.ts`.
+
 **Why:** son fallas silenciosas o errores en el caso feliz que ni el typecheck ni el pgTAP básico detectan.
 
 **How to apply:** en cada spec con RPC, trigger de regla o tabla puente, pedir que el algoritmo esté escrito paso a paso y que

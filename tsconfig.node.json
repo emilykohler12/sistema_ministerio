@@ -19,5 +19,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "src/test/hooks"]
+  "include": ["vite.config.ts", "src/test/hooks", "scripts/**/*.ts"]
 }

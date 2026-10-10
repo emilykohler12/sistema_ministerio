@@ -71,6 +71,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"establecimiento": {
+                  Row: {
+                    "activo": boolean,"created_at": string,"cue": string | null,"id": number,"localidad_id": number,"nombre": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "activo"?: boolean,"created_at"?: string,"cue"?: string | null,"id"?: never,"localidad_id": number,"nombre": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "activo"?: boolean,"created_at"?: string,"cue"?: string | null,"id"?: never,"localidad_id"?: number,"nombre"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "establecimiento_localidad_id_fkey"
+      columns: ["localidad_id"]
+isOneToOne: false
+      referencedRelation: "localidad"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"etiqueta": {
                   Row: {
                     "id": number,"nombre": string
@@ -81,6 +101,20 @@ isOneToOne: false
                   }
                   Update: {
                     "id"?: never,"nombre"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"localidad": {
+                  Row: {
+                    "id": number,"nombre": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id": number,"nombre": string
+                  }
+                  Update: {
+                    "id"?: number,"nombre"?: string
                   }
                   Relationships: [
                     

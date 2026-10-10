@@ -30,6 +30,16 @@ if (SUPABASE_REMOTO.test(cmd)) {
   )
 }
 
+// Carga del padrón (ADR 0019): solo contra el Supabase local. Un destino remoto se elige con SUPABASE_URL o se
+// confirma con --confirmar=<host>; si el comando completo menciona el script y alguna de las dos, se bloquea
+// (cubre `export SUPABASE_URL=... && npm run padron:importar`). La nube la carga una persona.
+if (/padron:importar|importar-padron/.test(cmd) && /--confirmar|SUPABASE_URL/.test(cmd)) {
+  block(
+    'Bloqueado: la carga del padrón se corre solo contra el Supabase local. SUPABASE_URL y --confirmar apuntan ' +
+      'a una base remota: esa carga la hace una persona, no un agente.',
+  )
+}
+
 const { segmentos } = analizarComando(cmd)
 
 // Escrituras por shell sobre archivos que no se editan a mano.

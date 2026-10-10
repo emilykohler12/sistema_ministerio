@@ -6,7 +6,7 @@
 //   sin-permiso@dam.local   / sin-permiso-dam-local   (sin marca de admin)
 //
 // Es idempotente: si el usuario ya existe, lo informa y sigue.
-import { execFileSync } from 'node:child_process'
+import { supabaseLocal } from './lib/supabaseLocal.ts'
 
 const USUARIOS = [
   {
@@ -19,24 +19,6 @@ const USUARIOS = [
     password: 'sin-permiso-dam-local',
   },
 ]
-
-function leerEstado() {
-  const salida = execFileSync('npx', ['supabase', 'status', '-o', 'json'], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-  })
-  return JSON.parse(salida)
-}
-
-// Compara el hostname exacto: un prefijo aceptaría "http://localhost.evil.com".
-function esUrlLocal(url) {
-  try {
-    const { protocol, hostname } = new URL(url)
-    return protocol === 'http:' && (hostname === '127.0.0.1' || hostname === 'localhost')
-  } catch {
-    return false
-  }
-}
 
 async function crearUsuario(apiUrl, clave, usuario) {
   const respuesta = await fetch(`${apiUrl}/auth/v1/admin/users`, {
@@ -55,18 +37,11 @@ async function crearUsuario(apiUrl, clave, usuario) {
 }
 
 async function main() {
-  const estado = leerEstado()
-  const apiUrl = estado.API_URL
-  const clave = estado.SERVICE_ROLE_KEY ?? estado.SECRET_KEY
-
-  // Defensa: este script nunca debe apuntar a algo que no sea el Supabase local.
-  if (!esUrlLocal(apiUrl)) {
-    throw new Error(`API_URL no es local (${apiUrl}). Abortado.`)
-  }
-  if (!clave) throw new Error('No se encontró la clave de servicio local.')
+  // supabaseLocal exige que la API sea local y que exista la clave de servicio.
+  const { url, clave } = supabaseLocal()
 
   for (const usuario of USUARIOS) {
-    const resultado = await crearUsuario(apiUrl, clave, usuario)
+    const resultado = await crearUsuario(url, clave, usuario)
     console.log(`${usuario.email}: ${resultado}`)
   }
 }

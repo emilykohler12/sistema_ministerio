@@ -15,7 +15,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset && node scripts/seed-usuarios.mjs",
     "db:types": "supabase gen types typescript --local > src/shared/types/database.ts.tmp && mv src/shared/types/database.ts.tmp src/shared/types/database.ts",
-    "test:db": "supabase test db"
+    "test:db": "supabase test db",
+    "padron:importar": "node scripts/importar-padron.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
