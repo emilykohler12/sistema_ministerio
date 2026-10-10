@@ -250,3 +250,96 @@ siguen la spec sin agregar nada. `config.toml` es el que genera `supabase init`,
 2. **Acepto.** `src/test/hooks` pasa a `tsconfig.node.json`.
 3. **Acepto.** Se saca la excepción de `.env.example`, que nunca se aplicaba, y el bloque duplicado del `.gitignore`.
    Se conservan `.env.*` y `!.env.example`.
+
+# Crítica del código (Fase B)
+
+Alcance: el working tree de `chore/supabase-base` (`supabase/migrations/20261010003733_base.sql`,
+`scripts/seed-usuarios.mjs`, `package.json`, `supabase/config.toml`, §8.3 y `supabase/tests/*.test.sql`). No reabro
+decisiones de la spec. Leí 0005 y la definición §8.4 y §9.1. No pude correr los tests porque el Supabase local no
+estaba levantado.
+
+## Veredicto
+Hay mejoras. Lo demás está bien así:
+- `es_admin()`: `stable`, `search_path = ''`, compara texto y la política la envuelve en `(select ...)`.
+- Privilegios de `registro_operacion`: `revoke all` + `grant select` + política.
+- El seed: usa la API pública, es idempotente, y la guarda de URL local cuesta una línea.
+- `db:types` con `.tmp` + `mv`, que no deja `database.ts` vacío si falla la generación.
+- El desvío de `[auth.email] enable_signup = true`: el registro público lo sigue apagando `[auth] enable_signup = false`.
+
+## Puntos
+
+### 1. `auditar()` traga cualquier error y pierde auditoría sin que nadie se entere. El fallback de FK además contradice la FK
+- **Problema.**
+  - **Origen de "nunca aborta".** El criterio 7 nació del hallazgo 1 de la crítica de la spec: con `NEW.id`, las
+    tablas puente hacían abortar la escritura. Eso ya lo resuelve `to_jsonb(...) ->> 'id'`. El código fue más lejos
+    y lo leyó como "ningún error de auditoría puede abortar", que es otra regla.
+  - **Contradice §9.1 y 0005.** §9.1 dice que la auditoría se cumple "sin importar desde dónde llegue el cambio".
+    Con `when others` puede pasar que la escritura se confirme y el registro no exista. El `raise warning` va al log
+    de Postgres. PostgREST no se lo pasa al cliente y nadie lee ese log, así que la pérdida es silenciosa.
+  - **El fallback de FK es justo el caso que la FK quería evitar.** La migración explica que la FK no lleva
+    `set null` "para que no se confunda un usuario borrado con sistema". Pero en el fallback, un `sub` que no está en
+    `auth.users` queda grabado con `usuario_id = NULL`, o sea como "sistema". El único caso real es un usuario borrado
+    que todavía tiene un JWT vigente. Para ese caso, que la escritura falle es lo correcto, no un problema.
+  - **El resto de `others` casi no atrapa nada.** Fuera de la FK, `operacion` y `tabla` nunca violan sus
+    restricciones. Lo que queda son fallas graves (disco lleno, un bug del esquema), y en esos casos conviene fallar.
+    Además, `others` no atrapa `query_canceled`.
+  - **Cada bloque `begin/exception` abre una subtransacción por fila.** En una carga masiva, por ejemplo la carga
+    inicial del padrón (§4), son miles de subtransacciones.
+- **Alternativa.** Sacar los dos bloques `exception` y dejar la falla cerrada:
+  ```sql
+  begin
+    insert into public.registro_operacion (usuario_id, operacion, tabla, registro_id, datos_anteriores, datos_nuevos)
+    values (auth.uid(), tg_op, tg_table_name, v_registro_id, v_anteriores, v_nuevos);
+    return coalesce(new, old);
+  end;
+  ```
+  Habría que reescribir el criterio 7 así: "la escritura no aborta por la forma de la tabla (sin `id`); si el
+  registro falla, la escritura falla". En `auditar.test.sql`, los dos `lives_ok` del `sub` inexistente pasan a
+  `throws_ok(..., '23503')`.
+- **Qué se gana.**
+  - Unas 20 líneas menos de PL/pgSQL de seguridad.
+  - Se cumple la garantía de §9.1: no hay escritura sin su registro.
+  - El "sistema" (`NULL`) vuelve a significar solo "sin sesión".
+  - No hay subtransacciones por fila.
+  - Es un argumento nuevo: la spec no decidió tragar errores. Solo decidió que la falta de `id` no aborte.
+- **Severidad:** media-alta. Hoy no se pierde nada, pero la regla queda débil de forma permanente y nadie se va a
+  enterar cuando falle.
+- **Recomendación:** hacerlo en este PR. Si quieren mantener "nunca aborta" a propósito, que quede escrito en la
+  spec como decisión y que el fallback de FK no grabe `NULL`, para no mezclar usuarios con "sistema".
+
+### 2. Los tests de privilegios y de estructura verifican de más en unos lugares y de menos en otros
+- **Problema.**
+  - **Privilegios.** `registro_operacion.test.sql` comprueba cada privilegio dos veces: con `has_table_privilege`
+    (3 `ok` largos) y otra vez con `throws_ok` por rol. Aun así no cubre el contrato completo. Solo mira que no haya
+    INSERT, UPDATE, DELETE ni TRUNCATE. Un `grant` futuro de `REFERENCES` o `TRIGGER`, o de `SELECT` a
+    `service_role`, pasaría sin que nadie lo note.
+  - **Estructura.** Los 9 `has_column` y 3 `col_type_is` repiten el DDL de la migración. Si falta una columna,
+    `auditar.test.sql` ya falla, porque hace `select` de todas.
+- **Alternativa.**
+  - Para los privilegios, usar `table_privs_are` de pgTAP, que compara el conjunto exacto:
+    ```sql
+    select table_privs_are('public', 'registro_operacion', 'anon',          array[]::text[]);
+    select table_privs_are('public', 'registro_operacion', 'service_role',  array[]::text[]);
+    select table_privs_are('public', 'registro_operacion', 'authenticated', array['SELECT']);
+    ```
+    De los `throws_ok` alcanza con uno o dos, como prueba de comportamiento (por ejemplo, "ni el admin puede
+    UPDATE").
+  - De la estructura, dejar lo que es contrato: los dos `col_is_null`, `fk_ok` y RLS habilitado.
+- **Qué se gana.** El archivo baja de 31 a unas 12 aserciones. El contrato pasa de "no tiene estos 4 privilegios" a
+  "tiene exactamente estos", que es lo que dice el criterio 6. Y cuando cambie el esquema hay que tocar menos líneas.
+- **Severidad:** baja-media.
+- **Recomendación:** hacerlo en este PR. Es reemplazar líneas, no hay lógica nueva.
+
+### Nota menor (no es un punto)
+- `grant execute on function public.es_admin() to anon, authenticated` sobra. `PUBLIC` ya tiene `EXECUTE` por
+  defecto, y Supabase lo vuelve a dar con sus default privileges. Se puede borrar o dejar como documentación.
+
+## Respuesta (código, Fase B)
+
+1. **Acepto.** El "nunca aborta" que traga errores salió de mis instrucciones al implementador, no de la spec.
+   `auditar()` pasa a fallar cerrada: sin bloques `exception`. El test del `sub` inexistente espera `23503`.
+   Criterio 7 reescrito en la spec (v3). Resuelve también el I1 de `revision.md`.
+2. **Acepto.** `table_privs_are` con los conjuntos exactos (anon y service_role vacíos, authenticated `{SELECT}`),
+   uno o dos `throws_ok` de comportamiento, y de la estructura solo `col_is_null`, `fk_ok` y RLS.
+- **Nota menor:** se deja el `grant execute` de `es_admin()` como documentación explícita de quién la usa.
+- **Proceso:** esta sección se agregó con heredoc de bash; los hooks no la vieron. Queda anotado para la próxima ronda.

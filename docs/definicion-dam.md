@@ -385,9 +385,9 @@ erDiagram
     registro_operacion {
         bigint id PK
         uuid usuario_id FK
-        varchar operacion
-        varchar tabla
-        varchar registro_id
+        text operacion
+        text tabla
+        text registro_id
         jsonb datos_anteriores
         jsonb datos_nuevos
         timestamptz fecha_hora
@@ -531,12 +531,14 @@ CHECK: `(tipo = 'ENLACE') = (url IS NOT NULL AND ruta_archivo IS NULL)` y, si no
 | Campo | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | bigint | PK | Identificador. |
-| usuario_id | uuid | FK → auth.users, NOT NULL | Usuario autenticado (`auth.uid()`). |
-| operacion | varchar(10) | NOT NULL | INSERT, UPDATE o DELETE. |
-| tabla | varchar(50) | NOT NULL | Tabla afectada. |
-| registro_id | varchar(50) | NOT NULL | Identificador del registro afectado. |
+| usuario_id | uuid | FK → auth.users | Usuario autenticado (`auth.uid()`). NULL = operación del sistema (sin sesión). |
+| operacion | text | NOT NULL, CHECK | INSERT, UPDATE o DELETE. |
+| tabla | text | NOT NULL | Tabla afectada (nombre sin esquema). |
+| registro_id | text | | Identificador del registro afectado. NULL en tablas sin columna `id` (clave compuesta); la clave queda en `datos_anteriores` / `datos_nuevos`. |
 | datos_anteriores / datos_nuevos | jsonb | | Estado antes y después de la operación. |
 | fecha_hora | timestamptz | NOT NULL | Momento de la operación. |
+
+La auditoría falla cerrada (§9.1): si el trigger `auditar()` no puede registrar la operación, la escritura también falla. La tabla es append-only: ningún rol de la API escribe en ella, solo el trigger.
 
 **configuracion**: una sola fila (`CHECK (id = 1)`) con los campos del diagrama. `logo_ruta` apunta a un bucket público.
 
