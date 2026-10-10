@@ -116,12 +116,20 @@ VOS ◄──► INGENIERO
 | `contexto.mjs` | Después de compactar | Reinyecta la rama y la spec activa (deducida de la rama `feat/<x>`) |
 | `roles.mjs` | Antes de editar y de cada comando (`settings.json`) | Lee `agent_type` y aplica el perfil del rol (reglas en `perfiles.mjs`). Escritura: cada subagente solo escribe lo de su rol (tests, `critica.md`, `revision.md` o, qa, `e2e/` y `qa.md`; Explore nada). Bash: lista blanca `lectura` (Explore, crítico), `checks` (test-writer, revisor) o `qa` (checks + `test:e2e` sin banderas de configuración). El principal y los roles de `LIBRES` (implementador, `general-purpose`, `claude`, `Plan`, `claude-code-guide`, `statusline-setup`) no se restringen; un rol desconocido no escribe. Falla cerrada (exit 2) |
 
+Los tres hooks de PreToolUse (`proteger`, `proteger-bash` y `roles`) llevan `"onFailure": "block"` en `settings.json`: si el script no arranca,
+sale con un código distinto de 0 y 2, vence el timeout o emite salida inválida, la llamada se bloquea como con un exit 2 (falla cerrada incluso ante
+un crash). Requiere Claude Code ≥ 2.1.295: con una versión anterior hay que actualizar antes de usar el repo (el Dev Container instala la última al
+reconstruirse). Los hooks de PostToolUse, Stop y SessionStart no lo llevan: no son barreras. Lo verifica `src/test/hooks/settings.test.ts`.
+Consecuencia: un error de sintaxis en `lib.mjs`, `proteger*.mjs` o `roles.mjs` bloquea también al agente principal; lo arregla la persona desde una
+terminal (`git checkout -- .claude/hooks/`). Los hooks son los de la rama activa al iniciar la sesión: una sesión iniciada en una rama sin `roles.mjs` no restringe a sus subagentes.
+
 Los permisos por rol viven en `settings.json` y no en el frontmatter de `.claude/agents/*.md` (decisión 0021): los hooks del
 frontmatter solo corren con la confianza de la carpeta aceptada, y una sesión del Agent SDK o de `claude -p` no cuenta.
 `limitar-escritura.mjs` y `limitar-bash.mjs` quedan como CLI de un perfil, para probar las reglas a mano.
 
 Límite honesto: los hooks frenan errores y atajos, no a un agente malicioso. Por ejemplo, un test
-puede escribir archivos al ejecutarse. Para eso está la revisión humana del PR.
+puede escribir archivos al ejecutarse. Para eso está la revisión humana del PR. Límites aceptados del perfil `checks`: `vitest run -u` (actualiza
+snapshots) y `--reporter=blob` (escribe `.vitest-reports/`) no se bloquean; quedan dentro del repo y se ven en el diff.
 
 Scripts en Node para que funcionen igual en Linux y Windows.
 

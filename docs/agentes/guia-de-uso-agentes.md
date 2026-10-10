@@ -135,6 +135,8 @@ Si el cambio toca una pantalla, después del revisor pasa el `qa`, que lo prueba
 |---|---|
 | Claude no sigue una instrucción | `/context` para ver si cargó. Si es obligatoria, pasarla a un hook |
 | Un hook no se ejecuta | `/hooks`, confianza del proyecto aceptada, script con Node disponible. Los hooks se toman al iniciar la sesión: tras cambiar `settings.json`, recargar. Los permisos por rol van en `settings.json` (`roles.mjs`), no en el frontmatter del agente (0021) |
+| Un hook de PreToolUse bloquea una llamada sin motivo aparente | Los de `proteger`, `proteger-bash` y `roles` llevan `onFailure: "block"` (Claude Code ≥ 2.1.295): un crash, un timeout o una salida inválida del script también bloquean. Correr el script a mano para ver el error. Un error de sintaxis en `lib.mjs`, `proteger*.mjs` o `roles.mjs` bloquea también al agente principal, que no puede arreglarlo: lo arregla la persona desde una terminal (`git checkout -- .claude/hooks/`). Con Claude Code < 2.1.295, actualizar antes de usar el repo |
+| `proteger-bash` bloquea un `gh pr create` cuyo texto menciona la carga del padrón | Es a propósito (falla cerrada): pasá el cuerpo con `--body-file` |
 | Una skill no se activa | Que la `description` diga cuándo usarla, o invocarla con `/nombre` |
 | Un subagente no aparece | Frontmatter con `name` y `description` válidos; reiniciar si la carpeta es nueva |
 | El agente pide permiso todo el tiempo | Agregar el comando seguro a `permissions.allow` |

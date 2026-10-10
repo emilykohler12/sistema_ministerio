@@ -222,6 +222,32 @@ describe('roles: bash, evasiones por comillas y banderas peligrosas', () => {
     expect(bash(agente, comando).codigo).toBe(2)
   })
 
+  // vitest escribe el reporte donde diga --outputFile (o --outputFile.<reporter>, o --output-file por cac).
+  it.each([
+    ['revisor', 'npx vitest run src/x.test.ts --outputFile=/tmp/x.json'],
+    ['revisor', 'npx vitest run --outputFile /tmp/x.json'],
+    ['revisor', 'npx vitest run --reporter=json --outputFile.json=/tmp/x.json'],
+    ['revisor', 'npx vitest run "--outputFile" /tmp/x.json'],
+    ['revisor', 'npx vitest run "--outputFile=/tmp/x.json"'],
+    ['revisor', "npx vitest run --output''File=/tmp/x.json"],
+    ['revisor', 'npx vitest run --output-file=/tmp/x.json'],
+    ['revisor', 'npm test -- --outputFile=/tmp/x.json'],
+    ['test-writer', 'npx vitest run --outputFile=/tmp/x.json'],
+    ['qa', 'npx vitest run --outputFile=/tmp/x.json'],
+    ['qa', 'npm test -- --outputFile.json=/tmp/x.json'],
+    // tsc y oxlint también escriben donde se les diga (perfil, traza, tsbuildinfo, config).
+    ['revisor', 'npx tsc --noEmit --generateTrace /tmp/d'],
+    ['revisor', 'npx tsc --noEmit --generateCpuProfile /tmp/x.cpuprofile'],
+    ['revisor', 'npx tsc --noEmit --tsBuildInfoFile /tmp/x.tsbuildinfo'],
+    ['revisor', 'npm run typecheck -- --generateCpuProfile x'],
+    ['revisor', 'npm run typecheck -- "--generateTrace" /tmp/d'],
+    ['test-writer', 'npx tsc --noEmit --generateTrace=/tmp/d'],
+    ['revisor', 'npx oxlint --init'],
+    ['qa', 'npx oxlint "--init"'],
+  ])('%s no puede correr %s', (agente, comando) => {
+    expect(bash(agente, comando).codigo).toBe(2)
+  })
+
   it.each([
     ['critico', 'sort -o salida.txt package.json'],
     ['critico', 'sort -ro salida.txt package.json'],
