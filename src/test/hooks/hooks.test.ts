@@ -77,6 +77,89 @@ describe('limitar-bash perfil checks', () => {
   })
 })
 
+describe('limitar-bash perfil qa', () => {
+  it.each([
+    'npm run test:e2e',
+    'npm run test:e2e -- e2e/padron.spec.ts',
+    'npm run test:e2e -- --grep "alta de institución"',
+    'npm run test:e2e -- -g login --retries=1',
+    'npx playwright test',
+    'npx playwright test e2e/padron.spec.ts --project=chromium',
+    'CI=1 npx playwright test --workers=1',
+    'npm run db:reset',
+    'npm run lint',
+    'npm run typecheck',
+    'npm test',
+    'git status',
+  ])('permite "%s"', (cmd) => {
+    expect(bash('limitar-bash.mjs', ['qa'], cmd).codigo).toBe(0)
+  })
+
+  it.each([
+    'rm -rf e2e',
+    'rm src/foo.ts',
+    'npm run test:e2e -- --config=otra.config.ts',
+    'npm run test:e2e -- -c otra.config.ts',
+    'npm run test:e2e -- --reporter=./mio.js',
+    'npm run test:e2e -- --output=/etc',
+    'npm run test:e2e -- --ui',
+    'npm run test:e2e:x',
+    'npm run test:e2e:watch -- e2e/a.spec.ts',
+    'npx playwright test-foo',
+    'npx playwright test --config otra.config.ts',
+    'npx playwright test --reporter=html',
+    'npx playwright install',
+    'npx playwright show-report',
+    'npx playwright codegen',
+    'npm run db:reset -- --db-url postgres://x',
+    'npm run db:start',
+    'npm run db:types',
+    'npm run dev',
+    'npx playwright test > src/foo.ts',
+    'echo x > e2e/a.ts',
+    'docker ps',
+  ])('bloquea "%s"', (cmd) => {
+    expect(bash('limitar-bash.mjs', ['qa'], cmd).codigo).toBe(2)
+  })
+})
+
+describe('limitar-bash perfil checks: sin pruebas e2e', () => {
+  it('bloquea npm run test:e2e (es del agente qa)', () => {
+    expect(bash('limitar-bash.mjs', ['checks'], 'npm run test:e2e').codigo).toBe(2)
+  })
+
+  it('bloquea npx playwright test', () => {
+    expect(bash('limitar-bash.mjs', ['checks'], 'npx playwright test').codigo).toBe(2)
+  })
+})
+
+describe('limitar-escritura perfil qa', () => {
+  it.each([
+    'e2e/padron.spec.ts',
+    'e2e/helpers.ts',
+    'docs/specs/padron/qa.md',
+    'docs/specs/padron/qa/captura-listado.png',
+    '.claude/agent-memory/qa/MEMORY.md',
+  ])('permite escribir %s', (f) => {
+    expect(escribir('limitar-escritura.mjs', ['qa'], f).codigo).toBe(0)
+  })
+
+  it.each([
+    'src/features/talleres/types.ts',
+    'src/foo.test.ts',
+    'playwright.config.ts',
+    'package.json',
+    'supabase/migrations/x.sql',
+    'docs/specs/padron/spec.md',
+    'docs/specs/padron/revision.md',
+    'docs/specs/padron/qa.md.bak',
+    '.claude/agent-memory/revisor/MEMORY.md',
+    'e2e-otro/x.ts',
+  ])('bloquea escribir %s', (f) => {
+    expect(escribir('limitar-escritura.mjs', ['qa'], f).codigo).toBe(2)
+  })
+})
+
 describe('limitar-escritura perfil tests', () => {
   it('permite escribir supabase/tests/base.test.sql', () => {
     expect(escribir('limitar-escritura.mjs', ['tests'], 'supabase/tests/base.test.sql').codigo).toBe(0)

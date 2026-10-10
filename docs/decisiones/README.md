@@ -6,7 +6,7 @@ Al crear un ADR con `/decision`, agregá su fila acá.
 | N.° | Decisión | Estado | Leer si vas a tocar… |
 |---|---|---|---|
 | [0001](0001-supabase-plataforma-unica.md) | Supabase para base de datos, Auth y Storage, sin capa de abstracción de proveedor | aceptada | Infraestructura, proveedor de datos, almacenamiento de archivos |
-| [0002](0002-arquitectura-de-agentes.md) | Claude Code con agente principal y cinco subagentes, orquestación plana | aceptada | Agentes, hooks, skills, flujo de trabajo |
+| [0002](0002-arquitectura-de-agentes.md) | Claude Code con agente principal y subagentes de rol único (cinco; seis con 0020), orquestación plana | aceptada | Agentes, hooks, skills, flujo de trabajo |
 | [0003](0003-dev-container.md) | Todo el desarrollo corre en un Dev Container | aceptada | Entorno, dependencias, `.devcontainer/`, comandos |
 | [0004](0004-supabase-directo-sin-api-propia.md) | Supabase directo desde el frontend con RLS y Edge Functions; sin API propia | aceptada | Hooks de datos, seguridad, RLS, Edge Functions, despliegue |
 | [0005](0005-usuario-por-persona-y-auditoria.md) | Un usuario de Supabase Auth por persona, rol único, auditoría por `auth.uid()` | aceptada | Login, sesión, `auth`, historial de operaciones, gestión de usuarios |
@@ -24,3 +24,4 @@ Al crear un ADR con `/decision`, agregá su fila acá.
 | [0017](0017-contadores-anonimos-sin-auditoria.md) | El UPDATE que solo cambia un contador anónimo no se audita ni toca `updated_at` (`WHEN` en los triggers); el contador solo cambia por una RPC definer con grant por columna | aceptada | Contadores, RPC anónimas, triggers `auditar()`/`tocar_updated_at()`, métricas |
 | [0018](0018-duplicados-por-nombre-de-constraint.md) | Con más de un único por tabla, el 23505 se atribuye a un campo por el nombre explícito de la constraint en `message`, fijado con `throws_ok`; un 23505 desconocido es un error general | aceptada | Constraints únicas, `errores.ts`, formularios con duplicados, tests pgTAP de unicidad |
 | [0019](0019-script-de-carga-del-padron.md) | Carga del padrón por script en fase B (tras la muestra): upsert por CUE sin desactivar, simulación por defecto, local por defecto y `--confirmar=<host>` para la nube | aceptada (carga real pendiente de C-08) | Script de importación, padrón, `scripts/`, `proteger-bash`, service_role |
+| [0020](0020-agente-qa-y-e2e.md) | Sexto subagente `qa`: e2e con Playwright escritos después de implementar, contra Supabase local; reporta en `qa.md` sin tocar la app | aceptada | Agente `qa`, `e2e/`, Playwright, hooks `limitar-*`, carriles chico y feature |

@@ -29,6 +29,7 @@ Vite · React 19 · TypeScript · Tailwind 4 · React Router 7 · React Query ·
 - Dev: `npm run dev`
 - Tests: `npx vitest run <archivo>` (uno) · `npm test` (todos)
 - Checks: `npm run lint` · `npm run typecheck`
+- E2E (Playwright, contra Supabase local): `npm run test:e2e`
 - Build: `npm run build`
 
 ## Estructura

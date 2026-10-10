@@ -2,12 +2,19 @@
 //   node limitar-escritura.mjs tests     → test-writer: *.test.ts(x), snapshots y pgTAP (supabase/tests/*.sql)
 //   node limitar-escritura.mjs critico   → su memoria y docs/specs/<feature>/critica.md
 //   node limitar-escritura.mjs revisor   → su memoria y docs/specs/<feature>/revision.md
+//   node limitar-escritura.mjs qa        → e2e/, docs/specs/<feature>/qa.md, sus capturas (qa/) y su memoria
 import { block, readInput, relPath } from './lib.mjs'
 
 const PERFILES = {
   tests: [/\.test\.tsx?$/, /\/__snapshots__\//, /^supabase\/tests\/.+\.sql$/],
   critico: [/^\.claude\/agent-memory\/critico\//, /^docs\/specs\/[^/]+\/critica\.md$/],
   revisor: [/^\.claude\/agent-memory\/revisor\//, /^docs\/specs\/[^/]+\/revision\.md$/],
+  qa: [
+    /^e2e\//,
+    /^docs\/specs\/[^/]+\/qa\.md$/,
+    /^docs\/specs\/[^/]+\/qa\//,
+    /^\.claude\/agent-memory\/qa\//,
+  ],
 }
 
 const perfil = process.argv[2]

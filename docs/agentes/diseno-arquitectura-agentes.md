@@ -27,8 +27,18 @@ Herramienta: Claude Code · Todo vive dentro del repositorio y se comparte por g
 | **implementador** | Subagente | Sonnet | Implementa la spec o el plan con TDD. Si duda, se detiene y devuelve `BLOQUEADO` | Edición + MCP Supabase |
 | **crítico** | Subagente | Opus | ¿Hay una forma más simple o mejor? Revisa la propuesta y la estructura del código | Lectura; escribe solo `critica.md` y su memoria (hooks) |
 | **revisor** | Subagente | Opus | ¿Está bien hecho? Revisa requisitos, tests, seguridad y RLS | Lectura + checks; escribe solo `revision.md` y su memoria (hooks) |
+| **qa** | Subagente | Sonnet | ¿Funciona en la app real? Escribe pocos e2e (Playwright), los corre contra el Supabase local y reporta | Lectura + checks + `test:e2e`; escribe solo `e2e/`, `qa.md`, sus capturas y su memoria (hooks). No toca `src/` |
 
 **Crítico ≠ revisor.** El crítico cuestiona el *diseño*. El revisor verifica la *corrección*. Separados para no mezclar "esto tiene un bug" con "yo lo haría distinto".
+
+**Revisor ≠ qa.** El revisor lee el código contra la spec. El qa usa la app en un navegador. Los e2e se escriben *después* de implementar (antes son frágiles: los selectores y textos aún no existen) y por un rol propio, para que la verificación en el navegador tenga dueño. Decisión 0020.
+
+### Reglas del qa
+
+- Pocos tests por feature: el camino feliz y 2 o 3 errores clave de la spec. Lo demás ya lo cubren Vitest y pgTAP.
+- Solo contra el Supabase local; `npm run db:reset` si necesita base limpia y siempre al terminar (pgTAP asume tablas vacías). Nunca la nube.
+- Corre después del crítico y el revisor, nunca en paralelo: comparten la base local con el `test:db` del revisor.
+- No modifica el código de la app: reporta bugs con pasos para reproducir en `docs/specs/<feature>/qa.md`.
 
 ### Reglas del crítico
 
@@ -51,8 +61,9 @@ VOS ◄──► INGENIERO
            ├──► test-writer ......... tests en rojo
            ├──► implementador ....... código en verde
            │        └─ BLOQUEADO → ingeniero → vos → se retoma
-           ├──► crítico (código) ┐
-           └──► revisor          ┘ en paralelo → critica.md / revision.md
+           ├──► crítico (código) ┐ en paralelo → critica.md / revision.md
+           ├──► revisor          ┘
+           └──► qa (navegador) ...... después, solo si hay pantalla: e2e en e2e/ → qa.md; db:reset al terminar
                     │
              Stop hook + CI ──── checks deterministas
                     │
@@ -65,7 +76,7 @@ VOS ◄──► INGENIERO
 |---|---|---|
 | **Directo** | Typo, texto, estilo, una línea | El ingeniero lo hace y corre los checks |
 | **Consulta** | Preguntas, análisis, revisar configuración | El ingeniero responde sin modificar archivos |
-| **Chico** | Un endpoint, un componente, un bug acotado | Plan breve en `docs/specs/<tarea>/plan.md` → implementador (test primero) → revisor |
+| **Chico** | Un endpoint, un componente, un bug acotado | Plan breve en `docs/specs/<tarea>/plan.md` → implementador (test primero) → revisor → `qa` si toca una pantalla |
 | **Feature** | Panel de talleres, sistema de descargas | Flujo completo con spec y crítico |
 
 ---
@@ -78,7 +89,7 @@ VOS ◄──► INGENIERO
 | **Output style** | Siempre, solo en la sesión principal | Personalidad y forma de trabajar del ingeniero |
 | **Reglas** (`.claude/rules/`) | Al tocar archivos que coinciden | `react.md` (`src/**/*.tsx`), `migraciones.md` (`supabase/**`) |
 | **Skills** (`.claude/skills/`) | Al invocarlas o cuando aplican | Procedimientos y flujos |
-| **Subagentes** (`.claude/agents/`) | Al delegar | Los 5 roles de arriba |
+| **Subagentes** (`.claude/agents/`) | Al delegar | Los 6 roles de arriba |
 | **Hooks** | En eventos, siempre | Lo que no puede fallar |
 | **docs/** | A demanda | Conocimiento compartido del equipo |
 
@@ -103,8 +114,8 @@ VOS ◄──► INGENIERO
 | `proteger-bash.mjs` | Antes de cada comando | Lo mismo que `proteger.mjs`, pero por shell (`cat .env`, `sed -i`, `>`) |
 | `checks-stop.mjs` | Al terminar un turno | Si hubo cambios: lint + typecheck + tests deben pasar. Sin `node_modules` avisa que falta el Dev Container |
 | `contexto.mjs` | Después de compactar | Reinyecta la rama y la spec activa (deducida de la rama `feat/<x>`) |
-| `limitar-escritura.mjs <perfil>` | Antes de editar (frontmatter del agente) | Cada subagente solo escribe lo de su rol: tests, `critica.md` o `revision.md` |
-| `limitar-bash.mjs <perfil>` | Antes de cada comando (frontmatter del agente) | Lista blanca de comandos: `lectura` (Explore, crítico) o `checks` (test-writer, revisor) |
+| `limitar-escritura.mjs <perfil>` | Antes de editar (frontmatter del agente) | Cada subagente solo escribe lo de su rol: tests, `critica.md`, `revision.md` o (qa) `e2e/` y `qa.md` |
+| `limitar-bash.mjs <perfil>` | Antes de cada comando (frontmatter del agente) | Lista blanca de comandos: `lectura` (Explore, crítico), `checks` (test-writer, revisor) o `qa` (checks + `test:e2e` sin banderas de configuración) |
 
 Límite honesto: los hooks frenan errores y atajos, no a un agente malicioso. Por ejemplo, un test
 puede escribir archivos al ejecutarse. Para eso está la revisión humana del PR.
@@ -130,15 +141,16 @@ CLAUDE.local.md               personal (gitignored)
 ├── settings.json             compartido: output style, permisos, hooks
 ├── settings.local.json       personal (gitignored): claves, preferencias
 ├── output-styles/ingeniero-sistemas.md
-├── agents/                   Explore · test-writer · implementador · critico · revisor
+├── agents/                   Explore · test-writer · implementador · critico · revisor · qa
 ├── skills/                   spec · tdd · supabase-rls · criticar · decision · pr · verify
 ├── rules/                    react.md · migraciones.md
 ├── hooks/                    formatear · proteger · proteger-bash · checks-stop · contexto · limitar-*
-└── agent-memory/             critico/ · revisor/  (memoria compartida por git)
+└── agent-memory/             critico/ · revisor/ · qa/  (memoria compartida por git)
 docs/
 ├── arquitectura.md           mapa del sistema
 ├── decisiones/               decisiones tomadas
-└── specs/<feature>/          spec · contexto · critica · revision · notas
+└── specs/<feature>/          spec · contexto · critica · revision · qa · notas
+e2e/                          pruebas de Playwright (las escribe y mantiene qa)
 ```
 
 ---
