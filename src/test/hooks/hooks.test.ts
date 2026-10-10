@@ -169,6 +169,20 @@ describe('limitar-escritura perfil tests', () => {
     expect(escribir('limitar-escritura.mjs', ['tests'], f).codigo).toBe(2)
   })
 
+  it.each([
+    '../fuera/foo.test.ts',
+    '../../fuera/src/foo.test.tsx',
+    '../fuera/__snapshots__/foo.snap',
+    '/tmp/otra/foo.test.ts',
+    '/tmp/otra/__snapshots__/foo.snap',
+  ])('bloquea rutas fuera del proyecto: %s', (f) => {
+    expect(escribir('limitar-escritura.mjs', ['tests'], f).codigo).toBe(2)
+  })
+
+  it('una ruta absoluta dentro del proyecto sigue valiendo', () => {
+    expect(escribir('limitar-escritura.mjs', ['tests'], path.join(raiz, 'src/foo.test.ts')).codigo).toBe(0)
+  })
+
   it('regresión: permite src/foo.test.ts', () => {
     expect(escribir('limitar-escritura.mjs', ['tests'], 'src/foo.test.ts').codigo).toBe(0)
   })

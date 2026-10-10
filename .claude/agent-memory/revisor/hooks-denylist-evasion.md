@@ -21,6 +21,9 @@ Se repitió en agente-qa (2026-10-10). En la lista negra de banderas de Playwrig
 `PW_TEST_REPORTER=` y `PLAYWRIGHT_HTML_OUTPUT_DIR=`, porque `limitar-bash` borra el prefijo de variables, y también `NODE_OPTIONS=--require`.
 Lo de fondo: si un agente puede escribir archivos que después se ejecutan (`e2e/*.spec.ts`), la lista de banderas no contiene nada.
 
+Se repitió en hooks-subagentes (2026-10-10), ahora en la lista **blanca** de `perfiles.mjs`. `"-exec"` y `"--fix"` entre comillas pasan
+los lookahead, y el prefijo de variables (`GIT_EXTERNAL_DIFF=`) se borra antes de comparar. Detalle en [[hooks-frontmatter-no-invocados]].
+
 **Why:** el criterio de la spec pedía "cualquier forma de invocación" y las listas negras por regex quedan cortas.
 **How to apply:** ante cualquier hook de bloqueo nuevo o modificado, probá mentalmente estas formas y pedí un test
 por cada una. También revisá si la lista negra cubre los caminos que usan un default remoto (en el CLI de Supabase:

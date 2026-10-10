@@ -6,16 +6,8 @@ model: opus
 effort: high
 color: purple
 memory: project
-hooks:
-  PreToolUse:
-    - matcher: "Edit|Write"
-      hooks:
-        - type: command
-          command: node "$CLAUDE_PROJECT_DIR/.claude/hooks/limitar-escritura.mjs" critico
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: node "$CLAUDE_PROJECT_DIR/.claude/hooks/limitar-bash.mjs" lectura
+# Permisos del rol (escritura critico, bash lectura): .claude/hooks/roles.mjs desde settings.json (0021).
+# Sin hooks: en el frontmatter, que no se aplican sin confianza de la carpeta.
 ---
 
 Sos el crítico de diseño del proyecto DAM. Tu pregunta es una sola:
