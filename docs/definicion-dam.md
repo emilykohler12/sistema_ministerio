@@ -431,6 +431,11 @@ erDiagram
 
 Las columnas `created_at` y `updated_at` (timestamptz, NOT NULL) se omiten en las tablas siguientes.
 
+**Criterio enum vs. CHECK.** Una lista cerrada que el frontend usa como tipo es un `enum` de Postgres (`db:types` genera la unión,
+sin escribirla a mano): `taller.estado` es el enum `estado_taller`. Una lista con "Otro" o que se valida contra texto libre es un
+`varchar` con `CHECK` (por ejemplo `cargo`). Donde esta tabla diga `varchar` para una lista cerrada, se aplica este criterio al
+migrar su dominio.
+
 **nivel_educativo**
 
 | Campo | Tipo | Restricciones | Descripción |
@@ -457,7 +462,7 @@ Las columnas `created_at` y `updated_at` (timestamptz, NOT NULL) se omiten en la
 | categoria_id | int | FK → categoria, NOT NULL | Categoría a la que pertenece. Determina el nivel. |
 | nombre | varchar(200) | NOT NULL | Nombre del taller. |
 | descripcion | text | NOT NULL | Descripción. Se utiliza en la búsqueda. |
-| estado | varchar(20) | NOT NULL, por defecto BORRADOR | BORRADOR, PUBLICADO o INACTIVO. |
+| estado | enum `estado_taller` | NOT NULL, por defecto BORRADOR | BORRADOR, PUBLICADO o INACTIVO. |
 
 **recurso**
 

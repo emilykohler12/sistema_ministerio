@@ -57,6 +57,34 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"destinatario": {
+                  Row: {
+                    "id": number,"nombre": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id": number,"nombre": string
+                  }
+                  Update: {
+                    "id"?: number,"nombre"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"etiqueta": {
+                  Row: {
+                    "id": number,"nombre": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: never,"nombre": string
+                  }
+                  Update: {
+                    "id"?: never,"nombre"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"nivel_educativo": {
                   Row: {
                     "id": number,"nombre": string,"orden": number
@@ -85,6 +113,78 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"taller": {
+                  Row: {
+                    "categoria_id": number,"created_at": string,"descripcion": string,"estado": Database["public"]['Enums']["estado_taller"],"id": number,"nombre": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "categoria_id": number,"created_at"?: string,"descripcion": string,"estado"?: Database["public"]['Enums']["estado_taller"],"id"?: never,"nombre": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "categoria_id"?: number,"created_at"?: string,"descripcion"?: string,"estado"?: Database["public"]['Enums']["estado_taller"],"id"?: never,"nombre"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "taller_categoria_id_fkey"
+      columns: ["categoria_id"]
+isOneToOne: false
+      referencedRelation: "categoria"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"taller_destinatario": {
+                  Row: {
+                    "destinatario_id": number,"taller_id": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "destinatario_id": number,"taller_id": number
+                  }
+                  Update: {
+                    "destinatario_id"?: number,"taller_id"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "taller_destinatario_destinatario_id_fkey"
+      columns: ["destinatario_id"]
+isOneToOne: false
+      referencedRelation: "destinatario"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "taller_destinatario_taller_id_fkey"
+      columns: ["taller_id"]
+isOneToOne: false
+      referencedRelation: "taller"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"taller_etiqueta": {
+                  Row: {
+                    "etiqueta_id": number,"taller_id": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "etiqueta_id": number,"taller_id": number
+                  }
+                  Update: {
+                    "etiqueta_id"?: number,"taller_id"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "taller_etiqueta_etiqueta_id_fkey"
+      columns: ["etiqueta_id"]
+isOneToOne: false
+      referencedRelation: "etiqueta"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "taller_etiqueta_taller_id_fkey"
+      columns: ["taller_id"]
+isOneToOne: false
+      referencedRelation: "taller"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -94,12 +194,15 @@ isOneToOne: false
             "es_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"guardar_taller":
+{ Args: { "p_categoria_id": number,"p_descripcion": string,"p_destinatarios": (number)[],"p_estado": Database["public"]['Enums']["estado_taller"],"p_etiquetas": (string)[],"p_id"?: number,"p_nombre": string }; Returns: number
+                           },
 "inmutable_unaccent":
 { Args: { "": string }; Returns: string
                            }
           }
           Enums: {
-            [_ in never]: never
+            "estado_taller": "BORRADOR"|"PUBLICADO"|"INACTIVO"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -219,7 +322,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            
+            "estado_taller": ["BORRADOR", "PUBLICADO", "INACTIVO"]
           }
         }
 } as const

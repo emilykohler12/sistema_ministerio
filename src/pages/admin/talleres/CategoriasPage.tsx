@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { idDeRuta, NIVELES, nombreNivel } from '@/features/talleres/types'
 import { useActualizarCategoria, useCategorias } from '@/features/talleres/hooks/useCategorias'
 import { useTalleres } from '@/features/talleres/hooks/useTalleres'
+import { mensajeDeError } from '@/features/talleres/errores'
 import { Badge } from '@/shared/components/ui/Badge'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
 import { Button } from '@/shared/components/ui/Button'
@@ -12,18 +13,23 @@ import { EmptyState } from '@/shared/components/ui/EmptyState'
 import { ConfirmDialog } from '@/shared/components/ui/ConfirmDialog'
 import { NoEncontrado } from './NoEncontrado'
 
+function pluralTalleres(n: number) {
+  return `${n} ${n === 1 ? 'taller' : 'talleres'}`
+}
+
 export function CategoriasPage() {
   const { nivelId } = useParams<{ nivelId: string }>()
   const nivel = NIVELES.find((n) => n.id === idDeRuta(nivelId))
   const [categoriaADarDeBaja, setCategoriaADarDeBaja] = useState<number | null>(null)
   const categorias = useCategorias(nivel?.id)
-  const talleres = useTalleres({})
+  const talleres = useTalleres()
   const actualizar = useActualizarCategoria()
 
   if (!nivel) return <NoEncontrado titulo="Nivel no encontrado" />
 
+  // Los talleres en borrador o publicados: son los que impiden dar de baja la categoría (DA001).
   function contarTalleres(categoriaId: number) {
-    return (talleres.data ?? []).filter((t) => t.categoriaId === categoriaId).length
+    return (talleres.data ?? []).filter((t) => t.categoria_id === categoriaId && t.estado !== 'INACTIVO').length
   }
 
   return (
@@ -40,7 +46,15 @@ export function CategoriasPage() {
       <div className="mt-6">
         {actualizar.isError && (
           <div className="mb-4">
-            <ErrorFallback message="No pudimos actualizar la categoría. Probá de nuevo." />
+            <ErrorFallback message={mensajeDeError(actualizar.error, 'No pudimos actualizar la categoría. Probá de nuevo.')} />
+          </div>
+        )}
+        {talleres.isError && (
+          <div className="mb-4">
+            <ErrorFallback
+              message="No pudimos cargar los talleres de cada categoría."
+              onRetry={() => void talleres.refetch()}
+            />
           </div>
         )}
         {categorias.isLoading && (
@@ -78,7 +92,10 @@ export function CategoriasPage() {
                 >
                   {cat.nombre}
                 </Link>
-                <p className="mt-1 text-sm text-gray-500">{contarTalleres(cat.id)} talleres</p>
+                {/* Sin los talleres cargados no se muestra el conteo: un "0 talleres" falso sería engañoso. */}
+                {talleres.isSuccess && (
+                  <p className="mt-1 text-sm text-gray-500">{pluralTalleres(contarTalleres(cat.id))}</p>
+                )}
                 <div className="mt-3 flex gap-4 text-sm font-medium">
                   <Link
                     to={`/admin/talleres/${nivel.id}/nueva-categoria?editar=${cat.id}`}
@@ -120,7 +137,7 @@ export function CategoriasPage() {
           }
         }}
         title="Dar de baja la categoría"
-        description="La categoría deja de verse en el portal. Los talleres asociados no se eliminan y podés reactivarla cuando quieras."
+        description="La categoría deja de verse en el portal y podés reactivarla cuando quieras. Para darla de baja, sus talleres tienen que estar inactivos."
         confirmLabel="Dar de baja"
       />
     </div>

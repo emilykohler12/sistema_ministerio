@@ -8,7 +8,7 @@ import { FieldError } from '@/shared/components/ui/FieldError'
 import { Select } from '@/shared/components/ui/Select'
 import { AutocompleteInput } from '@/shared/components/ui/AutocompleteInput'
 import { Button } from '@/shared/components/ui/Button'
-import { useNombresInstitucionSugeridos } from '@/features/talleres/hooks/useTalleres'
+import { useNombresInstitucionSugeridos } from './useNombresInstitucionSugeridos'
 
 const LOCALIDADES = ['Localidad 1', 'Localidad 2', 'Localidad 3', 'Localidad 4', 'Localidad 5']
 const ROLES = ['Docente', 'Director/a', 'Supervisor/a', 'Otro']

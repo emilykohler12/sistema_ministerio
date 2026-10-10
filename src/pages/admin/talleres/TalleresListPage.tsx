@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { NIVELES, destinatarioLabel, idDeRuta, nombreNivel } from '@/features/talleres/types'
+import { ETIQUETA_ESTADO, NIVELES, idDeRuta, nombreNivel, type EstadoTaller } from '@/features/talleres/types'
+import { mensajeDeError } from '@/features/talleres/errores'
+import { filtrarTalleres } from '@/features/talleres/filtrar'
 import { useCategoriaDeRuta } from '@/features/talleres/hooks/useCategoriaDeRuta'
-import { useTalleres } from '@/features/talleres/hooks/useTalleres'
+import { useCambiarEstadoTaller, useTalleres } from '@/features/talleres/hooks/useTalleres'
 import { TallerBuscador } from '@/features/talleres/components/TallerBuscador'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
 import { Badge } from '@/shared/components/ui/Badge'
@@ -11,19 +13,27 @@ import { TableSkeleton } from '@/shared/components/ui/Skeleton'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
 import { EmptyState } from '@/shared/components/ui/EmptyState'
 import { ConfirmDialog } from '@/shared/components/ui/ConfirmDialog'
-import { formatFechaCorta } from '@/shared/lib/date'
+import { formatFechaDeTimestamp } from '@/shared/lib/date'
 import { NoEncontrado } from './NoEncontrado'
+
+const VARIANTE_ESTADO = { BORRADOR: 'neutral', PUBLICADO: 'success', INACTIVO: 'warning' } as const satisfies Record<
+  EstadoTaller,
+  'neutral' | 'success' | 'warning'
+>
+
+const MENSAJE_GENERICO = 'No pudimos actualizar el taller. Probá de nuevo.'
 
 export function TalleresListPage() {
   const params = useParams<{ nivelId: string; categoriaId: string }>()
   const [busqueda, setBusqueda] = useState('')
-  const [tallerAEliminar, setTallerAEliminar] = useState<string | null>(null)
+  const [tallerADarDeBaja, setTallerADarDeBaja] = useState<number | null>(null)
 
   const nivelInfo = NIVELES.find((n) => n.id === idDeRuta(params.nivelId))
   const nivel = nivelInfo?.id
   const categoriaRuta = useCategoriaDeRuta(params.nivelId, params.categoriaId)
   const categoriaId = idDeRuta(params.categoriaId) ?? undefined
-  const talleres = useTalleres({ categoriaId, busqueda: busqueda || undefined })
+  const talleres = useTalleres(categoriaId)
+  const cambiarEstado = useCambiarEstadoTaller()
 
   if (!nivelInfo) return <NoEncontrado titulo="Nivel no encontrado" />
   if (categoriaRuta.estado === 'cargando') return <TableSkeleton />
@@ -32,6 +42,7 @@ export function TalleresListPage() {
     return <NoEncontrado titulo="Categoría no encontrada" volverA={`/admin/talleres/${nivel}`} />
   }
   const categoria = categoriaRuta.categoria
+  const visibles = filtrarTalleres(talleres.data ?? [], { busqueda })
 
   return (
     <div>
@@ -60,9 +71,14 @@ export function TalleresListPage() {
       </div>
 
       <div className="mt-4">
+        {cambiarEstado.isError && (
+          <div className="mb-4">
+            <ErrorFallback message={mensajeDeError(cambiarEstado.error, MENSAJE_GENERICO)} />
+          </div>
+        )}
         {talleres.isLoading && <TableSkeleton />}
         {talleres.isError && <ErrorFallback onRetry={() => talleres.refetch()} />}
-        {talleres.isSuccess && talleres.data.length === 0 && (
+        {talleres.isSuccess && visibles.length === 0 && (
           <EmptyState
             title="Todavía no hay talleres en esta categoría"
             action={
@@ -72,27 +88,27 @@ export function TalleresListPage() {
             }
           />
         )}
-        {talleres.isSuccess && talleres.data.length > 0 && (
+        {talleres.isSuccess && visibles.length > 0 && (
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="border-b border-gray-100 text-gray-500">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Título</th>
-                  <th className="px-4 py-3 font-medium">Destinado a</th>
-                  <th className="px-4 py-3 font-medium">Fecha</th>
-                  <th className="px-4 py-3 font-medium">Recursos</th>
-                  <th className="px-4 py-3 font-medium">Descargas</th>
+                  <th className="px-4 py-3 font-medium">Nombre</th>
+                  <th className="px-4 py-3 font-medium">Destinatarios</th>
+                  <th className="px-4 py-3 font-medium">Estado</th>
+                  <th className="px-4 py-3 font-medium">Última modificación</th>
                   <th className="px-4 py-3 font-medium">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {talleres.data.map((t) => (
+                {visibles.map((t) => (
                   <tr key={t.id}>
-                    <td className="px-4 py-3 font-medium text-gray-800">{t.titulo}</td>
-                    <td className="px-4 py-3 text-gray-600">{t.destinatarios.map(destinatarioLabel).join(', ')}</td>
-                    <td className="px-4 py-3 text-gray-600">{formatFechaCorta(t.fecha)}</td>
-                    <td className="px-4 py-3 text-gray-600">{t.recursos.length}</td>
-                    <td className="px-4 py-3 text-gray-600">{t.descargas}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800">{t.nombre}</td>
+                    <td className="px-4 py-3 text-gray-600">{t.destinatario.map((d) => d.nombre).join(', ')}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant={VARIANTE_ESTADO[t.estado]}>{ETIQUETA_ESTADO[t.estado]}</Badge>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{formatFechaDeTimestamp(t.updated_at)}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-3 font-medium">
                         <Link
@@ -101,13 +117,25 @@ export function TalleresListPage() {
                         >
                           Editar
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => setTallerAEliminar(t.id)}
-                          className="text-red-600 hover:underline"
-                        >
-                          Eliminar
-                        </button>
+                        {t.estado === 'INACTIVO' ? (
+                          <button
+                            type="button"
+                            disabled={cambiarEstado.isPending}
+                            onClick={() => cambiarEstado.mutate({ id: t.id, estado: 'BORRADOR' })}
+                            className="text-primary-600 hover:underline disabled:opacity-50"
+                          >
+                            Reactivar
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={cambiarEstado.isPending}
+                            onClick={() => setTallerADarDeBaja(t.id)}
+                            className="text-red-600 hover:underline disabled:opacity-50"
+                          >
+                            Dar de baja
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -119,11 +147,14 @@ export function TalleresListPage() {
       </div>
 
       <ConfirmDialog
-        open={!!tallerAEliminar}
-        onClose={() => setTallerAEliminar(null)}
-        onConfirm={() => setTallerAEliminar(null)}
-        title="Eliminar taller"
-        description="Esta acción no se puede deshacer."
+        open={tallerADarDeBaja !== null}
+        onClose={() => setTallerADarDeBaja(null)}
+        onConfirm={() => {
+          if (tallerADarDeBaja !== null) cambiarEstado.mutate({ id: tallerADarDeBaja, estado: 'INACTIVO' })
+        }}
+        title="Dar de baja el taller"
+        description="El taller deja de verse en el portal. No se elimina: podés reactivarlo cuando quieras."
+        confirmLabel="Dar de baja"
       />
     </div>
   )

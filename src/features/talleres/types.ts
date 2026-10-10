@@ -1,4 +1,4 @@
-import type { Tables, TablesInsert } from '@/shared/types/database'
+import type { Database, Enums, Tables, TablesInsert } from '@/shared/types/database'
 
 export type NivelEducativo = Tables<'nivel_educativo'>
 
@@ -29,39 +29,37 @@ export type Categoria = Tables<'categoria'>
 export type CategoriaNueva = Pick<TablesInsert<'categoria'>, 'nivel_id' | 'nombre' | 'descripcion'>
 export type CategoriaCambios = Partial<Pick<Categoria, 'nombre' | 'descripcion' | 'activo'>>
 
-export type Destinatario = 'directivos' | 'familias' | 'estudiantes' | 'docentes' | 'comunidad'
+export type EstadoTaller = Enums<'estado_taller'>
 
-export const DESTINATARIOS: { value: Destinatario; label: string }[] = [
-  { value: 'directivos', label: 'Directivos' },
-  { value: 'familias', label: 'Familias' },
-  { value: 'estudiantes', label: 'Estudiantes' },
-  { value: 'docentes', label: 'Docentes' },
-  { value: 'comunidad', label: 'Comunidad educativa' },
-]
+/** Etiqueta en español de cada estado; `satisfies` obliga a cubrir todos los valores del enum. */
+export const ETIQUETA_ESTADO = {
+  BORRADOR: 'Borrador',
+  PUBLICADO: 'Publicado',
+  INACTIVO: 'Inactivo',
+} satisfies Record<EstadoTaller, string>
 
-export function destinatarioLabel(destinatario: Destinatario) {
-  return DESTINATARIOS.find((d) => d.value === destinatario)?.label ?? destinatario
+export type Destinatario = Tables<'destinatario'>
+
+/**
+ * Los 5 destinatarios de la migración `talleres` (P-02). Catálogo fijo: ningún rol de la API los modifica.
+ * Debe coincidir con la base (el pgTAP compara las filas exactas); si cambia la lista, es una migración más esta constante.
+ */
+export const DESTINATARIOS = [
+  { id: 1, nombre: 'Directivos' },
+  { id: 2, nombre: 'Familias' },
+  { id: 3, nombre: 'Estudiantes' },
+  { id: 4, nombre: 'Docentes' },
+  { id: 5, nombre: 'Comunidad educativa' },
+] as const satisfies readonly Destinatario[]
+
+export type Etiqueta = Tables<'etiqueta'>
+
+/** Taller con lo que el portal y el panel necesitan: el nivel (vía la categoría), sus destinatarios y sus etiquetas. */
+export type Taller = Tables<'taller'> & {
+  categoria: Pick<Categoria, 'nivel_id'>
+  destinatario: Destinatario[]
+  etiqueta: Etiqueta[]
 }
 
-export type TipoRecurso = 'pdf' | 'video' | 'imagen'
-
-export interface RecursoArchivo {
-  nombre: string
-  tipo: TipoRecurso
-}
-
-export type EstadoTaller = 'borrador' | 'publicado' | 'inactivo'
-
-export interface Taller {
-  id: string
-  categoriaId: number
-  titulo: string
-  descripcion: string
-  destinatarios: Destinatario[]
-  etiquetas: string[]
-  fecha: string
-  responsable: string
-  recursos: RecursoArchivo[]
-  descargas: number
-  estado: EstadoTaller
-}
+/** Argumentos de la RPC `guardar_taller`: el alta omite `p_id`, la edición lo manda. */
+export type TallerGuardado = Database['public']['Functions']['guardar_taller']['Args']

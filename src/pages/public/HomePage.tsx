@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useConfiguracion } from '@/features/configuracion/hooks/useConfiguracion'
 import { useNormativas } from '@/features/normativas/hooks/useNormativas'
 import { NIVELES } from '@/features/talleres/types'
-import { useTalleres } from '@/features/talleres/hooks/useTalleres'
+import { useCatalogo } from '@/features/talleres/hooks/useTalleres'
 import { TallerCard } from '@/features/talleres/components/TallerCard'
 import { Button } from '@/shared/components/ui/Button'
 import { CardSkeleton } from '@/shared/components/ui/Skeleton'
@@ -13,12 +13,16 @@ import { EmptyState } from '@/shared/components/ui/EmptyState'
 
 export function HomePage() {
   const [busqueda, setBusqueda] = useState('')
-  const talleres = useTalleres({})
+  const talleres = useCatalogo({})
   const normativas = useNormativas({})
   const { data: config } = useConfiguracion()
 
-  const destacados = (talleres.data ?? []).slice(0, 3)
-  const talleresRecientes = (talleres.data ?? []).slice(3, 6)
+  // Los 6 publicados más recientes: los 3 primeros como destacados y los 3 siguientes en la sección Talleres.
+  const recientes = [...(talleres.data ?? [])]
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+    .slice(0, 6)
+  const destacados = recientes.slice(0, 3)
+  const talleresRecientes = recientes.slice(3, 6)
   const normativasRecientes = (normativas.data ?? []).slice(0, 3)
 
   const tieneMisionOVision = !!(config?.mision || config?.vision)
@@ -83,7 +87,7 @@ export function HomePage() {
 
       <section className="px-4 py-10 sm:px-6">
         <h2 className="mb-4 text-xl font-bold text-primary-800">Destacados</h2>
-        {talleres.isLoading && (
+        {talleres.isPending && (
           <div className="grid gap-4 sm:grid-cols-3">
             <CardSkeleton />
             <CardSkeleton />
@@ -148,7 +152,7 @@ export function HomePage() {
             Ver todos
           </Link>
         </div>
-        {talleres.isLoading && (
+        {talleres.isPending && (
           <div className="grid gap-4 sm:grid-cols-3">
             <CardSkeleton />
             <CardSkeleton />

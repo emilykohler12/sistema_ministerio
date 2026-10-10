@@ -1,23 +1,20 @@
-import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ChevronLeft, Share2 } from 'lucide-react'
-import { useTaller, useTalleres } from '@/features/talleres/hooks/useTalleres'
-import { destinatarioLabel } from '@/features/talleres/types'
+import { useCatalogo, useTallerPublicado } from '@/features/talleres/hooks/useTalleres'
+import { idDeRuta, nombreNivel } from '@/features/talleres/types'
 import { TallerCard } from '@/features/talleres/components/TallerCard'
-import { DescargaModal } from '@/features/descargas/DescargaModal'
 import { Badge } from '@/shared/components/ui/Badge'
-import { formatFecha } from '@/shared/lib/date'
 import { Button } from '@/shared/components/ui/Button'
-import { Skeleton } from '@/shared/components/ui/Skeleton'
+import { EmptyState } from '@/shared/components/ui/EmptyState'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
+import { Skeleton } from '@/shared/components/ui/Skeleton'
 
 export function TallerDetallePage() {
   const { id } = useParams<{ id: string }>()
-  const { data: taller, isLoading, isError, refetch } = useTaller(id)
-  const relacionados = useTalleres({ categoriaId: taller?.categoriaId })
-  const [modalOpen, setModalOpen] = useState(false)
+  const { data: taller, isPending, isError, refetch } = useTallerPublicado(idDeRuta(id))
+  const publicados = useCatalogo({})
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="px-4 py-10 sm:px-6">
         <Skeleton className="h-4 w-24" />
@@ -27,15 +24,36 @@ export function TallerDetallePage() {
     )
   }
 
-  if (isError || !taller) {
+  if (isError) {
     return (
       <div className="px-4 py-10 sm:px-6">
-        <ErrorFallback message="No pudimos cargar este recurso." onRetry={() => refetch()} />
+        <ErrorFallback message="No pudimos cargar este taller." onRetry={() => refetch()} />
       </div>
     )
   }
 
-  const recursoPrincipal = taller.recursos[0]
+  // Un id inválido, inexistente o de un taller que no está publicado (aunque haya sesión de admin).
+  if (!taller) {
+    return (
+      <div className="px-4 py-10 sm:px-6">
+        <EmptyState
+          title="Taller no encontrado"
+          description="Revisá el enlace o volvé al catálogo."
+          action={
+            <Link to="/talleres">
+              <Button size="sm" variant="outline">
+                Volver a talleres
+              </Button>
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
+
+  const similares = (publicados.data ?? [])
+    .filter((t) => t.categoria_id === taller.categoria_id && t.id !== taller.id)
+    .slice(0, 3)
 
   return (
     <div>
@@ -44,69 +62,47 @@ export function TallerDetallePage() {
           <ChevronLeft className="h-4 w-4" /> Volver
         </Link>
 
-        <div className="grid gap-8 lg:grid-cols-2">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-              {recursoPrincipal?.tipo.toUpperCase()}
-            </p>
-            <h1 className="mt-1 text-2xl font-bold text-primary-800 sm:text-3xl">{taller.titulo}</h1>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {taller.destinatarios.map((d) => (
-                <Badge key={d} variant="secondary">
-                  {destinatarioLabel(d)}
-                </Badge>
-              ))}
-            </div>
-            <p className="mt-3 text-sm text-gray-500">
-              {formatFecha(taller.fecha)}
-            </p>
-            <p className="mt-4 text-gray-700">{taller.descripcion}</p>
-
-            {taller.etiquetas.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {taller.etiquetas.map((e) => (
-                  <span key={e} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600">
-                    {e}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-6 flex gap-3">
-              <Button onClick={() => setModalOpen(true)}>Descargar</Button>
-              <Button variant="outline">
-                <Share2 className="h-4 w-4" /> Compartir
-              </Button>
-            </div>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+            Nivel {nombreNivel(taller.categoria.nivel_id).toLowerCase()}
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-primary-800 sm:text-3xl">{taller.nombre}</h1>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {taller.destinatario.map((d) => (
+              <Badge key={d.id} variant="secondary">
+                {d.nombre}
+              </Badge>
+            ))}
           </div>
+          <p className="mt-4 max-w-3xl text-gray-700">{taller.descripcion}</p>
 
-          <div className="flex min-h-64 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-400">
-            Vista previa del {recursoPrincipal?.tipo === 'pdf' ? 'PDF' : recursoPrincipal?.tipo}
+          {taller.etiqueta.length > 0 && (
+            <ul className="mt-4 flex flex-wrap gap-2" aria-label="Etiquetas">
+              {taller.etiqueta.map((e) => (
+                <li key={e.id} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600">
+                  {e.nombre}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="mt-6">
+            <Button variant="outline">
+              <Share2 className="h-4 w-4" /> Compartir
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-100 bg-gray-50 px-4 py-10 sm:px-6">
-        <div className="">
-          <h2 className="mb-4 text-xl font-bold text-primary-800">Recursos similares</h2>
+      {similares.length > 0 && (
+        <div className="border-t border-gray-100 bg-gray-50 px-4 py-10 sm:px-6">
+          <h2 className="mb-4 text-xl font-bold text-primary-800">Talleres similares</h2>
           <div className="grid gap-4 sm:grid-cols-3">
-            {(relacionados.data ?? [])
-              .filter((t) => t.id !== taller.id)
-              .slice(0, 3)
-              .map((t) => (
-                <TallerCard key={t.id} taller={t} linkTo={`/talleres/${t.id}`} />
-              ))}
+            {similares.map((t) => (
+              <TallerCard key={t.id} taller={t} linkTo={`/talleres/${t.id}`} mostrarNivel={false} />
+            ))}
           </div>
         </div>
-      </div>
-
-      {recursoPrincipal && (
-        <DescargaModal
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          recursoNombre={taller.titulo}
-          recursoTipo={recursoPrincipal.tipo}
-        />
       )}
     </div>
   )
