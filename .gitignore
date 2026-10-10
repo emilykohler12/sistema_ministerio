@@ -10,6 +10,10 @@ dist-ssr
 src/shared/types/*.tmp
 .DS_Store
 
+# Playwright (npm run test:e2e)
+test-results/
+playwright-report/
+
 # Claude Code: archivos personales
 CLAUDE.local.md
 .claude/settings.local.json

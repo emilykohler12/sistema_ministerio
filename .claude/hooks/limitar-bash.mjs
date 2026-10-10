@@ -2,6 +2,7 @@
 // Lista blanca: solo se permiten los comandos del perfil; todo lo demás se bloquea.
 //   node limitar-bash.mjs lectura   → explorar el repo (Explore, crítico)
 //   node limitar-bash.mjs checks    → explorar + correr lint, typecheck y tests (test-writer, revisor)
+//   node limitar-bash.mjs qa        → checks + pruebas en el navegador con Playwright (qa)
 import { analizarComando, block, escribeArchivo, readInput } from './lib.mjs'
 
 const perfil = process.argv[2]
@@ -13,12 +14,20 @@ const LECTURA = [
 ]
 const CHECKS = [
   ...LECTURA,
-  /^npm (test|run (test(?!:db)|lint|typecheck))\b(?!.*--fix)/,
+  /^npm (test|run (test(?!:db|:e2e)|lint|typecheck))\b(?!.*--fix)/,
   // Base local: anclados y sin argumentos extra (un `-- --db-url ...` no pasa).
   /^npm run (db:reset|test:db)$/,
   /^npx (vitest|tsc --noEmit|oxlint)\b(?!.*--fix)/,
 ]
-const PERFILES = { lectura: LECTURA, checks: CHECKS }
+// Playwright (solo qa). Se aceptan filtros (archivo, --grep, --project, --workers...), pero no las banderas que cambian
+// la configuración, cargan un reporter o escriben fuera de test-results/: -c/--config, --reporter, --output y --ui*.
+const SIN_BANDERAS_PELIGROSAS = String.raw`(?!.*\s(?:-[a-zA-Z]*c|--config|--reporter|--output|--ui)(?![a-zA-Z0-9]))`
+const QA = [
+  ...CHECKS,
+  new RegExp(String.raw`^npm run test:e2e(?=\s|$)${SIN_BANDERAS_PELIGROSAS}`),
+  new RegExp(String.raw`^npx playwright test(?=\s|$)${SIN_BANDERAS_PELIGROSAS}`),
+]
+const PERFILES = { lectura: LECTURA, checks: CHECKS, qa: QA }
 
 const permitidos = PERFILES[perfil]
 if (!permitidos) block(`limitar-bash: perfil desconocido "${perfil}".`)

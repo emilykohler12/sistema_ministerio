@@ -52,6 +52,9 @@ Carga del padrón (0019): `npm run padron:importar -- <csv> [--aplicar]` (`scrip
 service_role. Por defecto apunta al Supabase local; un destino remoto exige `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `--confirmar=<host>`
 (`scripts/lib/entorno.ts`, que también usa `seed-usuarios.mjs`), y `proteger-bash` lo bloquea para los agentes. Los scripts en TypeScript corren con
 `node` directo (type stripping de Node 24) y `tsconfig.node.json` los tipa.
+Pruebas en el navegador (0020): Playwright con Chromium headless (se instala al crear el contenedor), `npm run test:e2e`, specs en `e2e/` y
+`playwright.config.ts` (un worker, levanta `npm run dev` si no hay servidor). Corren contra el Supabase local con `admin@dam.local`
+(`e2e/helpers.ts`: `loginAdmin`). Las escribe el agente `qa` después de implementar; Vitest no toma `e2e/`. Sin CI por ahora.
 
 ## Base de datos (`supabase/`)
 

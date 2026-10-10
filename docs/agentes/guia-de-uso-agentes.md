@@ -22,10 +22,12 @@ Todo corre dentro del Dev Container (decisión 0003). En tu máquina solo hacen 
 8. Verificar que todo cargó:
    - `/context` → aparece `CLAUDE.md`.
    - `/output-style` → está activo **Ingeniero en Sistemas**.
-   - `@` en el prompt → aparecen los 5 agentes del proyecto.
+   - `@` en el prompt → aparecen los 6 agentes del proyecto.
    - `/hooks` → aparecen los hooks del proyecto.
    - `/skills` → aparecen las skills del proyecto.
    - `npm test` en la terminal → pasan los tests.
+   - `npm run test:e2e` (con el Supabase local levantado, `npm run db:start`) → pasan las pruebas de navegador.
+     Chromium se instala solo al crear el contenedor; si falta: `npx playwright install --with-deps chromium`.
 9. Opcional: agregar en tu `~/.claude/settings.json` un hook de notificación para que te avise cuando Claude necesita respuesta.
 
 Si cambia `.devcontainer/` o `package.json`: *Dev Containers: Rebuild Container*.
@@ -60,12 +62,14 @@ Si no estás de acuerdo con el carril, decíselo.
 
 **Chico** (un componente, un bug acotado)
 → Plan breve → lo aprobás → implementa → revisa → te muestra el resultado.
+Si el cambio toca una pantalla, después del revisor pasa el `qa`, que lo prueba en el navegador.
 
 **Feature** (algo nuevo e importante)
 1. `/spec <nombre>`: el ingeniero te entrevista y escribe `docs/specs/<nombre>/spec.md`.
 2. El crítico opina sobre la spec. El ingeniero te muestra en qué coincide y en qué no.
 3. **Vos aprobás la spec.** Este es el punto de control más importante.
-4. El ingeniero delega: tests → implementación → crítica + revisión.
+4. El ingeniero delega: tests → implementación → crítica + revisión en paralelo y luego `qa` (prueba la feature en el
+   navegador, deja `docs/specs/<nombre>/qa.md` con lo que probó y los bugs con pasos para reproducir, y resetea la base al terminar).
 5. Si el implementador se traba, el ingeniero te pregunta. Respondés y sigue solo.
 6. Al final te presenta: resumen, evidencia de tests y desvíos de la spec.
 

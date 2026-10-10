@@ -22,7 +22,7 @@
     "DAM_WATCH_POLLING": "1"
   },
   // Los volúmenes se crean como root: se los damos al usuario node antes de instalar.
-  "postCreateCommand": "sudo chown node:node node_modules /home/node/.claude && npm ci",
+  "postCreateCommand": "sudo chown node:node node_modules /home/node/.claude && npm ci && npx playwright install --with-deps chromium",
   "forwardPorts": [5173, 54321, 54323, 54324],
   "portsAttributes": {
     "5173": { "label": "DAM (Vite)", "onAutoForward": "notify" },

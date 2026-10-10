@@ -1,0 +1,1 @@
+- [Trampas e2e del DAM](trampas-e2e.md) — selectores y datos que costaron en los specs de Playwright
