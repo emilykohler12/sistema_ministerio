@@ -21,16 +21,13 @@ export function PublicHeader() {
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link to="/" className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded-md">
-          {config?.logoUrl ? (
-            <img src={config.logoUrl} alt={`Logo de ${nombre}`} className="h-9 w-9 rounded-md object-cover" />
-          ) : (
-            <span
-              className="flex h-9 w-9 items-center justify-center rounded-md bg-primary-800 text-sm font-bold text-white"
-              aria-hidden="true"
-            >
-              {iniciales || <School className="h-4 w-4" />}
-            </span>
-          )}
+          {/* Sin URL de Storage todavía (logo diferido): hasta entonces siempre iniciales o ícono. */}
+          <span
+            className="flex h-9 w-9 items-center justify-center rounded-md bg-primary-800 text-sm font-bold text-white"
+            aria-hidden="true"
+          >
+            {iniciales || <School className="h-4 w-4" />}
+          </span>
           <span className="text-sm font-semibold leading-tight text-primary-800">{nombre}</span>
         </Link>
 

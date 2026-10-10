@@ -25,7 +25,7 @@ los datos. Solo la descarga de talleres (y luego la gestión de usuarios) pasa p
 | `normativas` | Normativas con número, año, etiquetas y archivo |
 | `descargas` | Modal de descarga. Hoy: escuela, localidad y rol. Destino (0010): cargo, localidad, institución del padrón |
 | `dashboard` | KPIs y métricas para el administrador |
-| `configuracion` | Ajustes generales del sitio |
+| `configuracion` | Datos institucionales del sitio. **Migrado a Supabase** (primer corte, 0012): `types.ts` derivado, `consultas.ts`, hooks delgados; sin mocks. Logo pendiente (Storage) |
 | `auth` | Sesión del administrador con Supabase Auth (0005). `AuthContext` escucha solo `onAuthStateChange`; `esAdmin.ts` (puro, solo UX) exige `app_metadata.admin`; sesión en `sessionStorage` |
 
 ## Rutas
@@ -46,7 +46,12 @@ usuarios con `scripts/seed-usuarios.mjs`), `test:db` (pgTAP en `supabase/tests/`
 - `migrations/<ts>_base.sql`: piezas transversales, sin tablas de dominio. `es_admin()` (lee
   `app_metadata` del JWT), `inmutable_unaccent()` para búsquedas sin tildes, `registro_operacion`
   (append-only, solo SELECT para el admin) y el trigger `auditar()`, que falla cerrada.
-- Cada corte de dominio agrega su migración, sus tablas con RLS, el trigger `auditar()` y sus tests.
+- `migrations/<ts>_configuracion.sql`: `tocar_updated_at()` (transversal, `before update`, para toda tabla con
+  `updated_at`) y la tabla `configuracion` de una fila (`CHECK id = 1`): select público, update solo `es_admin()`,
+  sin insert ni delete.
+- Cada corte de dominio agrega su migración, sus tablas con RLS, el trigger `auditar()`, el trigger
+  `tocar_updated_at()` si la tabla tiene `updated_at`, y sus tests. Las guardias globales de `supabase/tests/`
+  (`rls_global`, `auditoria_global`, `truncate_global`, `updated_at_global`) fallan si se olvida alguno.
 
 ## Brechas entre el código y la definición v2
 

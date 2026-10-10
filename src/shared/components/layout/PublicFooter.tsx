@@ -11,16 +11,13 @@ export function PublicFooter() {
     <footer className="mt-auto bg-primary-800 text-white">
       <div className="mx-auto flex flex-col items-center gap-4 px-4 py-6 text-sm sm:flex-row sm:justify-between sm:px-6">
         <div className="flex items-center gap-2 font-semibold">
-          {config?.logoUrl ? (
-            <img src={config.logoUrl} alt={`Logo de ${nombre}`} className="h-8 w-8 rounded-md object-cover" />
-          ) : (
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-xs font-bold text-primary-800"
-              aria-hidden="true"
-            >
-              {iniciales}
-            </span>
-          )}
+          {/* Sin URL de Storage todavía (logo diferido): hasta entonces siempre iniciales. */}
+          <span
+            className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-xs font-bold text-primary-800"
+            aria-hidden="true"
+          >
+            {iniciales}
+          </span>
           <p>{nombre}</p>
         </div>
 

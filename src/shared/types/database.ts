@@ -23,7 +23,21 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "registro_operacion": {
+            "configuracion": {
+                  Row: {
+                    "correo": string,"direccion": string,"facebook": string,"id": number,"instagram": string,"logo_ruta": string | null,"mision": string,"nombre": string,"quienes_somos": string,"telefono": string,"updated_at": string,"vision": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "correo"?: string,"direccion"?: string,"facebook"?: string,"id"?: number,"instagram"?: string,"logo_ruta"?: string | null,"mision"?: string,"nombre": string,"quienes_somos"?: string,"telefono"?: string,"updated_at"?: string,"vision"?: string
+                  }
+                  Update: {
+                    "correo"?: string,"direccion"?: string,"facebook"?: string,"id"?: number,"instagram"?: string,"logo_ruta"?: string | null,"mision"?: string,"nombre"?: string,"quienes_somos"?: string,"telefono"?: string,"updated_at"?: string,"vision"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"registro_operacion": {
                   Row: {
                     "datos_anteriores": Json | null,"datos_nuevos": Json | null,"fecha_hora": string,"id": number,"operacion": string,"registro_id": string | null,"tabla": string,"usuario_id": string | null
                   }

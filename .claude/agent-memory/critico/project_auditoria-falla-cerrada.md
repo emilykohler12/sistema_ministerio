@@ -21,6 +21,8 @@ igual que el error tragado.
 - En los cortes de dominio, revisar dos cosas: que los triggers nuevos no copien el patrón de tragar errores, y que
   existan los guardias globales (RLS, auditar, truncate). Si no los agregaron, buscar en `critica.md` de supabase-base
   la respuesta a la ronda 2.
+- Las guardias (RLS, auditar, truncate) quedaron en ADR 0013. Cada transversal nueva que haya que repetir por tabla
+  (por ejemplo `tocar_updated_at`, Fase B de auth-configuracion) pide su guardia `*_global.test.sql`, igual que esas.
 - El perfil `lectura` del crítico no puede correr `npm run test:db`: decirlo y criticar leyendo el código.
 
 Relacionado: [[permisos-agentes-vs-spec]].
