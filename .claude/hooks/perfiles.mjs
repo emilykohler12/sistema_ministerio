@@ -49,7 +49,7 @@ const BANDERAS_PELIGROSAS = [
   { re: /(?<![\w-])-(?:exec|execdir|ok|okdir|delete|fprint\w*|fls)(?![\w-])/, que: 'find ejecuta o escribe' },
   { re: /(?<![\w-])--fix/, que: '--fix modifica archivos' },
   {
-    re: /(?<![\w-])--(?:pre|pre-glob|hostname-bin|ext-diff|textconv|output|outfile|compress-program|config-env|exec-path)(?![\w-])/,
+    re: /(?<![\w-])--(?:pre|pre-glob|hostname-bin|ext-diff|textconv|output|outputFile|output-file|outfile|generateCpuProfile|generateTrace|tsBuildInfoFile|init|compress-program|config-env|exec-path)(?![\w-])/,
     que: 'ejecuta otro programa o escribe un archivo',
   },
 ]

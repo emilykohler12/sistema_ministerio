@@ -3,7 +3,8 @@
 // así que el rol se lee de `agent_type` en la entrada. Falla cerrada: cualquier error sale con exit 2.
 //   sin agent_type (agente principal) o rol libre → sin restricción (siguen proteger.mjs y proteger-bash.mjs)
 //   rol con perfil → el de perfiles.mjs · rol desconocido → no escribe y solo lee por bash
-// Los imports son dinámicos y dentro del try: un import estático que falla saldría con exit 1, que no bloquea.
+// Los imports son dinámicos y dentro del try: segunda defensa. settings.json ya lleva onFailure "block" (Claude Code >= 2.1.295),
+// así que un import estático que falla (exit 1) también bloquea, pero acá el error sale con un motivo claro y exit 2.
 // perfiles.mjs se importa después de mirar agent_type: si se rompe, el agente principal sigue pudiendo arreglarlo.
 
 function bloquear(motivo) {
