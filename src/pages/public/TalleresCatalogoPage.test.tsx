@@ -34,6 +34,7 @@ function taller(id: number, nombre: string, p: Partial<Taller> & { nivel_id?: nu
     categoria: { nivel_id },
     destinatario: [],
     etiqueta: [],
+    recurso: [],
     ...resto,
   }
 }

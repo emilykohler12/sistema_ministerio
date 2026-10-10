@@ -6,12 +6,12 @@ import type { EstadoTaller, Taller, TallerGuardado } from '../types'
 // Una sola clave para todos los hooks: la lista completa se consulta una vez y cada hook filtra con `select`.
 // La RLS decide qué ve cada rol (la caché se limpia al cambiar de usuario, 0014): el admin recibe también
 // borradores e inactivos, así que el portal filtra los publicados en `soloPublicados`.
-const CLAVE = ['talleres'] as const
+export const CLAVE_TALLERES = ['talleres'] as const
 
 const soloPublicados = (todos: Taller[]) => todos.filter((t) => t.estado === 'PUBLICADO')
 
 function useTodosLosTalleres<T>(select: (todos: Taller[]) => T) {
-  return useQuery({ queryKey: CLAVE, queryFn: obtenerTalleres, select })
+  return useQuery({ queryKey: CLAVE_TALLERES, queryFn: obtenerTalleres, select })
 }
 
 /** Panel: todos los talleres, de cualquier estado, o solo los de una categoría. */
@@ -50,7 +50,7 @@ export function useGuardarTaller() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (datos: TallerGuardado) => guardarTaller(datos),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE_TALLERES }),
   })
 }
 
@@ -58,6 +58,6 @@ export function useCambiarEstadoTaller() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, estado }: { id: number; estado: EstadoTaller }) => cambiarEstadoTaller(id, estado),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE_TALLERES }),
   })
 }

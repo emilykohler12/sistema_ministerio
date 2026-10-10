@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes, useParams } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { guardarTaller, obtenerCategorias, obtenerTalleres } from '@/features/talleres/consultas'
 import type { Categoria, Taller } from '@/features/talleres/types'
@@ -48,11 +48,18 @@ const existente: Taller = {
   categoria: { nivel_id: 3 },
   destinatario: [{ id: 4, nombre: 'Docentes' }],
   etiqueta: [{ id: 1, nombre: 'ambiente' }],
+  recurso: [],
+}
+
+function PantallaRecursos() {
+  const { nivelId, categoriaId, tallerId } = useParams()
+  return <p>{`Recursos del taller ${tallerId} (nivel ${nivelId}, categoría ${categoriaId})`}</p>
 }
 
 function renderPagina(ruta: string) {
   return renderConProviders(
     <Routes>
+      <Route path="/admin/talleres/:nivelId/:categoriaId/:tallerId/recursos" element={<PantallaRecursos />} />
       <Route path="/admin/talleres/:nivelId/:categoriaId/nuevo" element={<TallerFormPage />} />
       <Route path="/admin/talleres/:nivelId/:categoriaId/:tallerId/editar" element={<TallerFormPage />} />
       <Route path="/admin/talleres/:nivelId/:categoriaId" element={<p>Lista de talleres</p>} />
@@ -133,7 +140,7 @@ describe('TallerFormPage: rutas y carga', () => {
 })
 
 describe('TallerFormPage: alta', () => {
-  it('llama a guardarTaller con los args de la RPC (sin p_id), el nombre recortado, y vuelve a la lista', async () => {
+  it('llama a guardarTaller con los args de la RPC (sin p_id), el nombre recortado, y navega a los recursos del taller creado', async () => {
     vi.mocked(guardarTaller).mockResolvedValue(9)
     renderPagina('/admin/talleres/3/7/nuevo')
     await screen.findByRole('heading', { name: 'Nuevo Taller' })
@@ -157,7 +164,9 @@ describe('TallerFormPage: alta', () => {
       p_etiquetas: ['redes'],
     })
     expect(datos).not.toHaveProperty('p_id')
-    expect(await screen.findByText('Lista de talleres')).toBeInTheDocument()
+    // El id que devuelve guardarTaller (9) es el del taller cuya pantalla de recursos se abre (criterio 10).
+    expect(await screen.findByText('Recursos del taller 9 (nivel 3, categoría 7)')).toBeInTheDocument()
+    expect(screen.queryByText('Lista de talleres')).not.toBeInTheDocument()
   })
 
   it('por defecto guarda como BORRADOR y sin etiquetas', async () => {

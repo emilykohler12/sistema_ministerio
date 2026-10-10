@@ -99,6 +99,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"recurso": {
+                  Row: {
+                    "created_at": string,"id": number,"nombre": string,"orden": number,"ruta_archivo": string | null,"taller_id": number,"tamanio_bytes": number | null,"tipo": Database["public"]['Enums']["tipo_recurso"],"updated_at": string,"url": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: never,"nombre": string,"orden": number,"ruta_archivo"?: string | null,"taller_id": number,"tamanio_bytes"?: number | null,"tipo": Database["public"]['Enums']["tipo_recurso"],"updated_at"?: string,"url"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: never,"nombre"?: string,"orden"?: number,"ruta_archivo"?: string | null,"taller_id"?: number,"tamanio_bytes"?: number | null,"tipo"?: Database["public"]['Enums']["tipo_recurso"],"updated_at"?: string,"url"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recurso_taller_id_fkey"
+      columns: ["taller_id"]
+isOneToOne: false
+      referencedRelation: "taller"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"registro_operacion": {
                   Row: {
                     "datos_anteriores": Json | null,"datos_nuevos": Json | null,"fecha_hora": string,"id": number,"operacion": string,"registro_id": string | null,"tabla": string,"usuario_id": string | null
@@ -199,10 +219,13 @@ isOneToOne: false
                            },
 "inmutable_unaccent":
 { Args: { "": string }; Returns: string
+                           },
+"ordenar_recursos":
+{ Args: { "p_ids": (number)[],"p_taller_id": number }; Returns: undefined
                            }
           }
           Enums: {
-            "estado_taller": "BORRADOR"|"PUBLICADO"|"INACTIVO"
+            "estado_taller": "BORRADOR"|"PUBLICADO"|"INACTIVO","tipo_recurso": "PDF"|"PPTX"|"DOCX"|"IMAGEN"|"VIDEO"|"ENLACE"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -322,7 +345,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "estado_taller": ["BORRADOR", "PUBLICADO", "INACTIVO"]
+            "estado_taller": ["BORRADOR", "PUBLICADO", "INACTIVO"],"tipo_recurso": ["PDF", "PPTX", "DOCX", "IMAGEN", "VIDEO", "ENLACE"]
           }
         }
 } as const

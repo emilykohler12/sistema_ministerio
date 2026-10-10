@@ -39,6 +39,14 @@ En talleres (2026-10-10, cuarta vez) la verificación en el navegador volvió a 
 error de carga quedaron implementadas (`TallerFormPage` en edición), pero sin test. `CategoriasPage` muestra "0 talleres" si
 falla la carga. Para sacar cantidades de `details`, cuidado con `Number(null) === 0`: PostgREST manda `details: null`.
 
+En recursos (2026-10-10, quinta vez) la verificación en el navegador ni siquiera quedó anotada como pendiente en `notas.md` (solo
+las comprobaciones por script). Las ramas de error de las mutaciones que pasan por diálogos (`DialogoRecurso`: alta de enlace,
+edición) y el `onError` del reemplazo quedaron sin test. Lo demás salió bien: secuencias con compensaciones, `remove()` con
+`data: []` tratado como falla, 413/415 en `status` o `statusCode`. Hubo huecos nuevos de UI de subida por lotes: archivos descartados sin
+aviso mientras corre un lote y errores del lote anterior que siguen visibles.
+- Para no reportar falsos positivos: con `onSuccess: () => invalidateQueries(...)`, React Query mantiene `isPending` hasta que termina
+  el refetch, así que no hay ventana de datos viejos entre el éxito y la recarga.
+
 Datos de la librería, para no reportar falsos positivos:
 - En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF
   y `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema de una edición por shell:

@@ -132,8 +132,9 @@ function Formulario({
       p_etiquetas: valores.etiquetas,
     }
     try {
-      await guardar.mutateAsync(datos)
-      navigate(volver)
+      const id = await guardar.mutateAsync(datos)
+      // Tras el alta se abre la pantalla de recursos del taller nuevo; la edición vuelve a la lista.
+      navigate(taller ? volver : `${volver}/${id}/recursos`)
     } catch (error) {
       setErrorGuardado(mensajeDeError(error, MENSAJE_GENERICO))
     }

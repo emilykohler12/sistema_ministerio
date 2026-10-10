@@ -17,6 +17,10 @@ son patrones que es probable que se copien en recursos y normativas:
   en `errores.ts` (puro).
 - Props agregadas "para no tocar un test" (`mostrarNivel`): aceptarlas solo si hay además una razón de UX.
 
+En la fase B de recursos (2026-10-10) se adoptó `useCategoriaDeRuta`, pero la escalera del taller (id inválido / error / cargando /
+de otra categoría) quedó copiada en `TallerFormPage` y `RecursosPage`. Propuse `useTallerDeRuta`; ver en la Respuesta si se aceptó.
+Además, una página llamaba a `consultas` directamente (`urlFirmada`), contra `.claude/rules/react.md`.
+
 **Why:** la fase B de cada corte copia el molde de la anterior, y estas tres cosas no las detecta el typecheck ni los tests.
 
 **How to apply:** en la crítica de código de cada corte con pantallas del portal o enums nuevos, buscar `isLoading` seguido de

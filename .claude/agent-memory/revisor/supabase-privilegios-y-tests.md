@@ -37,6 +37,11 @@ En talleres (2026-10-10) se repitió el olvido del `revoke execute` en las funci
 (`taller_validar_categoria`, `categoria_validar_baja`), aunque `tocar_updated_at` sí lo tiene. No se puede explotar
 (`rpc/<fn trigger>` da 404), es menor. `guardar_taller` revoca a public y anon, pero no a service_role.
 
+En recursos (2026-10-10) la migración salió bien: grant por columna, RPC invoker con EXECUTE solo para authenticated, bucket privado
+creado por migración y políticas de `storage.objects` `to authenticated` con `es_admin()`. La política de DELETE de Storage solo se puede
+probar con `set local storage.allow_delete_query = 'true'` y abriendo un select temporal (sin el select, el DELETE ve 0 filas igual).
+Para revisar Storage sin ensuciar la base, alcanza con psql (`pg_policies where schemaname='storage'`) y comparar `gen types --local`.
+
 **Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
 creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
 REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay

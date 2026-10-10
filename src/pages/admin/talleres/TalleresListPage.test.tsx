@@ -3,13 +3,15 @@ import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { cambiarEstadoTaller, obtenerCategorias, obtenerTalleres } from '@/features/talleres/consultas'
+import type { Recurso } from '@/features/recursos/types'
 import type { Categoria, Taller } from '@/features/talleres/types'
 import { renderConProviders } from '@/test/utils'
 import { TalleresListPage } from './TalleresListPage'
 
 /*
  * Contrato de consultas: ver useTalleres.test.ts. Textos asumidos: columnas "Nombre", "Destinatarios",
- * "Estado" y "Última modificación"; estados "Borrador" / "Publicado" / "Inactivo"; acciones "Editar",
+ * "Estado", "Recursos" (cantidad = taller.recurso.length) y "Última modificación"; acción "Recursos" (enlace a
+ * /admin/talleres/:nivelId/:categoriaId/:tallerId/recursos);estados "Borrador" / "Publicado" / "Inactivo"; acciones "Editar",
  * "Dar de baja" (abre un diálogo de confirmación) y "Reactivar" (sin confirmación). La baja llama a
  * cambiarEstadoTaller(id, 'INACTIVO') y la reactivación a cambiarEstadoTaller(id, 'BORRADOR').
  */
@@ -34,7 +36,22 @@ const ciencia: Categoria = {
   updated_at: '2026-10-10T00:00:00Z',
 }
 
-function taller(id: number, nombre: string, estado: Taller['estado'], categoria_id = 7): Taller {
+function recursoDe(id: number, taller_id: number): Recurso {
+  return {
+    id,
+    taller_id,
+    nombre: `Recurso ${id}`,
+    tipo: 'PDF',
+    ruta_archivo: `${taller_id}/${id}.pdf`,
+    url: null,
+    tamanio_bytes: 100,
+    orden: id,
+    created_at: '2026-10-10T00:00:00Z',
+    updated_at: '2026-10-10T00:00:00Z',
+  }
+}
+
+function taller(id: number, nombre: string, estado: Taller['estado'], categoria_id = 7, recurso: Recurso[] = []): Taller {
   return {
     id,
     categoria_id,
@@ -49,11 +66,12 @@ function taller(id: number, nombre: string, estado: Taller['estado'], categoria_
       { id: 4, nombre: 'Docentes' },
     ],
     etiqueta: [],
+    recurso,
   }
 }
 
 const talleres = [
-  taller(1, 'Huerta escolar', 'PUBLICADO'),
+  taller(1, 'Huerta escolar', 'PUBLICADO', 7, [recursoDe(1, 1), recursoDe(2, 1), recursoDe(3, 1)]),
   taller(2, 'Borrador de robótica', 'BORRADOR'),
   taller(3, 'Ajedrez viejo', 'INACTIVO'),
   taller(4, 'De otra categoría', 'PUBLICADO', 8),
@@ -114,13 +132,33 @@ describe('TalleresListPage: categoría de la URL', () => {
 })
 
 describe('TalleresListPage: lista', () => {
-  it('muestra las columnas nombre, destinatarios, estado y última modificación', async () => {
+  it('muestra las columnas nombre, destinatarios, estado, recursos y última modificación', async () => {
     renderPagina('/admin/talleres/3/7')
     await screen.findByText('Huerta escolar')
-    for (const col of ['Nombre', 'Destinatarios', 'Estado', 'Última modificación']) {
+    for (const col of ['Nombre', 'Destinatarios', 'Estado', 'Recursos', 'Última modificación']) {
       expect(screen.getByRole('columnheader', { name: col })).toBeInTheDocument()
     }
-    expect(screen.queryByRole('columnheader', { name: /descargas|recursos|fecha$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: /descargas|fecha$/i })).not.toBeInTheDocument()
+  })
+
+  it('la columna "Recursos" muestra la cantidad de recursos de cada taller', async () => {
+    renderPagina('/admin/talleres/3/7')
+    await screen.findByText('Huerta escolar')
+    expect(fila('Huerta escolar').getByRole('cell', { name: '3' })).toBeInTheDocument()
+    expect(fila('Borrador de robótica').getByRole('cell', { name: '0' })).toBeInTheDocument()
+  })
+
+  it('cada taller tiene la acción "Recursos", que lleva a la pantalla de recursos del taller', async () => {
+    renderPagina('/admin/talleres/3/7')
+    await screen.findByText('Huerta escolar')
+    expect(fila('Huerta escolar').getByRole('link', { name: 'Recursos' })).toHaveAttribute(
+      'href',
+      '/admin/talleres/3/7/1/recursos',
+    )
+    expect(fila('Ajedrez viejo').getByRole('link', { name: 'Recursos' })).toHaveAttribute(
+      'href',
+      '/admin/talleres/3/7/3/recursos',
+    )
   })
 
   it('lista solo los talleres de la categoría, incluidos borradores e inactivos', async () => {
