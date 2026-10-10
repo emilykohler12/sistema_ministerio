@@ -1,27 +1,32 @@
-import { useQuery } from '@tanstack/react-query'
-import { categoriasMock } from '../mocks/categorias.mock'
-import type { Nivel } from '../types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { actualizarCategoria, crearCategoria, obtenerCategorias } from '../consultas'
+import type { Categoria, CategoriaCambios, CategoriaNueva } from '../types'
 
-async function fetchCategorias(nivel?: Nivel) {
-  await new Promise((r) => setTimeout(r, 300))
-  if (!nivel) return categoriasMock
-  return categoriasMock.filter((c) => c.nivel === nivel || c.nivel === 'todos')
-}
+// Una sola clave para todos los hooks: la lista completa se consulta una vez y cada hook filtra con `select`.
+const CLAVE = ['categorias'] as const
 
-export function useCategorias(nivel?: Nivel) {
+export function useCategorias(nivelId?: number) {
   return useQuery({
-    queryKey: ['categorias', nivel ?? 'all'],
-    queryFn: () => fetchCategorias(nivel),
+    queryKey: CLAVE,
+    queryFn: obtenerCategorias,
+    select: (todas: Categoria[]) =>
+      nivelId === undefined ? todas : todas.filter((c) => c.nivel_id === nivelId),
   })
 }
 
-export function useCategoria(id: string | undefined) {
-  return useQuery({
-    queryKey: ['categorias', id],
-    queryFn: async () => {
-      await new Promise((r) => setTimeout(r, 200))
-      return categoriasMock.find((c) => c.id === id) ?? null
-    },
-    enabled: !!id,
+export function useCrearCategoria() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (nueva: CategoriaNueva) => crearCategoria(nueva),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE }),
+  })
+}
+
+export function useActualizarCategoria() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, cambios }: { id: number; cambios: CategoriaCambios }) =>
+      actualizarCategoria(id, cambios),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE }),
   })
 }

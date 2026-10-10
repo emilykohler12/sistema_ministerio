@@ -1,21 +1,33 @@
-export type Nivel = 'inicial' | 'primario' | 'secundario' | 'terciario' | 'formacion-profesional' | 'todos'
+import type { Tables, TablesInsert } from '@/shared/types/database'
 
-export const NIVELES: { value: Nivel; label: string }[] = [
-  { value: 'inicial', label: 'Inicial' },
-  { value: 'primario', label: 'Primario' },
-  { value: 'secundario', label: 'Secundario' },
-  { value: 'terciario', label: 'Terciario' },
-  { value: 'formacion-profesional', label: 'Formación profesional' },
-  { value: 'todos', label: 'Todos los niveles' },
-]
+export type NivelEducativo = Tables<'nivel_educativo'>
 
-export const NIVELES_FILTRO: { value: Nivel; label: string }[] = NIVELES.filter((n) => n.value !== 'todos')
+/**
+ * Los 5 niveles de la decisión 0008. Es un catálogo fijo: ningún rol de la API los modifica.
+ * Debe coincidir con la migración `niveles_categorias` (el pgTAP compara las filas exactas).
+ */
+export const NIVELES = [
+  { id: 1, nombre: 'Inicial', orden: 1 },
+  { id: 2, nombre: 'Primario', orden: 2 },
+  { id: 3, nombre: 'Secundario', orden: 3 },
+  { id: 4, nombre: 'Terciario', orden: 4 },
+  { id: 5, nombre: 'Formación profesional', orden: 5 },
+] as const satisfies readonly NivelEducativo[]
 
-export const NIVEL_VALUES = ['inicial', 'primario', 'secundario', 'terciario', 'formacion-profesional', 'todos'] as const
-
-export function nivelLabel(nivel: Nivel) {
-  return NIVELES.find((n) => n.value === nivel)?.label ?? nivel
+export function nombreNivel(id: number) {
+  return NIVELES.find((n) => n.id === id)?.nombre ?? String(id)
 }
+
+/** Id numérico de un parámetro de la URL: entero positivo, o `null` si no lo es (o no está). */
+export function idDeRuta(param: string | undefined): number | null {
+  if (param === undefined || !/^[1-9]\d*$/.test(param)) return null
+  const id = Number(param)
+  return Number.isSafeInteger(id) ? id : null
+}
+
+export type Categoria = Tables<'categoria'>
+export type CategoriaNueva = Pick<TablesInsert<'categoria'>, 'nivel_id' | 'nombre' | 'descripcion'>
+export type CategoriaCambios = Partial<Pick<Categoria, 'nombre' | 'descripcion' | 'activo'>>
 
 export type Destinatario = 'directivos' | 'familias' | 'estudiantes' | 'docentes' | 'comunidad'
 
@@ -31,13 +43,6 @@ export function destinatarioLabel(destinatario: Destinatario) {
   return DESTINATARIOS.find((d) => d.value === destinatario)?.label ?? destinatario
 }
 
-export interface Categoria {
-  id: string
-  nombre: string
-  nivel: Nivel
-  descripcion?: string
-}
-
 export type TipoRecurso = 'pdf' | 'video' | 'imagen'
 
 export interface RecursoArchivo {
@@ -49,10 +54,9 @@ export type EstadoTaller = 'borrador' | 'publicado' | 'inactivo'
 
 export interface Taller {
   id: string
-  categoriaId: string
+  categoriaId: number
   titulo: string
   descripcion: string
-  nivel: Nivel
   destinatarios: Destinatario[]
   etiquetas: string[]
   fecha: string

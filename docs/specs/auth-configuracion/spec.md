@@ -1,6 +1,6 @@
 # auth-configuracion: primer corte vertical
 
-- **Estado:** implementada (v2; Fase A en PR #5, Fase B en `feat/configuracion-supabase`)
+- **Estado:** implementada (v2; Fase A en PR #5, Fase B en PR #6; ambas en `main`)
 - **Autor:** Joa Sanchez + Claude
 - **Fecha:** 2026-10-10
 

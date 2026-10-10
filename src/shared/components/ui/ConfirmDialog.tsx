@@ -7,9 +7,18 @@ interface ConfirmDialogProps {
   onConfirm: () => void
   title: string
   description?: string
+  /** Texto del botón de confirmación. Por defecto, "Eliminar". */
+  confirmLabel?: string
 }
 
-export function ConfirmDialog({ open, onClose, onConfirm, title, description }: ConfirmDialogProps) {
+export function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmLabel = 'Eliminar',
+}: ConfirmDialogProps) {
   return (
     <Dialog open={open} onClose={onClose} title={title} description={description}>
       <div className="flex justify-end gap-3 pt-2">
@@ -23,7 +32,7 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, description }: 
             onClose()
           }}
         >
-          Eliminar
+          {confirmLabel}
         </Button>
       </div>
     </Dialog>

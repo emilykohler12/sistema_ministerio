@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
-import { NIVELES_FILTRO, destinatarioLabel, nivelLabel, type Nivel } from '@/features/talleres/types'
-import { useCategoria } from '@/features/talleres/hooks/useCategorias'
+import { Link, useParams } from 'react-router-dom'
+import { NIVELES, destinatarioLabel, idDeRuta, nombreNivel } from '@/features/talleres/types'
+import { useCategoriaDeRuta } from '@/features/talleres/hooks/useCategoriaDeRuta'
 import { useTalleres } from '@/features/talleres/hooks/useTalleres'
 import { TallerBuscador } from '@/features/talleres/components/TallerBuscador'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
@@ -12,36 +12,43 @@ import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
 import { EmptyState } from '@/shared/components/ui/EmptyState'
 import { ConfirmDialog } from '@/shared/components/ui/ConfirmDialog'
 import { formatFechaCorta } from '@/shared/lib/date'
+import { NoEncontrado } from './NoEncontrado'
 
 export function TalleresListPage() {
-  const { nivel, categoriaId } = useParams<{ nivel: Nivel; categoriaId: string }>()
+  const params = useParams<{ nivelId: string; categoriaId: string }>()
   const [busqueda, setBusqueda] = useState('')
   const [tallerAEliminar, setTallerAEliminar] = useState<string | null>(null)
 
-  const nivelInfo = NIVELES_FILTRO.find((n) => n.value === nivel)
-  const categoria = useCategoria(categoriaId)
+  const nivelInfo = NIVELES.find((n) => n.id === idDeRuta(params.nivelId))
+  const nivel = nivelInfo?.id
+  const categoriaRuta = useCategoriaDeRuta(params.nivelId, params.categoriaId)
+  const categoriaId = idDeRuta(params.categoriaId) ?? undefined
   const talleres = useTalleres({ categoriaId, busqueda: busqueda || undefined })
 
-  if (!nivelInfo) return <Navigate to="/admin/talleres" replace />
+  if (!nivelInfo) return <NoEncontrado titulo="Nivel no encontrado" />
+  if (categoriaRuta.estado === 'cargando') return <TableSkeleton />
+  if (categoriaRuta.estado === 'error') return <ErrorFallback onRetry={categoriaRuta.reintentar} />
+  if (categoriaRuta.estado === 'no-encontrada') {
+    return <NoEncontrado titulo="Categoría no encontrada" volverA={`/admin/talleres/${nivel}`} />
+  }
+  const categoria = categoriaRuta.categoria
 
   return (
     <div>
       <Breadcrumb
         items={[
           { label: 'Talleres', to: '/admin/talleres' },
-          { label: nivelInfo.label, to: `/admin/talleres/${nivel}` },
-          { label: categoria.data?.nombre ?? '...' },
+          { label: nivelInfo.nombre, to: `/admin/talleres/${nivel}` },
+          { label: categoria.nombre },
         ]}
       />
 
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-primary-800">{categoria.data?.nombre ?? 'Cargando...'}</h1>
-          {categoria.data && (
-            <Badge variant="primary" className="mt-2">
-              Nivel {nivelLabel(categoria.data.nivel).toLowerCase()}
-            </Badge>
-          )}
+          <h1 className="text-2xl font-bold text-primary-800">{categoria.nombre}</h1>
+          <Badge variant="primary" className="mt-2">
+            Nivel {nombreNivel(categoria.nivel_id).toLowerCase()}
+          </Badge>
         </div>
         <Link to={`/admin/talleres/${nivel}/${categoriaId}/nuevo`}>
           <Button>+ Nuevo taller</Button>

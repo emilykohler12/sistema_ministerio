@@ -23,7 +23,27 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "configuracion": {
+            "categoria": {
+                  Row: {
+                    "activo": boolean,"created_at": string,"descripcion": string,"id": number,"nivel_id": number,"nombre": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "activo"?: boolean,"created_at"?: string,"descripcion"?: string,"id"?: never,"nivel_id": number,"nombre": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "activo"?: boolean,"created_at"?: string,"descripcion"?: string,"id"?: never,"nivel_id"?: number,"nombre"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "categoria_nivel_id_fkey"
+      columns: ["nivel_id"]
+isOneToOne: false
+      referencedRelation: "nivel_educativo"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"configuracion": {
                   Row: {
                     "correo": string,"direccion": string,"facebook": string,"id": number,"instagram": string,"logo_ruta": string | null,"mision": string,"nombre": string,"quienes_somos": string,"telefono": string,"updated_at": string,"vision": string
                   }
@@ -33,6 +53,20 @@ export type Database = {
                   }
                   Update: {
                     "correo"?: string,"direccion"?: string,"facebook"?: string,"id"?: number,"instagram"?: string,"logo_ruta"?: string | null,"mision"?: string,"nombre"?: string,"quienes_somos"?: string,"telefono"?: string,"updated_at"?: string,"vision"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"nivel_educativo": {
+                  Row: {
+                    "id": number,"nombre": string,"orden": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id": number,"nombre": string,"orden": number
+                  }
+                  Update: {
+                    "id"?: number,"nombre"?: string,"orden"?: number
                   }
                   Relationships: [
                     

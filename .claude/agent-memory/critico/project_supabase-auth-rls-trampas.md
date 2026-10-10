@@ -34,6 +34,27 @@ En la crítica del código de la Fase B (configuración, 2026-10-10):
   valor. Un `update`/`delete` suelto en el script funciona.
 - **`tocar_updated_at()`** es una cuarta regla por corte. Propuse la guardia `updated_at_global` (ver [[auditoria-falla-cerrada]]).
 
+En la crítica de la spec `niveles-categorias` (2026-10-10, segundo corte):
+- **Caché por rol:** `['categorias']` devuelve solo activas a anon y todas al admin. Con `staleTime` 60 s y `clear()`
+  solo en `SIGNED_OUT`, si alguien inicia sesión después de navegar el portal ve datos de anon. Propuse limpiar la caché
+  cuando cambia el id del usuario (con un ref), no en cada `SIGNED_IN` (supabase-js lo reemite al volver el foco).
+  Se repite en talleres (borradores) y en todo dominio con RLS por rol.
+- **Datos fijos (niveles):** propuse una constante `satisfies NivelEducativo[]` más un pgTAP con las filas exactas,
+  en lugar de un hook con carga y error en siete pantallas.
+- Se repitió lo del form de edición sin guarda y lo de la función pura (`esNombreDuplicado`) en `consultas.ts`.
+- Las specs suelen olvidar las pantallas vecinas que se rompen con el cambio de tipos (`TalleresListPage`). Hacer grep
+  de los símbolos que se eliminan.
+
+En la crítica del código de `niveles-categorias` (2026-10-10), la respuesta está pendiente en `critica.md`:
+- **Ids de ruta resueltos por pantalla:** cuatro páginas repetían parseo de `:nivelId`/`:categoriaId`, la escalera
+  cargando/error/`null` y `NoEncontrado`, y divergieron (sin rama de error y sin comprobar que la categoría sea del nivel).
+  Propuse rutas de layout (`<RutaNivel>`/`<RutaCategoria>` con `useOutletContext`), o como mínimo `idDeRuta` puro.
+  Talleres agrega `:tallerId`: revisar si se adoptó.
+- **Molde del pgTAP/migración:** el índice por FK es redundante si la FK es la primera columna de un índice único, y
+  `has_table`/`relrowsecurity` por corte repiten `rls_global`. Los cortes copian el molde, así que hay que mirarlo.
+- Condiciones de limpieza de caché con términos muertos (`SIGNED_OUT` sin cambio de usuario derivado): con un solo rol,
+  una sesión sin marca ve lo mismo que anon.
+
 **Why:** son errores de diseño que no saltan en el typecheck, y los cortes siguientes copian el patrón de este.
 
 **How to apply:** en cada spec de corte, revisar los esperados de los tests pgTAP (qué código de error y en qué

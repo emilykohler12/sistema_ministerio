@@ -6,8 +6,7 @@ import { useTalleres } from './useTalleres'
 
 // vi.mock se ejecuta antes que los imports: los datos que usa tienen que crearse con vi.hoisted.
 const { talleres } = vi.hoisted(() => {
-  const base: Omit<Taller, 'id' | 'nivel' | 'titulo' | 'etiquetas'> = {
-    categoriaId: 'c1',
+  const base: Omit<Taller, 'id' | 'categoriaId' | 'titulo' | 'etiquetas'> = {
     descripcion: '',
     destinatarios: ['docentes'],
     fecha: '2026-01-01',
@@ -17,8 +16,8 @@ const { talleres } = vi.hoisted(() => {
     estado: 'publicado',
   }
   const talleres: Taller[] = [
-    { ...base, id: 't1', nivel: 'primario', titulo: 'Huerta escolar', etiquetas: ['ambiente'] },
-    { ...base, id: 't2', nivel: 'secundario', titulo: 'Programación', etiquetas: ['tecnología'] },
+    { ...base, id: 't1', categoriaId: 10, titulo: 'Huerta escolar', etiquetas: ['ambiente'] },
+    { ...base, id: 't2', categoriaId: 20, titulo: 'Programación', etiquetas: ['tecnología'] },
   ]
   return { talleres }
 })
@@ -26,8 +25,8 @@ const { talleres } = vi.hoisted(() => {
 vi.mock('../mocks/talleres.mock', () => ({ talleresMock: talleres }))
 
 describe('useTalleres', () => {
-  it('filtra por nivel', async () => {
-    const { result } = renderHook(() => useTalleres({ nivel: 'secundario' }), { wrapper: crearWrapperQuery() })
+  it('filtra por categoriaId numérico', async () => {
+    const { result } = renderHook(() => useTalleres({ categoriaId: 20 }), { wrapper: crearWrapperQuery() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data?.map((t) => t.id)).toEqual(['t2'])
   })

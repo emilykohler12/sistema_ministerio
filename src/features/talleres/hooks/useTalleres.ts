@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { talleresMock } from '../mocks/talleres.mock'
-import type { Destinatario, Nivel } from '../types'
+import type { Destinatario } from '../types'
 
 export interface TalleresFiltro {
-  categoriaId?: string
-  nivel?: Nivel
+  categoriaId?: number
   destinatario?: Destinatario
   busqueda?: string
 }
@@ -12,8 +11,7 @@ export interface TalleresFiltro {
 async function fetchTalleres(filtro: TalleresFiltro) {
   await new Promise((r) => setTimeout(r, 300))
   return talleresMock.filter((t) => {
-    if (filtro.categoriaId && t.categoriaId !== filtro.categoriaId) return false
-    if (filtro.nivel && t.nivel !== filtro.nivel) return false
+    if (filtro.categoriaId !== undefined && t.categoriaId !== filtro.categoriaId) return false
     if (filtro.destinatario && !t.destinatarios.includes(filtro.destinatario)) return false
     if (filtro.busqueda) {
       const q = filtro.busqueda.toLowerCase()

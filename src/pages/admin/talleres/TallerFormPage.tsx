@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
-import { useCategoria } from '@/features/talleres/hooks/useCategorias'
+import { useCategoriaDeRuta } from '@/features/talleres/hooks/useCategoriaDeRuta'
 import { useEtiquetasSugeridas, useTaller } from '@/features/talleres/hooks/useTalleres'
-import { DESTINATARIOS, NIVELES, NIVEL_VALUES, type Nivel, type Destinatario } from '@/features/talleres/types'
-import { NIVELES_FILTRO } from '@/features/talleres/types'
+import { DESTINATARIOS, NIVELES, idDeRuta, type Destinatario } from '@/features/talleres/types'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
 import { Label } from '@/shared/components/ui/Label'
 import { Input } from '@/shared/components/ui/Input'
@@ -17,11 +16,13 @@ import { ToggleGroup } from '@/shared/components/ui/ToggleGroup'
 import { TagInput } from '@/shared/components/ui/TagInput'
 import { FileDropzone } from '@/shared/components/ui/FileDropzone'
 import { Button } from '@/shared/components/ui/Button'
+import { CardSkeleton } from '@/shared/components/ui/Skeleton'
+import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
+import { NoEncontrado } from './NoEncontrado'
 
 const schema = z.object({
   titulo: z.string().min(2, 'Ingresá el título del taller'),
   descripcion: z.string().min(2, 'Ingresá una breve descripción'),
-  nivel: z.enum(NIVEL_VALUES),
   destinatarios: z.array(z.string()).min(1, 'Elegí al menos un destinatario'),
   etiquetas: z.array(z.string()),
   fecha: z.string().min(1, 'Ingresá una fecha'),
@@ -30,14 +31,16 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function TallerFormPage() {
-  const { nivel, categoriaId, tallerId } = useParams<{ nivel: Nivel; categoriaId: string; tallerId?: string }>()
+  const params = useParams<{ nivelId: string; categoriaId: string; tallerId?: string }>()
+  const { tallerId } = params
   const navigate = useNavigate()
   const { usuario } = useAuth()
-  const categoria = useCategoria(categoriaId)
+  const categoriaRuta = useCategoriaDeRuta(params.nivelId, params.categoriaId)
   const tallerExistente = useTaller(tallerId)
   const etiquetasSugeridas = useEtiquetasSugeridas()
 
-  const nivelInfo = NIVELES_FILTRO.find((n) => n.value === nivel)
+  const nivelInfo = NIVELES.find((n) => n.id === idDeRuta(params.nivelId))
+  const nivel = nivelInfo?.id
   const esEdicion = !!tallerId
 
   const {
@@ -53,7 +56,6 @@ export function TallerFormPage() {
       ? {
           titulo: tallerExistente.data.titulo,
           descripcion: tallerExistente.data.descripcion,
-          nivel: tallerExistente.data.nivel,
           destinatarios: tallerExistente.data.destinatarios,
           etiquetas: tallerExistente.data.etiquetas,
           fecha: tallerExistente.data.fecha,
@@ -61,7 +63,6 @@ export function TallerFormPage() {
       : {
           titulo: '',
           descripcion: '',
-          nivel: nivel ?? 'inicial',
           destinatarios: [],
           etiquetas: [],
           fecha: '',
@@ -76,12 +77,18 @@ export function TallerFormPage() {
     }
   }, [tallerExistente.data])
 
-  if (!nivelInfo) return <Navigate to="/admin/talleres" replace />
+  if (!nivelInfo) return <NoEncontrado titulo="Nivel no encontrado" />
+  if (categoriaRuta.estado === 'cargando') return <CardSkeleton />
+  if (categoriaRuta.estado === 'error') return <ErrorFallback onRetry={categoriaRuta.reintentar} />
+  if (categoriaRuta.estado === 'no-encontrada') {
+    return <NoEncontrado titulo="Categoría no encontrada" volverA={`/admin/talleres/${nivel}`} />
+  }
+  const categoria = categoriaRuta.categoria
 
   async function onSubmit() {
     await new Promise((r) => setTimeout(r, 500))
     reset()
-    navigate(`/admin/talleres/${nivel}/${categoriaId}`)
+    navigate(`/admin/talleres/${nivel}/${categoria.id}`)
   }
 
   return (
@@ -89,8 +96,8 @@ export function TallerFormPage() {
       <Breadcrumb
         items={[
           { label: 'Talleres', to: '/admin/talleres' },
-          { label: nivelInfo.label, to: `/admin/talleres/${nivel}` },
-          { label: categoria.data?.nombre ?? '...', to: `/admin/talleres/${nivel}/${categoriaId}` },
+          { label: nivelInfo.nombre, to: `/admin/talleres/${nivel}` },
+          { label: categoria.nombre, to: `/admin/talleres/${nivel}/${categoria.id}` },
           { label: esEdicion ? 'Editar taller' : 'Nuevo taller' },
         ]}
       />
@@ -119,16 +126,6 @@ export function TallerFormPage() {
         <div>
           <Label>Archivo</Label>
           <FileDropzone multiple files={files} onChange={setFiles} hint="Podés sumar varios: PDF, video o imagen" />
-        </div>
-
-        <div>
-          <Label>Nivel</Label>
-          <ToggleGroup
-            name="Nivel"
-            options={NIVELES.filter((n) => n.value !== 'todos').map((n) => ({ value: n.value, label: n.label }))}
-            value={watch('nivel')}
-            onChange={(v) => setValue('nivel', v, { shouldValidate: true })}
-          />
         </div>
 
         <div>
@@ -173,7 +170,7 @@ export function TallerFormPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate(`/admin/talleres/${nivel}/${categoriaId}`)}
+            onClick={() => navigate(`/admin/talleres/${nivel}/${categoria.id}`)}
           >
             Cancelar
           </Button>

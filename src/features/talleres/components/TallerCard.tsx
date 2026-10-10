@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/shared/components/ui/Badge'
 import { Button } from '@/shared/components/ui/Button'
 import { formatFecha } from '@/shared/lib/date'
-import { destinatarioLabel, nivelLabel, type Taller } from '../types'
+import { destinatarioLabel, type Taller } from '../types'
 
 const TIPO_LABEL: Record<string, string> = { pdf: 'PDF', video: 'Video', imagen: 'Imagen' }
 
@@ -14,7 +14,6 @@ export function TallerCard({ taller, linkTo }: { taller: Taller; linkTo?: string
       <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{TIPO_LABEL[tipoPrincipal]}</p>
       <h3 className="mt-1 text-base font-semibold text-primary-800">{taller.titulo}</h3>
       <div className="mt-2 flex flex-wrap gap-1.5">
-        <Badge variant="primary">Nivel {nivelLabel(taller.nivel).toLowerCase()}</Badge>
         {taller.destinatarios.slice(0, 1).map((d) => (
           <Badge key={d} variant="secondary">
             {destinatarioLabel(d)}
