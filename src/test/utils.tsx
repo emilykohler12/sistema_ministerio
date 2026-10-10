@@ -4,7 +4,7 @@ import { render } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 
-function crearQueryClient() {
+export function crearQueryClient() {
   // Un cliente nuevo por test: sin reintentos ni caché compartida entre tests.
   return new QueryClient({ defaultOptions: { queries: { retry: false } } })
 }
