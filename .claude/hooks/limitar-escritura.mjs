@@ -1,31 +1,10 @@
-// PreToolUse (Edit|Write) de subagentes: cada uno solo escribe los archivos de su rol.
-//   node limitar-escritura.mjs tests     → test-writer: *.test.ts(x), snapshots y pgTAP (supabase/tests/*.sql)
-//   node limitar-escritura.mjs critico   → su memoria y docs/specs/<feature>/critica.md
-//   node limitar-escritura.mjs revisor   → su memoria y docs/specs/<feature>/revision.md
-//   node limitar-escritura.mjs qa        → e2e/, docs/specs/<feature>/qa.md y su memoria
-import { block, readInput, relPath } from './lib.mjs'
-
-const PERFILES = {
-  tests: [/\.test\.tsx?$/, /\/__snapshots__\//, /^supabase\/tests\/.+\.sql$/],
-  critico: [/^\.claude\/agent-memory\/critico\//, /^docs\/specs\/[^/]+\/critica\.md$/],
-  revisor: [/^\.claude\/agent-memory\/revisor\//, /^docs\/specs\/[^/]+\/revision\.md$/],
-  qa: [
-    /^e2e\//,
-    /^docs\/specs\/[^/]+\/qa\.md$/,
-    /^\.claude\/agent-memory\/qa\//,
-  ],
-}
-
-const perfil = process.argv[2]
-const permitidos = PERFILES[perfil]
-if (!permitidos) block(`limitar-escritura: perfil desconocido "${perfil}".`)
+// CLI de un perfil de escritura (Edit|Write): node limitar-escritura.mjs <tests|critico|revisor|qa>
+// Las reglas viven en perfiles.mjs. En el flujo real las aplica roles.mjs desde settings.json (0021):
+// los hooks del frontmatter de los agentes no corren sin la confianza de la carpeta.
+import { block, readInput } from './lib.mjs'
+import { motivoEscritura } from './perfiles.mjs'
 
 const input = await readInput()
-const file = relPath(input.tool_input?.file_path)
-if (!file) process.exit(0)
-
-if (!permitidos.some((re) => re.test(file))) {
-  block(`Bloqueado: con el perfil "${perfil}" no podés escribir "${file}". Ese archivo es de otro rol.`)
-}
-
+const motivo = motivoEscritura(process.argv[2], input.tool_input?.file_path)
+if (motivo) block(motivo)
 process.exit(0)

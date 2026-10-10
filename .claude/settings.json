@@ -37,6 +37,10 @@
       {
         "matcher": "Bash",
         "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/proteger-bash.mjs\"" }]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit|MultiEdit|Bash",
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/roles.mjs\"" }]
       }
     ],
     "PostToolUse": [
