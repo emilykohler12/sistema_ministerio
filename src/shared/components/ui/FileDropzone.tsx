@@ -3,6 +3,11 @@ import { File as FileIcon, X } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 
 interface FileDropzoneProps {
+  /** Id del input, para asociarle un `<Label htmlFor>`. Si falta, se genera uno. */
+  id?: string
+  invalid?: boolean
+  /** Id del elemento que describe el campo (por ejemplo, su mensaje de error). */
+  describedBy?: string
   label?: string
   hint?: string
   multiple?: boolean
@@ -15,6 +20,9 @@ interface FileDropzoneProps {
 }
 
 export function FileDropzone({
+  id,
+  invalid,
+  describedBy,
   label = 'Arrastrá el archivo o',
   hint = 'PDF, video o imagen',
   multiple = false,
@@ -25,7 +33,8 @@ export function FileDropzone({
 }: FileDropzoneProps) {
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const inputId = useId()
+  const generado = useId()
+  const inputId = id ?? generado
 
   function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return
@@ -96,6 +105,8 @@ export function FileDropzone({
           type="file"
           multiple={multiple}
           accept={accept}
+          aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
           className="sr-only"
           onChange={handleInputChange}
         />

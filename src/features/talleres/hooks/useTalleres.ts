@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CLAVE_ETIQUETAS } from '@/features/etiquetas/hooks/useEtiquetas'
 import { cambiarEstadoTaller, guardarTaller, obtenerTalleres } from '../consultas'
 import { filtrarTalleres, type FiltrosTalleres } from '../filtrar'
 import type { EstadoTaller, Taller, TallerGuardado } from '../types'
@@ -26,16 +27,6 @@ export function useTaller(id: number | null) {
   return useTodosLosTalleres((todos) => todos.find((t) => t.id === id) ?? null)
 }
 
-/** Panel: nombres únicos de las etiquetas que ya usan los talleres, ordenados, para sugerir en el formulario. */
-export function useEtiquetasSugeridas(): string[] {
-  const { data } = useTodosLosTalleres((todos) =>
-    Array.from(new Set(todos.flatMap((t) => t.etiqueta.map((e) => e.nombre)))).sort((a, b) =>
-      a.localeCompare(b, 'es'),
-    ),
-  )
-  return data ?? []
-}
-
 /** Portal: solo los talleres publicados (también con sesión de admin), con los filtros aplicados. */
 export function useCatalogo(filtros: FiltrosTalleres) {
   return useTodosLosTalleres((todos) => filtrarTalleres(soloPublicados(todos), filtros))
@@ -50,7 +41,12 @@ export function useGuardarTaller() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (datos: TallerGuardado) => guardarTaller(datos),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE_TALLERES }),
+    // El guardado puede crear etiquetas nuevas: las sugerencias de taller y de normativa se refrescan.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: CLAVE_TALLERES }),
+        queryClient.invalidateQueries({ queryKey: CLAVE_ETIQUETAS }),
+      ]),
   })
 }
 

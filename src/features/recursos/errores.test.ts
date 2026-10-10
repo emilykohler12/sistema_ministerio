@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { validarArchivo } from './archivos'
-import { esRechazoDelServidor, mensajeDeErrorRecurso } from './errores'
+import { mensajeDeErrorRecurso } from './errores'
 
 /*
  * Contrato de errores.ts (puro):
@@ -9,6 +9,7 @@ import { esRechazoDelServidor, mensajeDeErrorRecurso } from './errores'
  * Se acepta `status` (número o texto) o `statusCode` (texto o número).
  *   413 -> motivo de tamaño (menciona "tamaño"); 415 -> motivo de formato (menciona "formato");
  *   cualquier otra cosa -> mensaje genérico que no menciona ni tamaño ni formato.
+ * (esRechazoDelServidor se mudó, privado, a src/shared/lib/storage.ts; se prueba allí a través de `compensar`.)
  */
 
 describe('mensajeDeErrorRecurso', () => {
@@ -54,30 +55,5 @@ describe('mensajeDeErrorRecurso', () => {
       expect(mensaje.length).toBeGreaterThan(0)
       expect(mensaje).not.toMatch(/tamaño|formato/i)
     }
-  })
-})
-
-/*
- * esRechazoDelServidor(error: unknown): boolean — true si el servidor respondió y rechazó la escritura (hay `code` no vacío:
- * SQLSTATE o PGRST…). Un corte de red llega con `code: ''` y `status: 0`: ahí la escritura pudo haberse confirmado.
- */
-describe('esRechazoDelServidor', () => {
-  it('es verdadero cuando el error trae un code no vacío', () => {
-    expect(esRechazoDelServidor({ code: '42501', message: 'rls' })).toBe(true)
-    expect(esRechazoDelServidor({ code: '23514' })).toBe(true)
-    expect(esRechazoDelServidor({ code: 'PGRST116' })).toBe(true)
-  })
-
-  it('es falso con un corte de red de postgrest-js (code vacío, status 0)', () => {
-    expect(esRechazoDelServidor({ message: 'TypeError: fetch failed', code: '', status: 0 })).toBe(false)
-  })
-
-  it('es falso sin code o con algo que no es un error del servidor', () => {
-    expect(esRechazoDelServidor(new Error('sin red'))).toBe(false)
-    expect(esRechazoDelServidor({ message: 'x' })).toBe(false)
-    expect(esRechazoDelServidor({ code: 42501 })).toBe(false)
-    expect(esRechazoDelServidor(null)).toBe(false)
-    expect(esRechazoDelServidor(undefined)).toBe(false)
-    expect(esRechazoDelServidor('texto')).toBe(false)
   })
 })

@@ -35,6 +35,27 @@ En la crítica del código de la fase A de recursos (2026-10-10), con `ordenar_r
 Se repitió por tercera vez: una función pura en `consultas.ts` (`filtrarTalleres`) y un catálogo fijo leído con un hook
 (destinatarios, igual que `NIVELES`).
 
+En la crítica de la spec `normativas` (2026-10-10) verifiqué en la base local:
+- **`WHEN` con `OLD` no entra en un trigger `insert or update or delete`** (error "INSERT trigger's WHEN condition cannot reference OLD").
+  `auditar()` se engancha combinado, así que excluir columnas obliga a separar `after insert or delete` + `after update when (...)`. Las
+  guardias globales solo miran que exista el trigger, no el `WHEN`: pedir pgTAP por comportamiento. Alternativa más simple que
+  `to_jsonb(old) - ...`: `when (old.col = new.col)` + grant de UPDATE por columna sin `col` (molde `categoria`/`recurso`).
+- **EXECUTE se chequea en llamadas anidadas** con el rol actual: una función auxiliar "sin grant a la API" llamada desde una RPC invoker
+  da `permission denied`. Si es invoker, darle EXECUTE a `authenticated` no abre nada.
+- Una RPC que escribe la fila completa con datos del form (incluida una ruta de Storage) puede repuntar a un archivo ya borrado si la caché
+  está vieja: argumento `default null` = conservar y devolver la ruta anterior leída con `for update`.
+- `postgres` en Supabase local: `rolsuper = f`, `rolbypassrls = t` (un definer de postgres saltea la RLS).
+
+En la crítica del código de la fase A de normativas (2026-10-10):
+- **`db:types` tipa no nulas las columnas de `RETURNS TABLE`** (`ruta_anterior: string`, aunque en el alta sea null) y devuelve un array.
+  Hay que tiparlas a mano en `consultas.ts`.
+- **"Devolver la ruta anterior" también cuando se conserva el archivo es una trampa:** el cliente compara contra una ruta nueva que no
+  existe y borra el archivo vivo. Propuse devolverla solo si se reemplazó: `nullif(anterior, coalesce(p_ruta, anterior))`.
+- **Un definer de `postgres` es robusto por partida doble:** `postgres` es el dueño de la tabla (sin `force row level security`) y además
+  tiene bypassrls. `service_role` conserva el UPDATE de toda la tabla aunque se revoque a anon/authenticated: no basta para decir que
+  "la RPC es la única forma".
+- **Tests de "atomicidad" vacíos:** si el error salta antes del paso que dejaría rastro, el test pasa con cualquier implementación.
+
 **Why:** son fallas silenciosas o errores en el caso feliz que ni el typecheck ni el pgTAP básico detectan.
 
 **How to apply:** en cada spec con RPC, trigger de regla o tabla puente, pedir que el algoritmo esté escrito paso a paso y que

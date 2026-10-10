@@ -495,12 +495,17 @@ hace cumplir el bucket `talleres` (`file_size_limit`), que también fija los for
 | Campo | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | id | int | PK | Identificador. |
-| titulo | varchar(200) | NOT NULL | Título. |
+| titulo | varchar(200) | NOT NULL, no vacío | Título. |
 | descripcion | text | | Descripción. |
-| numero | varchar(50) | NOT NULL | Número de la resolución. |
-| anio | smallint | NOT NULL | Año. |
-| ruta_archivo | varchar(500) | NOT NULL | Ubicación en el bucket público de normativas. |
+| numero | varchar(50) | NOT NULL, no vacío; único con `anio` (normalizado) | Número de la resolución. Se guarda recortado. |
+| anio | smallint | NOT NULL, entre 1900 y 2100 | Año. |
+| ruta_archivo | varchar(500) | NOT NULL, UNIQUE | Ubicación en el bucket público de normativas (`<uuid>.pdf`). |
 | descargas | int | NOT NULL, por defecto 0 | Contador anónimo, incrementado por una función RPC. |
+
+CHECK: `titulo` y `numero` no vacíos (`btrim(...) <> ''`), `anio between 1900 and 2100` y `ruta_archivo ~ '^[0-9a-f-]{36}\.pdf$'`. Índice único
+sobre (`lower(inmutable_unaccent(btrim(numero)))`, `anio`): el mismo número y año no se repite, sin distinguir mayúsculas, tildes ni espacios en los
+extremos. El bucket `normativas` es público y admite solo PDF de hasta 20 MiB (`file_size_limit`). `descargas` solo la cambia la función
+`contar_descarga_normativa` (el admin no tiene UPDATE sobre esa columna) y ese incremento no se audita ni mueve `updated_at`.
 
 **localidad**
 

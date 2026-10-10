@@ -5,12 +5,12 @@ import { z } from 'zod'
 import { useNavigate, useParams } from 'react-router-dom'
 import { mensajeDeError } from '@/features/talleres/errores'
 import { useCategoriaDeRuta } from '@/features/talleres/hooks/useCategoriaDeRuta'
-import { useEtiquetasSugeridas, useGuardarTaller, useTaller } from '@/features/talleres/hooks/useTalleres'
+import { useEtiquetas } from '@/features/etiquetas/hooks/useEtiquetas'
+import { useGuardarTaller, useTaller } from '@/features/talleres/hooks/useTalleres'
 import {
   DESTINATARIOS,
   ETIQUETA_ESTADO,
   NIVELES,
-  idDeRuta,
   type Categoria,
   type NivelEducativo,
   type Taller,
@@ -28,7 +28,8 @@ import { TagInput } from '@/shared/components/ui/TagInput'
 import { Button } from '@/shared/components/ui/Button'
 import { CardSkeleton } from '@/shared/components/ui/Skeleton'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
-import { NoEncontrado } from './NoEncontrado'
+import { NoEncontrado } from '@/shared/components/ui/NoEncontrado'
+import { idDeRuta } from '@/shared/lib/rutas'
 
 // Las reglas del criterio 1: nombre sin espacios en los bordes (hasta varchar(200)), descripción obligatoria,
 // al menos un destinatario y de 0 a 20 etiquetas de 1 a 100 caracteres.
@@ -60,7 +61,7 @@ export function TallerFormPage() {
   const categoriaRuta = useCategoriaDeRuta(params.nivelId, params.categoriaId)
   const tallerRuta = useTaller(esEdicion ? idDeRuta(params.tallerId) : null)
 
-  if (!nivel) return <NoEncontrado titulo="Nivel no encontrado" />
+  if (!nivel) return <NoEncontrado titulo="Nivel no encontrado" volverA="/admin/talleres" />
   if (categoriaRuta.estado === 'cargando') return <CardSkeleton />
   if (categoriaRuta.estado === 'error') return <ErrorFallback onRetry={categoriaRuta.reintentar} />
   if (categoriaRuta.estado === 'no-encontrada') {
@@ -92,7 +93,7 @@ function Formulario({
 }) {
   const navigate = useNavigate()
   const guardar = useGuardarTaller()
-  const etiquetasSugeridas = useEtiquetasSugeridas()
+  const etiquetasSugeridas = useEtiquetas()
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null)
   const volver = `/admin/talleres/${nivel.id}/${categoria.id}`
 

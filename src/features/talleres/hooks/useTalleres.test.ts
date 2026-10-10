@@ -8,7 +8,6 @@ import type { Taller } from '../types'
 import {
   useCambiarEstadoTaller,
   useCatalogo,
-  useEtiquetasSugeridas,
   useGuardarTaller,
   useTaller,
   useTallerPublicado,
@@ -22,7 +21,8 @@ import {
  *   cambiarEstadoTaller(id: number, estado: EstadoTaller): Promise<unknown>
  * Todos los hooks comparten la clave ['talleres'] y filtran con `select`.
  * useGuardarTaller().mutate(datos); useCambiarEstadoTaller().mutate({ id, estado }).
- * useEtiquetasSugeridas() devuelve directamente un string[] (nombres únicos de la caché, ordenados).
+ * useEtiquetasSugeridas se eliminó: lo reemplaza useEtiquetas (src/features/etiquetas, criterio 9).
+ * useGuardarTaller también invalida ['etiquetas'] (el guardado puede crear etiquetas nuevas).
  */
 vi.mock('../consultas', () => ({
   obtenerTalleres: vi.fn(),
@@ -115,21 +115,6 @@ describe('useTaller', () => {
   })
 })
 
-describe('useEtiquetasSugeridas', () => {
-  it('devuelve los nombres únicos de las etiquetas de los talleres, ordenados', async () => {
-    const { wrapper } = crearContexto()
-    const { result } = renderHook(() => useEtiquetasSugeridas(), { wrapper })
-    await waitFor(() => expect(result.current).toEqual(['ambiente', 'redes', 'salud']))
-  })
-
-  it('mientras no hay datos devuelve una lista vacía', () => {
-    vi.mocked(obtenerTalleres).mockReturnValue(new Promise(() => {}))
-    const { wrapper } = crearContexto()
-    const { result } = renderHook(() => useEtiquetasSugeridas(), { wrapper })
-    expect(result.current).toEqual([])
-  })
-})
-
 describe('useCatalogo', () => {
   it('devuelve solo los talleres publicados, aunque obtenerTalleres traiga borradores e inactivos', async () => {
     const { wrapper } = crearContexto()
@@ -202,6 +187,33 @@ describe('useGuardarTaller', () => {
 
     expect(vi.mocked(guardarTaller).mock.calls[0][0]).toEqual(datos)
     await waitFor(() => expect(obtenerTalleres).toHaveBeenCalledTimes(2))
+  })
+
+  it('invalida también la clave ["etiquetas"], porque el guardado puede crear etiquetas', async () => {
+    vi.mocked(guardarTaller).mockResolvedValue(10)
+    const { client, wrapper } = crearContexto()
+    client.setQueryData(['etiquetas'], [{ id: 1, nombre: 'viejas' }])
+    const { result } = renderHook(() => useGuardarTaller(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync(datos)
+    })
+
+    expect(client.getQueryState(['etiquetas'])?.isInvalidated).toBe(true)
+  })
+
+  it('si guardarTaller falla, no invalida las etiquetas', async () => {
+    vi.mocked(guardarTaller).mockRejectedValue({ code: 'DA002' })
+    const { client, wrapper } = crearContexto()
+    client.setQueryData(['etiquetas'], [{ id: 1, nombre: 'viejas' }])
+    const { result } = renderHook(() => useGuardarTaller(), { wrapper })
+
+    await act(async () => {
+      result.current.mutate(datos)
+    })
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(client.getQueryState(['etiquetas'])?.isInvalidated).toBe(false)
   })
 
   it('si guardarTaller falla, expone el error y no refresca', async () => {

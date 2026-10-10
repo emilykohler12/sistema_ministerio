@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { idDeRuta, NIVELES, type Categoria, type NivelEducativo } from '@/features/talleres/types'
+import { NIVELES, type Categoria, type NivelEducativo } from '@/features/talleres/types'
 import { esNombreDuplicado } from '@/features/talleres/errores'
 import { useCategoriaDeRuta } from '@/features/talleres/hooks/useCategoriaDeRuta'
 import { useActualizarCategoria, useCrearCategoria } from '@/features/talleres/hooks/useCategorias'
@@ -15,7 +15,8 @@ import { FieldError } from '@/shared/components/ui/FieldError'
 import { Button } from '@/shared/components/ui/Button'
 import { CardSkeleton } from '@/shared/components/ui/Skeleton'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
-import { NoEncontrado } from './NoEncontrado'
+import { NoEncontrado } from '@/shared/components/ui/NoEncontrado'
+import { idDeRuta } from '@/shared/lib/rutas'
 
 // Igual que la base: nombre no vacío (sin espacios en los bordes) y de hasta varchar(150).
 const schema = z.object({
@@ -41,7 +42,7 @@ export function CategoriaFormPage() {
   const esEdicion = editarParam !== null
   const categoria = useCategoriaDeRuta(nivelId, editarParam ?? undefined)
 
-  if (!nivel) return <NoEncontrado titulo="Nivel no encontrado" />
+  if (!nivel) return <NoEncontrado titulo="Nivel no encontrado" volverA="/admin/talleres" />
 
   if (!esEdicion) return <Formulario nivel={nivel} />
 

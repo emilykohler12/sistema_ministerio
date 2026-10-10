@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TallerBuscador } from '@/features/talleres/components/TallerBuscador'
+import { Buscador } from '@/shared/components/ui/Buscador'
 import { TallerCard } from '@/features/talleres/components/TallerCard'
 import { TallerFiltros, type FiltrosState } from '@/features/talleres/components/TallerFiltros'
 import { useCatalogo } from '@/features/talleres/hooks/useTalleres'
@@ -23,7 +23,7 @@ export function TalleresCatalogoPage() {
       <p className="mt-1 text-sm text-gray-500">Explorá los talleres disponibles por nivel y destinatario.</p>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <TallerBuscador value={busqueda} onChange={setBusqueda} />
+        <Buscador value={busqueda} onChange={setBusqueda} etiqueta="Buscar por nombre o etiqueta" placeholder="Buscar por nombre o etiqueta..." />
         <div className="sm:w-96">
           <TallerFiltros value={filtros} onChange={setFiltros} />
         </div>

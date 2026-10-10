@@ -23,7 +23,8 @@ los datos. Solo la descarga de talleres (y luego la gestión de usuarios) pasa p
 |---|---|
 | `talleres` | Niveles, categorías, talleres y sus destinatarios y etiquetas. Catálogo público y gestión admin. **Niveles, categorías y talleres migrados a Supabase** (0012; cortes 2 y 3): `types.ts` derivado (`NIVELES` y `DESTINATARIOS` son constantes con las filas fijas de la base, sin hook; `Taller` = fila + `categoria.nivel_id` + destinatarios + etiquetas + recursos), `consultas.ts` (solo supabase; talleres con embeds y escritura con la RPC `guardar_taller`), `errores.ts` y `filtrar.ts` (puros, sin imports de supabase: `DA001`/`DA002`, normalización y filtros del catálogo) y hooks sobre las claves únicas `['categorias']` y `['talleres']`. El portal lee solo publicados (`useCatalogo`, `useTallerPublicado`); el panel, todos (`useTalleres`, `useTaller`). Los recursos viajan embebidos en el taller (`recurso: Recurso[]`, ordenados por `orden`, `id`); `CLAVE_TALLERES` se exporta para que `recursos` invalide la caché |
 | `recursos` | Archivos y enlaces de los talleres, con el bucket privado `talleres` de Storage. **Migrado a Supabase** (0012; corte 4): `types.ts` derivado (`Recurso`, `TipoRecurso`, `ETIQUETA_TIPO_RECURSO`), `archivos.ts` (puro: tabla `FORMATOS` extensión → tipo y MIME, que fija el tipo y el MIME por la extensión y no por `file.type`; `validarArchivo`, `rutaNueva`, `idDeYoutube`, `formatearTamanio`), `consultas.ts` (solo supabase: Storage, tabla y RPC `ordenar_recursos`), `secuencias.ts` (alta, reemplazo y eliminación con el orden y las compensaciones entre base y Storage), `errores.ts` (413/415 de Storage) y hooks de mutación que invalidan `CLAVE_TALLERES`. La lectura no tiene hook propio: sale de `useTaller` / `useTallerPublicado`. `components/ListaRecursos` es la sección del portal (YouTube integrado con `youtube-nocookie.com`, otros enlaces externos). Sin descarga pública (corte descargas) |
-| `normativas` | Normativas con número, año, etiquetas y archivo |
+| `normativas` | Normativas con número, año, etiquetas y un PDF en el bucket **público** `normativas`. **Migrado a Supabase** (0012; corte normativas): `types.ts` derivado (`Normativa` = fila + `etiqueta: Etiqueta[]` + `url` pública), `archivos.ts` (puro: `validarPdf`, tope de 20 MiB, `rutaNueva()` = `<uuid>.pdf`), `consultas.ts` (solo supabase: `getPublicUrl`, RPC `guardar_normativa` y `contar_descarga_normativa`), `secuencias.ts` (alta, reemplazo con la `ruta_anterior` que devuelve la RPC y baja, según 0016), `errores.ts` (23505, 413 y 415), `filtrar.ts` (título, número, descripción y etiquetas, sin tildes; orden año desc e `id` desc) y hooks sobre `['normativas']`. `useContarDescarga` cuenta una vez por normativa en la visita (`sessionStorage`), sin esperar la respuesta. `components/EnlaceDescarga` abre el PDF en otra pestaña |
+| `etiquetas` | Catálogo compartido por talleres y normativas: `types.ts`, `consultas.ts` (lee la tabla `etiqueta`) y `useEtiquetas` (`['etiquetas']`), que alimenta las sugerencias de ambos formularios. Los guardados de taller y de normativa invalidan esa clave |
 | `descargas` | Modal de descarga. Hoy: escuela, localidad y rol, sin pantalla que lo use hasta el corte descargas (el detalle del taller ya no lo abre); `useNombresInstitucionSugeridos` vive aquí. Destino (0010): cargo, localidad, institución del padrón |
 | `dashboard` | KPIs y métricas para el administrador |
 | `configuracion` | Datos institucionales del sitio. **Migrado a Supabase** (primer corte, 0012): `types.ts` derivado, `consultas.ts`, hooks delgados; sin mocks. Logo pendiente (Storage) |
@@ -68,18 +69,29 @@ usuarios con `scripts/seed-usuarios.mjs`), `test:db` (pgTAP en `supabase/tests/`
   columna). RPC `ordenar_recursos(p_taller_id, p_ids)` (invoker, lista completa, audita solo filas cambiadas). Bucket privado `talleres` por
   migración (50 MiB; PDF, PPTX, DOCX, JPG, PNG, WebP, MP4) y políticas de `storage.objects` solo para el admin (select, insert, delete; sin update).
   Sin trigger que lea `storage.objects`: el invariante "ninguna fila apunta a un archivo inexistente" lo sostiene el orden de las operaciones de la app.
+- `migrations/<ts>_resolver_etiquetas.sql`: `resolver_etiquetas(text[]) returns int[]` (invoker, solo `authenticated`) normaliza, crea las
+  etiquetas que faltan y devuelve sus ids. La usan `guardar_taller` (reescrita) y `guardar_normativa`.
+- `migrations/<ts>_normativas.sql`: `normativa` (número y año únicos sin distinguir mayúsculas, tildes ni espacios de los extremos; `ruta_archivo`
+  `<uuid>.pdf` única; baja física; `descargas` sin grant de UPDATE) y `normativa_etiqueta`. Select público, escritura solo admin. Los triggers de
+  update (`auditar()` y `tocar_updated_at()`) llevan un `WHEN` que omite el UPDATE que solo cambia el contador. RPC `guardar_normativa` (invoker,
+  devuelve `id` y `ruta_anterior` solo si se reemplazó el archivo) y `contar_descarga_normativa` (security definer, `anon`). Bucket público
+  `normativas` (20 MiB, solo PDF) con escritura solo del admin.
 - Cada corte de dominio agrega su migración, sus tablas con RLS, el trigger `auditar()`, el trigger
   `tocar_updated_at()` si la tabla tiene `updated_at`, y sus tests. Las guardias globales de `supabase/tests/`
-  (`rls_global`, `auditoria_global`, `truncate_global`, `updated_at_global`) fallan si se olvida alguno.
+  (`rls_global`, `auditoria_global`, `truncate_global`, `updated_at_global`) fallan si se olvida alguno. `storage_global` exige que toda
+  política de escritura de `storage.objects` sea de `authenticated` con `es_admin`.
+- Storage desde el frontend: `src/shared/lib/storage.ts` (`subirArchivo` y `borrarArchivo` por bucket, `compensar` y `borrarOAvisar` de 0016).
+  Cada dominio lo envuelve en su `consultas.ts` y ordena las operaciones en su `secuencias.ts`.
 
 ## Brechas entre el código y la definición v2
 
 - Integrar Supabase: la base transversal, el cliente (`src/shared/lib/supabase.ts`, variables `VITE_SUPABASE_URL` y
-  `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`) y el login real están listos; faltan las tablas de normativas y padrón, los buckets de normativas y logo y la
+  `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`) y el login real están listos; faltan las tablas del padrón, el bucket del logo y la
   Edge Function `descargar-taller` (0004–0006). Recuperación de contraseña y cierre por inactividad (§5.2) pendientes.
 - Recursos: faltan la descarga (enlaces firmados públicos, Edge Function) y el registro de descargas. Limpieza de archivos huérfanos en Storage
-  (hoy solo un `console.warn`), subida reanudable (TUS) y barra de progreso. Al sumar el bucket público de normativas, agregar una guardia
-  global de Storage (ninguna política de escritura para `anon` ni `public`).
+  (hoy solo un `console.warn`; vale también para normativas), subida reanudable (TUS) y barra de progreso. La baja y el reemplazo de un recurso
+  borran la ruta de la caché y no la de la base; normativas ya usa la de la base (`delete ... select`).
+- Normativas: `taller_normativa` (C-02), KPI y contador en el dashboard, y borrado de etiquetas sin uso.
 - Formulario de descarga y modal con lista de enlaces (0006, 0010).
 - Nuevas pantallas: establecimientos, instituciones sin vincular, historial; luego usuarios.
-- Búsqueda: en talleres ya incluye la descripción e ignora tildes (`filtrar.ts`); falta en normativas. Mejoras del dashboard (definición §5.4).
+- Mejoras del dashboard (definición §5.4).

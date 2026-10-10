@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useConfiguracion } from '@/features/configuracion/hooks/useConfiguracion'
+import { EnlaceDescarga } from '@/features/normativas/components/EnlaceDescarga'
 import { useNormativas } from '@/features/normativas/hooks/useNormativas'
 import { NIVELES } from '@/features/talleres/types'
 import { useCatalogo } from '@/features/talleres/hooks/useTalleres'
@@ -115,7 +116,7 @@ export function HomePage() {
               Ver todas
             </Link>
           </div>
-          {normativas.isLoading && <CardSkeleton />}
+          {normativas.isPending && <CardSkeleton />}
           {normativas.isError && <ErrorFallback onRetry={() => normativas.refetch()} />}
           {normativas.isSuccess && normativasRecientes.length === 0 && (
             <EmptyState title="No hay normativas publicadas" />
@@ -129,14 +130,12 @@ export function HomePage() {
                     <p className="text-sm text-gray-500">{n.anio}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
-                    {n.etiquetas.map((e) => (
-                      <span key={e} className="rounded-md bg-primary-700 px-2.5 py-1 text-xs font-semibold text-white">
-                        {e}
+                    {n.etiqueta.map((e) => (
+                      <span key={e.id} className="rounded-md bg-primary-700 px-2.5 py-1 text-xs font-semibold text-white">
+                        {e.nombre}
                       </span>
                     ))}
-                    <Button variant="outline" size="sm">
-                      Descargar
-                    </Button>
+                    <EnlaceDescarga normativa={n} />
                   </div>
                 </li>
               ))}

@@ -1,3 +1,4 @@
+import type { Etiqueta } from '@/features/etiquetas/types'
 import type { Recurso } from '@/features/recursos/types'
 import type { Database, Enums, Tables, TablesInsert } from '@/shared/types/database'
 
@@ -17,13 +18,6 @@ export const NIVELES = [
 
 export function nombreNivel(id: number) {
   return NIVELES.find((n) => n.id === id)?.nombre ?? String(id)
-}
-
-/** Id numérico de un parámetro de la URL: entero positivo, o `null` si no lo es (o no está). */
-export function idDeRuta(param: string | undefined): number | null {
-  if (param === undefined || !/^[1-9]\d*$/.test(param)) return null
-  const id = Number(param)
-  return Number.isSafeInteger(id) ? id : null
 }
 
 export type Categoria = Tables<'categoria'>
@@ -52,8 +46,6 @@ export const DESTINATARIOS = [
   { id: 4, nombre: 'Docentes' },
   { id: 5, nombre: 'Comunidad educativa' },
 ] as const satisfies readonly Destinatario[]
-
-export type Etiqueta = Tables<'etiqueta'>
 
 /** Taller con lo que el portal y el panel necesitan: el nivel (vía la categoría), sus destinatarios, etiquetas y recursos (por `orden`, `id`). */
 export type Taller = Tables<'taller'> & {

@@ -2,6 +2,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes, useParams } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { obtenerEtiquetas } from '@/features/etiquetas/consultas'
 import { guardarTaller, obtenerCategorias, obtenerTalleres } from '@/features/talleres/consultas'
 import type { Categoria, Taller } from '@/features/talleres/types'
 import { renderConProviders } from '@/test/utils'
@@ -14,6 +15,7 @@ import { TallerFormPage } from './TallerFormPage'
  * nombre de cada destinatario; etiquetas con el TagInput (Enter agrega); botones "Crear taller" (alta) y
  * "Guardar cambios" (edición). Los errores salen en elementos con role="alert". Al guardar se vuelve a
  * /admin/talleres/:nivelId/:categoriaId.
+ * Las etiquetas sugeridas salen de useEtiquetas (consultas de `features/etiquetas`, mockeadas acá; criterio 9).
  */
 vi.mock('@/features/talleres/consultas', () => ({
   obtenerCategorias: vi.fn(),
@@ -23,6 +25,8 @@ vi.mock('@/features/talleres/consultas', () => ({
   guardarTaller: vi.fn(),
   cambiarEstadoTaller: vi.fn(),
 }))
+
+vi.mock('@/features/etiquetas/consultas', () => ({ obtenerEtiquetas: vi.fn() }))
 
 const DA002 = 'La categoría está dada de baja: reactivala primero'
 const PLACEHOLDER_ETIQUETAS = 'Ej: lectura, evaluación'
@@ -82,6 +86,20 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(obtenerCategorias).mockResolvedValue([ciencia])
   vi.mocked(obtenerTalleres).mockResolvedValue([existente])
+  vi.mocked(obtenerEtiquetas).mockResolvedValue([
+    { id: 1, nombre: 'ambiente' },
+    { id: 2, nombre: 'ciberseguridad' },
+  ])
+})
+
+describe('TallerFormPage: etiquetas sugeridas (criterio 9)', () => {
+  it('sugiere etiquetas de la tabla etiqueta, aunque ningún taller las use', async () => {
+    renderPagina('/admin/talleres/3/7/nuevo')
+    await screen.findByRole('heading', { name: 'Nuevo Taller' })
+    await waitFor(() => expect(obtenerEtiquetas).toHaveBeenCalled())
+    await userEvent.type(screen.getByPlaceholderText(PLACEHOLDER_ETIQUETAS), 'cib')
+    expect(await screen.findByRole('button', { name: 'ciberseguridad' })).toBeInTheDocument()
+  })
 })
 
 describe('TallerFormPage: rutas y carga', () => {

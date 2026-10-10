@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ETIQUETA_ESTADO, NIVELES, idDeRuta, nombreNivel, type EstadoTaller } from '@/features/talleres/types'
+import { ETIQUETA_ESTADO, NIVELES, nombreNivel, type EstadoTaller } from '@/features/talleres/types'
 import { mensajeDeError } from '@/features/talleres/errores'
 import { filtrarTalleres } from '@/features/talleres/filtrar'
 import { useCategoriaDeRuta } from '@/features/talleres/hooks/useCategoriaDeRuta'
 import { useCambiarEstadoTaller, useTalleres } from '@/features/talleres/hooks/useTalleres'
-import { TallerBuscador } from '@/features/talleres/components/TallerBuscador'
+import { Buscador } from '@/shared/components/ui/Buscador'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
 import { Badge } from '@/shared/components/ui/Badge'
 import { Button } from '@/shared/components/ui/Button'
@@ -14,7 +14,8 @@ import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
 import { EmptyState } from '@/shared/components/ui/EmptyState'
 import { ConfirmDialog } from '@/shared/components/ui/ConfirmDialog'
 import { formatFechaDeTimestamp } from '@/shared/lib/date'
-import { NoEncontrado } from './NoEncontrado'
+import { NoEncontrado } from '@/shared/components/ui/NoEncontrado'
+import { idDeRuta } from '@/shared/lib/rutas'
 
 const VARIANTE_ESTADO = { BORRADOR: 'neutral', PUBLICADO: 'success', INACTIVO: 'warning' } as const satisfies Record<
   EstadoTaller,
@@ -35,7 +36,7 @@ export function TalleresListPage() {
   const talleres = useTalleres(categoriaId)
   const cambiarEstado = useCambiarEstadoTaller()
 
-  if (!nivelInfo) return <NoEncontrado titulo="Nivel no encontrado" />
+  if (!nivelInfo) return <NoEncontrado titulo="Nivel no encontrado" volverA="/admin/talleres" />
   if (categoriaRuta.estado === 'cargando') return <TableSkeleton />
   if (categoriaRuta.estado === 'error') return <ErrorFallback onRetry={categoriaRuta.reintentar} />
   if (categoriaRuta.estado === 'no-encontrada') {
@@ -67,7 +68,7 @@ export function TalleresListPage() {
       </div>
 
       <div className="mt-6">
-        <TallerBuscador value={busqueda} onChange={setBusqueda} />
+        <Buscador value={busqueda} onChange={setBusqueda} etiqueta="Buscar por nombre o etiqueta" placeholder="Buscar por nombre o etiqueta..." />
       </div>
 
       <div className="mt-4">

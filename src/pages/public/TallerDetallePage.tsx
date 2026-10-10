@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { ChevronLeft, Share2 } from 'lucide-react'
 import { useCatalogo, useTallerPublicado } from '@/features/talleres/hooks/useTalleres'
-import { idDeRuta, nombreNivel } from '@/features/talleres/types'
+import { nombreNivel } from '@/features/talleres/types'
 import { ListaRecursos } from '@/features/recursos/components/ListaRecursos'
 import { TallerCard } from '@/features/talleres/components/TallerCard'
 import { Badge } from '@/shared/components/ui/Badge'
@@ -9,6 +9,7 @@ import { Button } from '@/shared/components/ui/Button'
 import { EmptyState } from '@/shared/components/ui/EmptyState'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
 import { Skeleton } from '@/shared/components/ui/Skeleton'
+import { idDeRuta } from '@/shared/lib/rutas'
 
 export function TallerDetallePage() {
   const { id } = useParams<{ id: string }>()

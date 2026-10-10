@@ -38,6 +38,12 @@ En la crítica del código de la fase B de recursos (2026-10-10):
 - Invalidar una vez por lote (lo propuse yo) deja la caché vieja durante el lote: hay que bloquear reordenar mientras dura (`P0001`).
 - `idDeYoutube` con host exacto y regex de 11 caracteres es seguro para el `src` del iframe. La URL externa ya está protegida por el CHECK `https://`.
 
+En la crítica de la spec `normativas` (2026-10-10, primer bucket público):
+- `getPublicUrl(ruta, { download })` → storage-api responde `Content-Disposition: attachment` (`/app/dist/storage/renderer/renderer.js`),
+  así que descarga en vez de abrir en pestaña. `getPublicUrl` no necesita política; `remove()` sigue necesitando select + delete del admin.
+- Una guardia global de Storage que solo mire `to anon/public` no ve una política `to authenticated` sin `es_admin()` ni una `for all`:
+  pedir que toda política de escritura tenga `roles = {authenticated}` y `es_admin`.
+
 **Why:** Storage es un sistema aparte, sin transacción común con Postgres. Sus detalles (qué MIME llega, cuándo se ve la fila) no salen
 en los tipos ni en el pgTAP y deciden si un diseño se sostiene.
 

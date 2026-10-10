@@ -1,10 +1,16 @@
+import { useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useState } from 'react'
-import { useAuth } from '@/features/auth/AuthContext'
-import { useNormativa } from '@/features/normativas/hooks/useNormativas'
+import { useEtiquetas } from '@/features/etiquetas/hooks/useEtiquetas'
+import { validarPdf } from '@/features/normativas/archivos'
+import { mensajeDeErrorNormativa } from '@/features/normativas/errores'
+import { useGuardarNormativa, useNormativa } from '@/features/normativas/hooks/useNormativas'
+import type { Normativa } from '@/features/normativas/types'
+
+import { NoEncontrado } from '@/shared/components/ui/NoEncontrado'
+import { idDeRuta } from '@/shared/lib/rutas'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
 import { Label } from '@/shared/components/ui/Label'
 import { Input } from '@/shared/components/ui/Input'
@@ -13,66 +19,111 @@ import { FieldError } from '@/shared/components/ui/FieldError'
 import { TagInput } from '@/shared/components/ui/TagInput'
 import { FileDropzone } from '@/shared/components/ui/FileDropzone'
 import { Button } from '@/shared/components/ui/Button'
+import { CardSkeleton } from '@/shared/components/ui/Skeleton'
+import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
 
-const schema = z.object({
-  titulo: z.string().min(2, 'Ingresá el título de la normativa'),
-  descripcion: z.string().optional(),
-  etiquetas: z.array(z.string()),
-  numero: z.string().min(1, 'Ingresá el número'),
-  anio: z.string().regex(/^\d{4}$/, 'Ingresá un año de 4 dígitos'),
-})
+const LISTA = '/admin/normativas'
 
-type FormValues = z.infer<typeof schema>
+// Los mismos límites que la base: título hasta 200, número hasta 50 y año entre 1900 y 2100. El PDF es obligatorio
+// solo en el alta; en la edición, sin archivo se conserva el que está en la base.
+function crearSchema(esAlta: boolean) {
+  return z.object({
+    titulo: z
+      .string()
+      .trim()
+      .min(1, 'Ingresá el título de la normativa')
+      .max(200, 'El título no puede superar los 200 caracteres'),
+    descripcion: z.string(),
+    etiquetas: z.array(z.string()),
+    numero: z
+      .string()
+      .trim()
+      .min(1, 'Ingresá el número')
+      .max(50, 'El número no puede superar los 50 caracteres'),
+    anio: z
+      .string()
+      .trim()
+      .regex(/^\d{4}$/, 'Ingresá un año de 4 dígitos')
+      .refine((v) => Number(v) >= 1900 && Number(v) <= 2100, 'El año debe estar entre 1900 y 2100'),
+    archivo: z.custom<File | null>().superRefine((file, ctx) => {
+      const motivo = file ? validarPdf(file) : esAlta ? 'Elegí el PDF de la normativa' : null
+      if (motivo) ctx.addIssue({ code: 'custom', message: motivo })
+    }),
+  })
+}
+
+type FormValues = z.infer<ReturnType<typeof crearSchema>>
+
+const NORMATIVA_NO_ENCONTRADA = 'Normativa no encontrada'
 
 export function NormativaFormPage() {
   const [searchParams] = useSearchParams()
-  const editarId = searchParams.get('editar') ?? undefined
-  const normativaExistente = useNormativa(editarId)
+  const editar = searchParams.get('editar')
+  const esEdicion = editar !== null
+  const id = esEdicion ? idDeRuta(editar) : null
+  const normativa = useNormativa(id)
+
+  if (!esEdicion) return <Formulario />
+
+  // Sin la normativa cargada no se muestra el formulario: guardar vacío pisaría sus datos.
+  if (id === null) return <NoEncontrado titulo={NORMATIVA_NO_ENCONTRADA} volverA={LISTA} />
+  if (normativa.isError) return <ErrorFallback onRetry={() => void normativa.refetch()} />
+  if (normativa.data === undefined) return <CardSkeleton />
+  if (normativa.data === null) return <NoEncontrado titulo={NORMATIVA_NO_ENCONTRADA} volverA={LISTA} />
+  return <Formulario normativa={normativa.data} />
+}
+
+function Formulario({ normativa }: { normativa?: Normativa }) {
   const navigate = useNavigate()
-  const { usuario } = useAuth()
-  const [archivo, setArchivo] = useState<string[]>([])
+  const guardar = useGuardarNormativa()
+  const etiquetasSugeridas = useEtiquetas()
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null)
+  const schema = useMemo(() => crearSchema(!normativa), [normativa])
 
   const {
     register,
     handleSubmit,
     control,
-    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    values: normativaExistente.data
-      ? {
-          titulo: normativaExistente.data.titulo,
-          descripcion: normativaExistente.data.descripcion,
-          etiquetas: normativaExistente.data.etiquetas,
-          numero: normativaExistente.data.numero,
-          anio: normativaExistente.data.anio,
-        }
-      : {
-          titulo: '',
-          descripcion: '',
-          etiquetas: [],
-          numero: '',
-          anio: '',
-        },
+    defaultValues: {
+      titulo: normativa?.titulo ?? '',
+      descripcion: normativa?.descripcion ?? '',
+      etiquetas: normativa?.etiqueta.map((e) => e.nombre) ?? [],
+      numero: normativa?.numero ?? '',
+      anio: normativa ? String(normativa.anio) : '',
+      archivo: null,
+    },
   })
 
-  async function onSubmit() {
-    await new Promise((r) => setTimeout(r, 500))
-    reset()
-    navigate('/admin/normativas')
+  async function onSubmit(valores: FormValues) {
+    setErrorGuardado(null)
+    try {
+      await guardar.mutateAsync({
+        id: normativa?.id,
+        datos: {
+          titulo: valores.titulo,
+          descripcion: valores.descripcion.trim() === '' ? null : valores.descripcion.trim(),
+          numero: valores.numero,
+          anio: Number(valores.anio),
+          etiquetas: valores.etiquetas,
+        },
+        archivo: valores.archivo ?? undefined,
+      })
+      navigate(LISTA)
+    } catch (error) {
+      setErrorGuardado(mensajeDeErrorNormativa(error))
+    }
   }
+
+  const titulo = normativa ? 'Editar normativa' : 'Nueva Normativa'
 
   return (
     <div>
-      <Breadcrumb
-        items={[
-          { label: 'Normativas', to: '/admin/normativas' },
-          { label: editarId ? 'Editar normativa' : 'Nueva Normativa' },
-        ]}
-      />
+      <Breadcrumb items={[{ label: 'Normativas', to: LISTA }, { label: titulo }]} />
 
-      <h1 className="text-2xl font-bold text-primary-800">{editarId ? 'Editar normativa' : 'Nueva Normativa'}</h1>
+      <h1 className="text-2xl font-bold text-primary-800">{titulo}</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 space-y-5">
         <div>
@@ -100,6 +151,7 @@ export function NormativaFormPage() {
               <TagInput
                 value={field.value}
                 onChange={field.onChange}
+                suggestions={etiquetasSugeridas}
                 placeholder="Escribí una palabra clave y presioná Enter"
               />
             )}
@@ -127,21 +179,50 @@ export function NormativaFormPage() {
         </div>
 
         <div>
-          <Label>Archivo</Label>
-          <FileDropzone label="Arrastrá el PDF o" accept="application/pdf" files={archivo} onChange={setArchivo} />
+          <Label htmlFor="archivo">Archivo</Label>
+          {normativa && (
+            <p className="mb-2 text-sm text-gray-600">
+              <a
+                href={normativa.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary-600 hover:underline"
+              >
+                Ver archivo actual
+              </a>
+              . Si no elegís otro, se conserva.
+            </p>
+          )}
+          <Controller
+            control={control}
+            name="archivo"
+            render={({ field }) => (
+              <FileDropzone
+                id="archivo"
+                invalid={!!errors.archivo}
+                describedBy={errors.archivo ? 'archivo-error' : undefined}
+                label="Arrastrá el PDF o"
+                hint="Solo PDF, hasta 20 MB"
+                accept="application/pdf"
+                files={field.value ? [field.value.name] : []}
+                onFiles={(elegidos) => field.onChange(elegidos[0] ?? null)}
+                onChange={(nombres) => {
+                  if (nombres.length === 0) field.onChange(null)
+                }}
+              />
+            )}
+          />
+          <FieldError id="archivo-error" message={errors.archivo?.message} />
         </div>
 
-        <div>
-          <Label htmlFor="responsable">Nombre del encargado de subir</Label>
-          <Input id="responsable" value={usuario?.email ?? ''} disabled />
-        </div>
+        {errorGuardado && <FieldError id="normativa-error" message={errorGuardado} />}
 
         <div className="flex justify-end gap-3 pt-2">
-          <Button type="button" variant="outline" onClick={() => navigate('/admin/normativas')}>
+          <Button type="button" variant="outline" onClick={() => navigate(LISTA)}>
             Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Publicando...' : 'Publicar'}
+            {isSubmitting ? 'Guardando...' : 'Guardar'}
           </Button>
         </div>
       </form>

@@ -42,10 +42,22 @@ creado por migración y políticas de `storage.objects` `to authenticated` con `
 probar con `set local storage.allow_delete_query = 'true'` y abriendo un select temporal (sin el select, el DELETE ve 0 filas igual).
 Para revisar Storage sin ensuciar la base, alcanza con psql (`pg_policies where schemaname='storage'`) y comparar `gen types --local`.
 
+En normativas (fase A, 2026-10-10) la base salió bien a la primera (394 asserts). Huecos menores que pueden repetirse:
+- Un trigger con `WHEN` que excluye una columna (por ejemplo, el contador `descargas`) deja sin auditar **cualquier** UPDATE que también la
+  cambie. El grant por columna lo cierra para la API, pero no para `service_role` ni `postgres`. Se prueba con `set local role service_role`
+  dentro de rollback.
+- Un "update que no cambia nada" (`set col = col`) en un test de denegación es vacuo: no detecta una política permisiva. Pedí que cambie
+  un valor o que verifique `registro_operacion`.
+- `db:types` pierde la nulabilidad en `RETURNS TABLE` y en parámetros sin default (`ruta_anterior: string`): avisalo para la fase de frontend.
+- Las docs de estado (`arquitectura.md`: migraciones, guardias, brechas) quedan sin actualizar en la fase de base (ver [[supabase-js-frontend]]).
+
 **Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
 creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
 REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay
 que correr `db:reset`. No escribir por la API sin un plan de limpieza.
+En normativas fase B funcionó una tercera vía: un script de supabase-js en el scratchpad que limpia en un `finally` con la **service role local**
+(borra la fila, los objetos de las rutas propias y la etiqueta por nombre único) y después vuelve a correr `test:db`, que quedó en verde. Con
+`createRequire('/workspaces/sistema_ministerio/package.json')` se importa supabase-js desde el scratchpad.
 
 **Why:** el criterio 6 pedía que nadie de la API escriba, y el contrato de auditoría es "NULL = sistema" con falla cerrada.
 Si solo se mira `has_table_privilege` sobre la tabla, el hueco de la secuencia no aparece.

@@ -1,8 +1,8 @@
 import { useState } from 'react'
+import { EnlaceDescarga } from '@/features/normativas/components/EnlaceDescarga'
 import { useNormativas } from '@/features/normativas/hooks/useNormativas'
-import { TallerBuscador } from '@/features/talleres/components/TallerBuscador'
+import { Buscador } from '@/shared/components/ui/Buscador'
 import { Badge } from '@/shared/components/ui/Badge'
-import { Button } from '@/shared/components/ui/Button'
 import { TableSkeleton } from '@/shared/components/ui/Skeleton'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
 import { EmptyState } from '@/shared/components/ui/EmptyState'
@@ -17,11 +17,11 @@ export function NormativasPublicPage() {
       <p className="mt-1 text-sm text-gray-500">Resoluciones, disposiciones y decretos vigentes.</p>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <TallerBuscador value={busqueda} onChange={setBusqueda} />
+        <Buscador value={busqueda} onChange={setBusqueda} etiqueta="Buscar por título, número o etiqueta" placeholder="Buscar por título, número o etiqueta..." />
       </div>
 
       <div className="mt-6">
-        {normativas.isLoading && <TableSkeleton />}
+        {normativas.isPending && <TableSkeleton />}
         {normativas.isError && <ErrorFallback onRetry={() => normativas.refetch()} />}
         {normativas.isSuccess && normativas.data.length === 0 && (
           <EmptyState title="No encontramos normativas" description="Probá con otros filtros." />
@@ -37,14 +37,12 @@ export function NormativasPublicPage() {
                   <p className="text-sm text-gray-500">{n.anio}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  {n.etiquetas.map((e) => (
-                    <Badge key={e} variant="primary">
-                      {e}
+                  {n.etiqueta.map((e) => (
+                    <Badge key={e.id} variant="primary">
+                      {e.nombre}
                     </Badge>
                   ))}
-                  <Button variant="outline" size="sm">
-                    Descargar
-                  </Button>
+                  <EnlaceDescarga normativa={n} />
                 </div>
               </li>
             ))}
