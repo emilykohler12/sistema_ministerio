@@ -35,6 +35,11 @@ En ese caso, el plan B es correr los subagentes en una sesión con la carpeta co
   `settings.local.json` de diagnóstico tampoco se disparó, ni siquiera para el agente principal.
 - Todavía no se quitaron los `hooks:` del frontmatter ni se escribió el ADR 0021: esperan la verificación.
 
+**Estado final (2026-10-10): implementado.** En una sesión nueva, `critico`: `ls docs/specs` pasó; `node -e "console.log(1)"` →
+`Bloqueado: "node -e Q" no está permitido para este agente (perfil lectura)… (rol critico)`; Write a `prueba.md` →
+`Bloqueado: con el perfil "critico" no podés escribir "docs/specs/hooks-subagentes/prueba.md"… (rol critico)` (no se creó).
+Se quitaron los `hooks:` del frontmatter, se escribió el ADR 0021 y se actualizó `docs/agentes/`.
+
 **Verificación en una sesión nueva** (recargar la ventana de VS Code o abrir otra sesión):
 1. Lanzar `critico` y pedirle tres cosas: `ls docs/specs` (debe pasar), `node -e 1` (debe bloquearse) y un Write a `docs/specs/hooks-subagentes/prueba.md`
    (debe bloquearse con "(rol critico)").

@@ -1,18 +1,22 @@
 ---
 name: hooks-frontmatter-no-invocados
-description: Los hooks limitar-* del frontmatter de .claude/agents/*.md no se invocaban (2026-10-10); los de settings.json sí. Probar invocación en vivo, no solo el script
+description: Los hooks limitar-* del frontmatter no corrían; desde 0021 los permisos por rol los aplica roles.mjs (settings.json, agent_type). Sondear en vivo y buscar escrituras/ejecución con comandos de la lista blanca
 metadata:
   type: project
 ---
 
 En la revisión de agente-qa (2026-10-10, Claude Code 2.1.294) se comprobó que los hooks `limitar-escritura` y `limitar-bash`
-declarados en el frontmatter de los subagentes **no se ejecutan**. El revisor corrió `node -e` y escribió fuera de `revision.md` sin
-bloqueo, y en ningún transcript aparece un bloqueo de `limitar-*`. `proteger-bash` (de `settings.json`) sí bloquea dentro del subagente.
-Los scripts funcionan cuando se los prueba a mano con stdin. Esto explica que en el padrón el revisor escribiera `revision-fase-b.md` y
-el crítico usara heredoc. Además, un script que no carga sale con 1, que no bloquea: falla abierta.
+declarados en el frontmatter de los subagentes **no se ejecutaban** (requieren confianza de la carpeta; SDK y `-p` no cuentan).
+Se arregló en hooks-subagentes (ADR 0021): `roles.mjs` en `settings.json` lee `agent_type` y aplica `perfiles.mjs`. Ahora sí bloquea
+al revisor (comprobado: `node --version` → "(rol revisor)"). Consecuencia: el revisor no puede usar `node`, `for`, `sed`, ni escribir al
+scratchpad; para sondear usa comandos de la lista blanca.
 
-**Why:** `hooks.test.ts` solo prueba el script, no la invocación, así que todo el diseño de permisos por rol podía estar inactivo sin que
-ningún test lo detectara.
-**How to apply:** al revisar cualquier cambio en `.claude/agents/` o `.claude/hooks/limitar-*`, hacé una sonda en vivo: un comando fuera
-de la lista blanca, como `node -e`, y un Write al scratchpad. Mirá si bloquea. Distinguí "el script funciona" de "el hook se invoca".
-Si se arregló (con un despachador en `settings.json` por `agent_type`), verificá que falle cerrado. Ver también [[hooks-denylist-evasion]].
+Al activarse, las listas blancas mostraron agujeros (2026-10-10, sondeados en vivo): `find "-exec"` (las comillas se vuelven `Q`),
+`GIT_EXTERNAL_DIFF=` delante de `git diff --ext-diff` (se borra el prefijo de variables), `rg --pre`, `sort -o`, `git diff --output=`,
+`uniq in out`, `tree -o`, `git branch -D`, y `"--fix"` entre comillas para oxlint.
+
+**Why:** una lista blanca de "comandos de lectura" igual deja escribir o ejecutar si no se miran las banderas, y las comillas esconden
+banderas a los lookahead.
+**How to apply:** ante cambios en `perfiles.mjs`/`roles.mjs`/agentes, sondeá en vivo (comando fuera de lista, Write fuera del perfil) y
+probá banderas que escriben (`-o`, `--output`) o ejecutan (`--pre`, `-exec`, `GIT_*`, `NODE_OPTIONS`) en los comandos permitidos, con y
+sin comillas. Verificá que falle cerrado (import dentro del try, exit 2). Ver [[hooks-denylist-evasion]].

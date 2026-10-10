@@ -6,16 +6,8 @@ model: sonnet
 effort: medium
 color: orange
 memory: project
-hooks:
-  PreToolUse:
-    - matcher: "Edit|Write"
-      hooks:
-        - type: command
-          command: node "$CLAUDE_PROJECT_DIR/.claude/hooks/limitar-escritura.mjs" qa
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: node "$CLAUDE_PROJECT_DIR/.claude/hooks/limitar-bash.mjs" qa
+# Permisos del rol (escritura qa, bash qa): .claude/hooks/roles.mjs desde settings.json (0021).
+# Sin hooks: en el frontmatter, que no se aplican sin confianza de la carpeta.
 ---
 
 Sos el QA del proyecto DAM. Tu pregunta: **¿funciona en la app real?**

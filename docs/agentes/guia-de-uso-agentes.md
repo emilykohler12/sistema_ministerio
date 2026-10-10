@@ -134,7 +134,7 @@ Si el cambio toca una pantalla, después del revisor pasa el `qa`, que lo prueba
 | Problema | Revisar |
 |---|---|
 | Claude no sigue una instrucción | `/context` para ver si cargó. Si es obligatoria, pasarla a un hook |
-| Un hook no se ejecuta | `/hooks`, confianza del proyecto aceptada, script con Node disponible |
+| Un hook no se ejecuta | `/hooks`, confianza del proyecto aceptada, script con Node disponible. Los hooks se toman al iniciar la sesión: tras cambiar `settings.json`, recargar. Los permisos por rol van en `settings.json` (`roles.mjs`), no en el frontmatter del agente (0021) |
 | Una skill no se activa | Que la `description` diga cuándo usarla, o invocarla con `/nombre` |
 | Un subagente no aparece | Frontmatter con `name` y `description` válidos; reiniciar si la carpeta es nueva |
 | El agente pide permiso todo el tiempo | Agregar el comando seguro a `permissions.allow` |

@@ -1,6 +1,6 @@
 ---
 name: permisos-agentes-vs-spec
-description: Las specs que tocan hooks/permisos de agentes suelen suponer perfiles que no existen; contrastar siempre con .claude/agents/*.md y limitar-*.mjs
+description: Las specs que tocan hooks/permisos de agentes suelen suponer perfiles que no existen; contrastar siempre con roles.mjs y perfiles.mjs (0021)
 metadata:
   type: project
 ---
@@ -14,7 +14,7 @@ acepta `*.test.ts(x)`, así que el test-writer no podía escribir pgTAP (`.sql`)
 **Why:** cada nueva herramienta (Supabase CLI, SQL) rompe el supuesto de que "tests = .test.ts" y
 "comandos = npm test/lint".
 
-**How to apply:** cuando una spec agregue comandos o tipos de archivo, chequear frontmatter de
-`.claude/agents/*.md` y los perfiles de `limitar-bash.mjs`/`limitar-escritura.mjs`; recomendar regex
+**How to apply:** cuando una spec agregue comandos o tipos de archivo, chequear `ROLES` en `.claude/hooks/roles.mjs`
+y los perfiles de `.claude/hooks/perfiles.mjs` (desde 0021 el frontmatter de los agentes ya no lleva hooks); recomendar regex
 anclados y bloqueos en `proteger-bash.mjs` (ve cualquier invocación) antes que deny por prefijo.
 Relacionado: [[tipos-v1-vs-firma-hooks]].

@@ -7,16 +7,8 @@ effort: medium
 color: yellow
 skills:
   - tdd
-hooks:
-  PreToolUse:
-    - matcher: "Edit|Write"
-      hooks:
-        - type: command
-          command: node "$CLAUDE_PROJECT_DIR/.claude/hooks/limitar-escritura.mjs" tests
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: node "$CLAUDE_PROJECT_DIR/.claude/hooks/limitar-bash.mjs" checks
+# Permisos del rol (escritura tests, bash checks): .claude/hooks/roles.mjs desde settings.json (0021).
+# Sin hooks: en el frontmatter, que no se aplican sin confianza de la carpeta.
 ---
 
 Escribís tests a partir de la spec que te pasan, nunca a partir de código ya implementado.

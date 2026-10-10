@@ -22,7 +22,7 @@ Herramienta: Claude Code · Todo vive dentro del repositorio y se comparte por g
 | Rol | Tipo | Modelo | Responsabilidad | Herramientas |
 |---|---|---|---|---|
 | **Ingeniero en Sistemas** | Sesión principal (output style) | Opus | Discute, planifica, enseña, orquesta, decide el carril | Todas |
-| **Explore** | Subagente (reemplaza al incluido) | Sonnet | Busca contexto en el repo: código, specs, decisiones | Solo lectura (hook `limitar-bash lectura`) |
+| **Explore** | Subagente (reemplaza al incluido) | Sonnet | Busca contexto en el repo: código, specs, decisiones | Solo lectura (hook `roles.mjs`, perfil `lectura`) |
 | **test-writer** | Subagente | Sonnet | Escribe tests que fallan a partir de la spec (fase RED) | Solo `*.test.ts(x)`; shell solo para checks (hooks) |
 | **implementador** | Subagente | Sonnet | Implementa la spec o el plan con TDD. Si duda, se detiene y devuelve `BLOQUEADO` | Edición + MCP Supabase |
 | **crítico** | Subagente | Opus | ¿Hay una forma más simple o mejor? Revisa la propuesta y la estructura del código | Lectura; escribe solo `critica.md` y su memoria (hooks) |
@@ -114,8 +114,11 @@ VOS ◄──► INGENIERO
 | `proteger-bash.mjs` | Antes de cada comando | Lo mismo que `proteger.mjs`, pero por shell (`cat .env`, `sed -i`, `>`) |
 | `checks-stop.mjs` | Al terminar un turno | Si hubo cambios: lint + typecheck + tests deben pasar. Sin `node_modules` avisa que falta el Dev Container |
 | `contexto.mjs` | Después de compactar | Reinyecta la rama y la spec activa (deducida de la rama `feat/<x>`) |
-| `limitar-escritura.mjs <perfil>` | Antes de editar (frontmatter del agente) | Cada subagente solo escribe lo de su rol: tests, `critica.md`, `revision.md` o (qa) `e2e/` y `qa.md` |
-| `limitar-bash.mjs <perfil>` | Antes de cada comando (frontmatter del agente) | Lista blanca de comandos: `lectura` (Explore, crítico), `checks` (test-writer, revisor) o `qa` (checks + `test:e2e` sin banderas de configuración) |
+| `roles.mjs` | Antes de editar y de cada comando (`settings.json`) | Lee `agent_type` y aplica el perfil del rol (reglas en `perfiles.mjs`). Escritura: cada subagente solo escribe lo de su rol (tests, `critica.md`, `revision.md` o, qa, `e2e/` y `qa.md`; Explore nada). Bash: lista blanca `lectura` (Explore, crítico), `checks` (test-writer, revisor) o `qa` (checks + `test:e2e` sin banderas de configuración). El principal y los roles de `LIBRES` (implementador, `general-purpose`, `claude`, `Plan`, `claude-code-guide`, `statusline-setup`) no se restringen; un rol desconocido no escribe. Falla cerrada (exit 2) |
+
+Los permisos por rol viven en `settings.json` y no en el frontmatter de `.claude/agents/*.md` (decisión 0021): los hooks del
+frontmatter solo corren con la confianza de la carpeta aceptada, y una sesión del Agent SDK o de `claude -p` no cuenta.
+`limitar-escritura.mjs` y `limitar-bash.mjs` quedan como CLI de un perfil, para probar las reglas a mano.
 
 Límite honesto: los hooks frenan errores y atajos, no a un agente malicioso. Por ejemplo, un test
 puede escribir archivos al ejecutarse. Para eso está la revisión humana del PR.
@@ -144,7 +147,7 @@ CLAUDE.local.md               personal (gitignored)
 ├── agents/                   Explore · test-writer · implementador · critico · revisor · qa
 ├── skills/                   spec · tdd · supabase-rls · criticar · decision · pr · verify
 ├── rules/                    react.md · migraciones.md
-├── hooks/                    formatear · proteger · proteger-bash · checks-stop · contexto · limitar-*
+├── hooks/                    formatear · proteger · proteger-bash · checks-stop · contexto · roles · perfiles · limitar-*
 └── agent-memory/             critico/ · revisor/ · qa/  (memoria compartida por git)
 docs/
 ├── arquitectura.md           mapa del sistema

@@ -4,6 +4,7 @@
 //   sin agent_type (agente principal) o rol libre → sin restricción (siguen proteger.mjs y proteger-bash.mjs)
 //   rol con perfil → el de perfiles.mjs · rol desconocido → no escribe y solo lee por bash
 // Los imports son dinámicos y dentro del try: un import estático que falla saldría con exit 1, que no bloquea.
+// perfiles.mjs se importa después de mirar agent_type: si se rompe, el agente principal sigue pudiendo arreglarlo.
 
 function bloquear(motivo) {
   process.stderr.write(motivo + '\n')
@@ -22,20 +23,33 @@ const DESCONOCIDO = { escritura: 'ninguno', bash: 'lectura' }
 const ESCRITURA = new Set(['Edit', 'Write', 'NotebookEdit', 'MultiEdit'])
 
 try {
-  const { motivoBash, motivoEscritura } = await import('./perfiles.mjs')
   let raw = ''
   for await (const chunk of process.stdin) raw += chunk
   const input = JSON.parse(raw)
+  if (input === null || typeof input !== 'object' || Array.isArray(input)) {
+    bloquear('Bloqueado: roles.mjs recibió una entrada que no es un objeto JSON. Falla cerrada.')
+  }
   const agente = input.agent_type
   if (!agente || LIBRES.has(agente)) process.exit(0)
 
-  const rol = ROLES[agente] ?? DESCONOCIDO
+  const rol = Object.hasOwn(ROLES, agente) ? ROLES[agente] : DESCONOCIDO
   const herramienta = input.tool_name
+  const toolInput = input.tool_input
   let motivo = null
   if (ESCRITURA.has(herramienta)) {
-    motivo = motivoEscritura(rol.escritura, input.tool_input?.file_path ?? input.tool_input?.notebook_path)
+    const archivo = toolInput?.file_path || toolInput?.notebook_path
+    if (typeof archivo !== 'string' || !archivo) {
+      bloquear(`Bloqueado: la llamada ${herramienta} no trae una ruta de archivo válida (rol ${agente}).`)
+    }
+    const { motivoEscritura } = await import('./perfiles.mjs')
+    motivo = motivoEscritura(rol.escritura, archivo)
   } else if (herramienta === 'Bash') {
-    motivo = motivoBash(rol.bash, input.tool_input?.command ?? '')
+    const comando = toolInput?.command
+    if (typeof comando !== 'string') {
+      bloquear(`Bloqueado: la llamada Bash no trae un comando válido (rol ${agente}).`)
+    }
+    const { motivoBash } = await import('./perfiles.mjs')
+    motivo = motivoBash(rol.bash, comando)
   }
   if (motivo) bloquear(`${motivo} (rol ${agente})`)
   process.exit(0)

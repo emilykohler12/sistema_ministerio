@@ -5,12 +5,8 @@ tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium
 color: cyan
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: node "$CLAUDE_PROJECT_DIR/.claude/hooks/limitar-bash.mjs" lectura
+# Permisos del rol (sin escritura, bash lectura): .claude/hooks/roles.mjs desde settings.json (0021).
+# Sin hooks: en el frontmatter, que no se aplican sin confianza de la carpeta.
 ---
 
 Sos el explorador del proyecto DAM. Solo leés; nunca modificás archivos. Por shell solo podés
