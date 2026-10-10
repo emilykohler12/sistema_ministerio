@@ -27,7 +27,7 @@ Herramienta: Claude Code · Todo vive dentro del repositorio y se comparte por g
 | **implementador** | Subagente | Sonnet | Implementa la spec o el plan con TDD. Si duda, se detiene y devuelve `BLOQUEADO` | Edición + MCP Supabase |
 | **crítico** | Subagente | Opus | ¿Hay una forma más simple o mejor? Revisa la propuesta y la estructura del código | Lectura; escribe solo `critica.md` y su memoria (hooks) |
 | **revisor** | Subagente | Opus | ¿Está bien hecho? Revisa requisitos, tests, seguridad y RLS | Lectura + checks; escribe solo `revision.md` y su memoria (hooks) |
-| **qa** | Subagente | Sonnet | ¿Funciona en la app real? Escribe pocos e2e (Playwright), los corre contra el Supabase local y reporta | Lectura + checks + `test:e2e`; escribe solo `e2e/`, `qa.md`, sus capturas y su memoria (hooks). No toca `src/` |
+| **qa** | Subagente | Sonnet | ¿Funciona en la app real? Escribe pocos e2e (Playwright), los corre contra el Supabase local y reporta | Lectura + checks + `test:e2e`; escribe solo `e2e/`, `qa.md` y su memoria (hooks). No toca `src/` |
 
 **Crítico ≠ revisor.** El crítico cuestiona el *diseño*. El revisor verifica la *corrección*. Separados para no mezclar "esto tiene un bug" con "yo lo haría distinto".
 

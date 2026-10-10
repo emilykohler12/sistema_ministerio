@@ -138,7 +138,6 @@ describe('limitar-escritura perfil qa', () => {
     'e2e/padron.spec.ts',
     'e2e/helpers.ts',
     'docs/specs/padron/qa.md',
-    'docs/specs/padron/qa/captura-listado.png',
     '.claude/agent-memory/qa/MEMORY.md',
   ])('permite escribir %s', (f) => {
     expect(escribir('limitar-escritura.mjs', ['qa'], f).codigo).toBe(0)
@@ -153,6 +152,7 @@ describe('limitar-escritura perfil qa', () => {
     'docs/specs/padron/spec.md',
     'docs/specs/padron/revision.md',
     'docs/specs/padron/qa.md.bak',
+    'docs/specs/padron/qa/captura-listado.png',
     '.claude/agent-memory/revisor/MEMORY.md',
     'e2e-otro/x.ts',
   ])('bloquea escribir %s', (f) => {

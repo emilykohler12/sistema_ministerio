@@ -2,7 +2,7 @@
 //   node limitar-escritura.mjs tests     → test-writer: *.test.ts(x), snapshots y pgTAP (supabase/tests/*.sql)
 //   node limitar-escritura.mjs critico   → su memoria y docs/specs/<feature>/critica.md
 //   node limitar-escritura.mjs revisor   → su memoria y docs/specs/<feature>/revision.md
-//   node limitar-escritura.mjs qa        → e2e/, docs/specs/<feature>/qa.md, sus capturas (qa/) y su memoria
+//   node limitar-escritura.mjs qa        → e2e/, docs/specs/<feature>/qa.md y su memoria
 import { block, readInput, relPath } from './lib.mjs'
 
 const PERFILES = {
@@ -12,7 +12,6 @@ const PERFILES = {
   qa: [
     /^e2e\//,
     /^docs\/specs\/[^/]+\/qa\.md$/,
-    /^docs\/specs\/[^/]+\/qa\//,
     /^\.claude\/agent-memory\/qa\//,
   ],
 }

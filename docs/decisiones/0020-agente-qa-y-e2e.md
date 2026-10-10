@@ -17,7 +17,8 @@ Sexto subagente `qa` (Sonnet), con una pregunta propia: **¿funciona en la app r
 siguen en paralelo) y, en el carril chico, solo si el cambio toca una pantalla.
 - Playwright con Chromium headless; `npm run test:e2e`; specs en `e2e/<feature>.spec.ts`; contra Supabase local, nunca la nube.
 - Pocas pruebas por feature: camino feliz y 2 o 3 errores clave de la spec. Lo demás ya lo cubren Vitest y pgTAP.
-- No modifica la app: reporta en `docs/specs/<feature>/qa.md`. Un hook limita su escritura a `e2e/`, `qa.md`, sus capturas y su memoria.
+- No modifica la app: reporta en `docs/specs/<feature>/qa.md`. Un hook limita su escritura a `e2e/`, `qa.md` y su memoria.
+- Reporta en texto; no commitea capturas (peso en git y en tokens); las de fallos quedan en `test-results/`, ignorado.
 - Su shell excluye banderas como `--config` o `--reporter`. Es defensa en profundidad y se puede evadir: la contención real es revisar el diff de `e2e/` (los spec son código Node).
 - Corre solo, nunca en paralelo con el revisor (comparten la base), y al terminar hace `npm run db:reset` (pgTAP asume tablas vacías).
 
