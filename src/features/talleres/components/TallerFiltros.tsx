@@ -1,8 +1,8 @@
-import { DESTINATARIOS, NIVELES_FILTRO, type Destinatario, type Nivel } from '../types'
+import { DESTINATARIOS, NIVELES, type Destinatario } from '../types'
 import { Select } from '@/shared/components/ui/Select'
 
 export interface FiltrosState {
-  nivel: Nivel | ''
+  nivel: number | ''
   destinatario: Destinatario | ''
 }
 
@@ -22,12 +22,12 @@ export function TallerFiltros({
         <Select
           id="filtro-nivel"
           value={value.nivel}
-          onChange={(e) => onChange({ ...value, nivel: e.target.value as Nivel | '' })}
+          onChange={(e) => onChange({ ...value, nivel: e.target.value === '' ? '' : Number(e.target.value) })}
         >
           <option value="">Nivel</option>
-          {NIVELES_FILTRO.map((n) => (
-            <option key={n.value} value={n.value}>
-              {n.label}
+          {NIVELES.map((n) => (
+            <option key={n.id} value={n.id}>
+              {n.nombre}
             </option>
           ))}
         </Select>

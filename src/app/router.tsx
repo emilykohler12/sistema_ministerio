@@ -68,24 +68,24 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage />, handle: { title: 'Dashboard' } },
       { path: 'talleres', element: <NivelesPage />, handle: { title: 'Talleres' } },
-      { path: 'talleres/:nivel', element: <CategoriasPage />, handle: { title: 'Talleres' } },
+      { path: 'talleres/:nivelId', element: <CategoriasPage />, handle: { title: 'Talleres' } },
       {
-        path: 'talleres/:nivel/nueva-categoria',
+        path: 'talleres/:nivelId/nueva-categoria',
         element: <CategoriaFormPage />,
         handle: { title: 'Nueva categoría' },
       },
       {
-        path: 'talleres/:nivel/:categoriaId',
+        path: 'talleres/:nivelId/:categoriaId',
         element: <TalleresListPage />,
         handle: { title: 'Talleres' },
       },
       {
-        path: 'talleres/:nivel/:categoriaId/nuevo',
+        path: 'talleres/:nivelId/:categoriaId/nuevo',
         element: <TallerFormPage />,
         handle: { title: 'Nuevo taller' },
       },
       {
-        path: 'talleres/:nivel/:categoriaId/:tallerId/editar',
+        path: 'talleres/:nivelId/:categoriaId/:tallerId/editar',
         element: <TallerFormPage />,
         handle: { title: 'Editar taller' },
       },

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ChevronLeft, Share2 } from 'lucide-react'
 import { useTaller, useTalleres } from '@/features/talleres/hooks/useTalleres'
-import { destinatarioLabel, nivelLabel } from '@/features/talleres/types'
+import { destinatarioLabel } from '@/features/talleres/types'
 import { TallerCard } from '@/features/talleres/components/TallerCard'
 import { DescargaModal } from '@/features/descargas/DescargaModal'
 import { Badge } from '@/shared/components/ui/Badge'
@@ -51,7 +51,6 @@ export function TallerDetallePage() {
             </p>
             <h1 className="mt-1 text-2xl font-bold text-primary-800 sm:text-3xl">{taller.titulo}</h1>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              <Badge variant="primary">Nivel {nivelLabel(taller.nivel).toLowerCase()}</Badge>
               {taller.destinatarios.map((d) => (
                 <Badge key={d} variant="secondary">
                   {destinatarioLabel(d)}

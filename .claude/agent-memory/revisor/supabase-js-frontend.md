@@ -25,6 +25,16 @@ En la Fase B (configuración, 2026-10-10) se repitió con otra forma:
 - Hay un criterio de la spec reescrito durante la implementación que no figura en los desvíos de `notas.md`. Hacé
   `git diff main -- spec.md`.
 
+En niveles-categorias (2026-10-10, tercera vez) la pantalla principal (`CategoriaFormPage`) quedó bien, pero el hueco
+pasó a las **pantallas vecinas** que leen el mismo hook: `TalleresListPage` y `TallerFormPage` solo distinguen
+`data === null` ("no encontrado"). Con un error, `data` queda `undefined` y la pantalla muestra "Cargando..." para siempre.
+Tampoco comprueban que el `:categoriaId` sea del `:nivelId` de la URL. Volvió a faltar el registro de la verificación en
+el navegador en `notas.md` (por tercera vez).
+- Para revisar: en cada `useX(id)` que devuelve `null` si no existe, buscá **todos** los consumidores con grep y revisá
+  las tres ramas (`undefined` por error, `null` y un id de otro padre).
+- El script de la API en el scratchpad (24 comprobaciones de RLS por REST) sirve de molde. Cubre `.single()` para
+  PATCH bloqueados (406/PGRST116) y 23505/23514/22001/23503 por REST.
+
 Datos de la librería, para no reportar falsos positivos:
 - En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF
   y `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema de una edición por shell:

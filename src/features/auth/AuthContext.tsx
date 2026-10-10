@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { createContext, type ReactNode, useContext, useEffect, useState } from 'react'
+import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react'
 import { cerrarSesion, escucharSesion, iniciarSesion as iniciarSesionConsulta } from './consultas'
 import { esAdmin } from './esAdmin'
 
@@ -23,21 +23,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [usuario, setUsuario] = useState<UsuarioAdmin | null>(null)
   const [cargando, setCargando] = useState(true)
+  const usuarioAnterior = useRef<string | null>(null)
 
   // Única fuente de la sesión. Regla: nunca llamar a supabase.auth.* de forma sincrónica
   // dentro del callback (puede trabar el cliente); por eso el cierre se difiere.
   useEffect(() => {
     return escucharSesion((evento, session) => {
       const user = session?.user
-      if (user && esAdmin(user)) {
-        setUsuario({ id: user.id, email: user.email })
+      const idActual = user && esAdmin(user) ? user.id : null
+      if (idActual) {
+        setUsuario({ id: idActual, email: user?.email })
       } else {
         setUsuario(null)
         // signOut borra la sesión local aunque falle la red: el rechazo no tiene nada más que hacer.
         if (user) setTimeout(() => cerrarSesion().catch(() => {}), 0)
       }
       if (evento === 'INITIAL_SESSION') setCargando(false)
-      if (evento === 'SIGNED_OUT') queryClient.clear()
+      // Los datos cambian según el rol (RLS): se limpia al cambiar el usuario derivado (anon a admin y
+      // viceversa). No en cada SIGNED_IN: supabase-js lo repite al recuperar el foco con la misma sesión.
+      const cambio = idActual !== usuarioAnterior.current
+      usuarioAnterior.current = idActual
+      if (cambio && evento !== 'INITIAL_SESSION') queryClient.clear()
     })
   }, [queryClient])
 

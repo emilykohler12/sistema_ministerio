@@ -3,7 +3,7 @@ import { Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useConfiguracion } from '@/features/configuracion/hooks/useConfiguracion'
 import { useNormativas } from '@/features/normativas/hooks/useNormativas'
-import { NIVELES_FILTRO } from '@/features/talleres/types'
+import { NIVELES } from '@/features/talleres/types'
 import { useTalleres } from '@/features/talleres/hooks/useTalleres'
 import { TallerCard } from '@/features/talleres/components/TallerCard'
 import { Button } from '@/shared/components/ui/Button'
@@ -164,7 +164,7 @@ export function HomePage() {
         )}
       </section>
 
-      <p className="sr-only">Niveles disponibles: {NIVELES_FILTRO.map((n) => n.label).join(', ')}</p>
+      <p className="sr-only">Niveles disponibles: {NIVELES.map((n) => n.nombre).join(', ')}</p>
     </div>
   )
 }

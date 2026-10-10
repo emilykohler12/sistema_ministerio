@@ -98,6 +98,32 @@ describe('AuthProvider', () => {
     expect(clear).toHaveBeenCalledTimes(1)
   })
 
+  it('un cambio de usuario (anon a admin) limpia la caché de React Query', () => {
+    client.setQueryData(['categorias'], [{ id: 1 }])
+    const clear = vi.spyOn(client, 'clear')
+    montar()
+    emitir('INITIAL_SESSION', null)
+    expect(clear).not.toHaveBeenCalled()
+    emitir('SIGNED_IN', sesionAdmin)
+    expect(clear).toHaveBeenCalledTimes(1)
+    expect(client.getQueryData(['categorias'])).toBeUndefined()
+  })
+
+  it('INITIAL_SESSION no limpia la caché, ni siquiera con un admin', () => {
+    const clear = vi.spyOn(client, 'clear')
+    montar()
+    emitir('INITIAL_SESSION', sesionAdmin)
+    expect(clear).not.toHaveBeenCalled()
+  })
+
+  it('un SIGNED_IN repetido del mismo usuario (al volver el foco) no limpia la caché', () => {
+    const clear = vi.spyOn(client, 'clear')
+    montar()
+    emitir('INITIAL_SESSION', sesionAdmin)
+    emitir('SIGNED_IN', sesionAdmin)
+    expect(clear).not.toHaveBeenCalled()
+  })
+
   it('al desmontar se desuscribe', () => {
     const { unmount } = montar()
     expect(desuscribir).not.toHaveBeenCalled()

@@ -25,6 +25,14 @@ la API (solo se probó el INSERT como postgres) y el `revoke execute` de las fun
 sirve el script del scratchpad (`supabase status -o json` por stdin). Las contraseñas del seed están en
 `scripts/seed-usuarios.mjs` y son distintas por usuario.
 
+En niveles-categorias (2026-10-10) la migración y el pgTAP salieron bien a la primera (36 asserts, cubren cada viñeta).
+Para no reportar falsos positivos:
+- La secuencia de identidad de las tablas de dominio (`categoria_id_seq`) queda con `rwU` para anon y authenticated.
+  No es explotable: la columna es `generated always` y PostgREST no expone `nextval` (`rpc/nextval` da 404). Solo vale
+  revocarla en tablas forenses, como `registro_operacion`.
+- La RLS por fila no restringe columnas: el admin puede cambiar columnas que la UI fija (por ejemplo `nivel_id`). Si un
+  criterio dice "no se puede cambiar X", mirá si alcanza con la UI o si hace falta un `revoke update (col)` o un trigger.
+
 **Why:** el criterio 6 pedía que nadie de la API escriba, y el contrato de auditoría es "NULL = sistema" con falla cerrada.
 Si solo se mira `has_table_privilege` sobre la tabla, el hueco de la secuencia no aparece.
 **How to apply:** en cada migración, consultá los privilegios reales con psql (`docker exec supabase_db_sistema_ministerio
