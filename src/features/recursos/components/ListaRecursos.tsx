@@ -5,8 +5,8 @@ import { ETIQUETA_TIPO_RECURSO, type Recurso } from '../types'
 
 /**
  * Recursos de un taller en el portal: nombre, tipo y tamaño de cada archivo, y el total. Los videos de YouTube se
- * integran con youtube-nocookie.com (0009); otros enlaces van como enlace externo. Sin descarga: llega con el
- * corte descargas. Sin recursos no muestra nada.
+ * integran con youtube-nocookie.com (0009); otros enlaces van como enlace externo. Los archivos no se descargan desde
+ * acá: la descarga pasa por el formulario de `DescargaModal` (0006). Sin recursos no muestra nada.
  */
 export function ListaRecursos({ recursos }: { recursos: Recurso[] }) {
   if (recursos.length === 0) return null

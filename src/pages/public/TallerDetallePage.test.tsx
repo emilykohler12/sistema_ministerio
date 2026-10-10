@@ -100,11 +100,24 @@ describe('TallerDetallePage', () => {
     expect(screen.getByText('Ciberseguridad')).toBeInTheDocument()
   })
 
-  it('no ofrece descarga ni vista previa (la descarga llega con el corte descargas)', async () => {
+  it('un taller sin recursos no muestra el botón "Descargar" ni vista previa', async () => {
     renderPagina('1')
     await screen.findByRole('heading', { name: 'Cuidados en redes' })
     expect(screen.queryByRole('button', { name: /descargar/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/vista previa/i)).not.toBeInTheDocument()
+  })
+
+  it('un taller con recursos muestra el botón "Descargar" (criterio 1 de descargas)', async () => {
+    renderPagina('7')
+    expect(await screen.findByRole('button', { name: 'Descargar' })).toBeInTheDocument()
+  })
+
+  it('el botón "Descargar" abre el modal con el formulario', async () => {
+    renderPagina('7')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Descargar' }))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByLabelText('Cargo')).toBeInTheDocument()
   })
 
   it('un taller sin recursos no muestra la sección "Recursos"', async () => {
@@ -159,7 +172,7 @@ describe('TallerDetallePage', () => {
  * Criterio 9: sección "Recursos" (heading) dentro del detalle. Cada recurso es un <li> con su nombre.
  * Los archivos muestran la etiqueta del tipo (ETIQUETA_TIPO_RECURSO) y el tamaño (formatearTamanio);
  * hay un texto con "total" y la suma de los tamaños. Un enlace de YouTube va en un <iframe> con título hacia
- * https://www.youtube-nocookie.com/embed/<id>; otro enlace es un <a> externo. Sin botón ni enlace "Descargar".
+ * https://www.youtube-nocookie.com/embed/<id>; otro enlace es un <a> externo. Con recursos hay un botón "Descargar" (modal), no un enlace.
  */
 describe('TallerDetallePage: recursos', () => {
   const item = (nombre: string) => {
@@ -203,11 +216,19 @@ describe('TallerDetallePage: recursos', () => {
     expect(enlaceExterno).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
-  it('no ofrece descarga: ni botón ni enlace "Descargar"', async () => {
+  it('la sección de recursos no enlaza los archivos: la descarga pasa por el botón y el formulario', async () => {
     renderPagina('7')
     await screen.findByRole('heading', { name: /recursos/i })
-    expect(screen.queryByRole('button', { name: /descargar/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Descargar' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /descargar/i })).not.toBeInTheDocument()
+  })
+
+  it('un taller solo con enlaces también ofrece "Descargar" (tiene al menos un recurso)', async () => {
+    vi.mocked(obtenerTalleres).mockResolvedValue([
+      taller(8, 'Solo enlaces', { recurso: [enlace(9, 1, 'Sitio', 'https://example.com')] }),
+    ])
+    renderPagina('8')
+    expect(await screen.findByRole('button', { name: 'Descargar' })).toBeInTheDocument()
   })
 
   it('un taller solo con enlaces muestra la sección, sin tamaño total', async () => {

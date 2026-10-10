@@ -25,6 +25,7 @@
 | 2 | Padrón de establecimientos y nuevo formulario de descarga (cargo, localidad, institución). Responde C-01. | [0010](decisiones/0010-padron-de-establecimientos.md) |
 | 2 | Supabase local con Docker-in-Docker para desarrollo. | [0011](decisiones/0011-supabase-local-docker-in-docker.md) |
 | 2 | Búsqueda en el cliente, reglas de baja y unicidad, tablero de métricas (secciones 5.3, 5.4 y 8.4). | — |
+| 2 | La descarga de talleres usa una RPC y una política de Storage en lugar de la Edge Function `descargar-taller` (secciones 9.1 a 9.3 y 10.3). | [0022](decisiones/0022-descarga-por-rpc-y-politica-de-storage.md) |
 
 Este documento describe **qué** hace el sistema. El **por qué** de cada decisión está en `docs/decisiones/`
 y el **estado actual del código** en `docs/arquitectura.md`.
@@ -587,11 +588,10 @@ Supabase
  ├── Auth           una cuenta por administrador
  ├── Storage        bucket privado (talleres) y públicos (normativas, logo)
  └── Edge Functions con la clave de servicio:
-       descargar-taller     valida, registra la descarga y firma los enlaces
        gestionar-usuarios   invita y desactiva usuarios (feature posterior)
 ```
 
-- **Seguridad:** la clave `anon` es pública por diseño. Lo que protege los datos son las políticas RLS, activadas en **todas** las tablas y verificadas con tests. La clave de servicio solo existe en las Edge Functions.
+- **Seguridad:** la clave `anon` es pública por diseño. Lo que protege los datos son las políticas RLS, activadas en **todas** las tablas y verificadas con tests. La clave de servicio solo existe en las Edge Functions (hoy, ninguna; la descarga de talleres no la usa, 0022).
 - **Reglas de negocio en la base:** las reglas de baja, los invariantes y la auditoría se cumplen sin importar desde dónde llegue el cambio.
 
 ### 9.2 Tecnologías
@@ -608,7 +608,7 @@ Supabase
 | Pruebas | Vitest + Testing Library | Tests unitarios y de componentes. | Implementado |
 | Base de datos | PostgreSQL de Supabase | Datos, reglas y RLS. | Definido |
 | Base de datos | Supabase CLI | Migraciones SQL versionadas y `supabase gen types`. | Definido |
-| Servidor | Supabase Edge Functions | Descarga de talleres y gestión de usuarios. | Definido |
+| Servidor | Supabase Edge Functions | Gestión de usuarios (la descarga de talleres usa una RPC y una política de Storage, 0022). | Definido |
 | Autenticación | Supabase Auth | Una cuenta por administrador. | Definido |
 | Archivos | Supabase Storage | Buckets privado y públicos. | Definido |
 | Desarrollo | Dev Container + Docker-in-Docker | Entorno reproducible y Supabase local (0003, 0011). | Definido |
@@ -620,8 +620,8 @@ El código es un único paquete Vite organizado por dominios (`src/features/<dom
 **Descarga de un taller**
 
 1. El usuario presiona "Descargar" y completa el formulario (cargo, localidad, institución).
-2. La Edge Function `descargar-taller` valida los datos, verifica que el taller esté publicado e inserta el registro en `registro_descarga`.
-3. La función genera enlaces firmados para cada archivo del taller y los devuelve junto con los enlaces externos.
+2. El navegador llama a la RPC `registrar_descarga`, que normaliza los campos, verifica que el taller esté publicado e inserta el registro en `registro_descarga`. Un taller que ya no está disponible o un establecimiento inactivo o de otra localidad se rechazan con un error propio. El navegador recuerda el formulario y los talleres registrados durante la visita: un taller ya registrado no se vuelve a registrar.
+3. Con el registro hecho, el navegador firma con `createSignedUrl` (1 hora) cada archivo del taller (la política de Storage lo permite solo para talleres publicados) y reúne los enlaces firmados con los enlaces externos.
 4. El modal muestra la lista de recursos para descargar uno por uno.
 
 **Descarga de una normativa**
@@ -663,7 +663,7 @@ El formulario de descarga no registra nombres de personas, sino cargo, localidad
 
 ### 10.3 Calidad de los datos de descarga
 
-Los datos del formulario son autodeclarados. El padrón reduce las variantes de escritura; las instituciones ingresadas como "Otra" se normalizan con la pantalla de vinculación. Cualquiera puede invocar la descarga e inflar los registros: el riesgo se acepta y se agregará un captcha (Cloudflare Turnstile) solo si aparece abuso.
+Los datos del formulario son autodeclarados. El padrón reduce las variantes de escritura; las instituciones ingresadas como "Otra" se normalizan con la pantalla de vinculación. Cualquiera puede invocar la RPC `registrar_descarga` e inflar los registros, y firmar el enlace de un archivo visible sin pasar por el formulario: se protegen las métricas, no el acceso (0006, 0022). El riesgo se acepta y se agregará un captcha (Cloudflare Turnstile) solo si aparece abuso; verificarlo del lado del servidor obligaría a volver a una Edge Function.
 
 ---
 

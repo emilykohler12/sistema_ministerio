@@ -6,6 +6,7 @@ import {
   formatearTamanio,
   formatoDeArchivo,
   idDeYoutube,
+  nombreDeDescarga,
   nombreSinExtension,
   rutaNueva,
   validarArchivo,
@@ -240,5 +241,36 @@ describe('formatearTamanio', () => {
     expect(formatearTamanio(2.5 * 1048576)).toBe('2,5 MB')
     expect(formatearTamanio(52428800)).toBe('50 MB')
     expect(formatearTamanio(1073741824)).toBe('1 GB')
+  })
+})
+
+/*
+ * Contrato (corte descargas, criterio 3): nombreDeDescarga(recurso: Pick<Recurso, 'nombre' | 'ruta_archivo'>): string
+ * Puro. El nombre del recurso sin diacríticos, con todo lo que no sea [\w .-] cambiado por "-", más la extensión de
+ * `ruta_archivo` (en minúsculas, con punto). No depende de cómo codifiquen la librería y el servidor.
+ */
+describe('nombreDeDescarga', () => {
+  const uuid = '3f2b8c1e-5a7d-4e90-9b1a-0c2d4e6f8a10'
+  const archivo = (nombre: string, ext = 'pdf') => ({ nombre, ruta_archivo: `5/${uuid}.${ext}` })
+
+  it('"Guía / 1°" con ruta .pdf da "Guia - 1-.pdf"', () => {
+    expect(nombreDeDescarga(archivo('Guía / 1°'))).toBe('Guia - 1-.pdf')
+  })
+
+  it('quita los diacríticos y conserva mayúsculas, espacios, puntos y guiones', () => {
+    expect(nombreDeDescarga(archivo('Ñandú: Guía v1.2-final'))).toBe('Nandu- Guia v1.2-final.pdf')
+  })
+
+  it('cambia por "-" cualquier carácter fuera de [\\w .-] (barras, comillas, signos)', () => {
+    expect(nombreDeDescarga(archivo('a/b\\c"d?e*f'))).toBe('a-b-c-d-e-f.pdf')
+  })
+
+  it('toma la extensión de la ruta, no del nombre, y en minúsculas', () => {
+    expect(nombreDeDescarga(archivo('Presentación', 'pptx'))).toBe('Presentacion.pptx')
+    expect(nombreDeDescarga({ nombre: 'Foto', ruta_archivo: `5/${uuid}.JPG` })).toBe('Foto.jpg')
+  })
+
+  it('el resultado es solo ASCII seguro', () => {
+    expect(nombreDeDescarga(archivo('Educación física — Módulo ①'))).toMatch(/^[\w .-]+$/)
   })
 })
