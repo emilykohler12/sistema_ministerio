@@ -27,6 +27,13 @@ copiado en los `errores.ts` de recursos y normativas. Propuse mudarlos a `shared
 que la edición ya usaba la de la base. El molde bueno: que la firma reciba solo el id y que la ruta salga de la RPC o del `delete ... select`.
 Hooks `use*` que no llaman a ningún hook.
 
+En la fase B de descargas (2026-10-10, primer formulario del portal) apareció **una mutación que mezcla una escritura con una lectura**
+(registrar + firmar). Para disparar sola la parte de lectura hace falta `useEffect` + ref contra el modo estricto, `datos?` opcional
+con `throw`, y un render que lee `sessionStorage`. Propuse mutación (escritura) + `useQuery` habilitado (lectura, `gcTime: 0`,
+`retry: 1`), con "Reintentar" = `refetch`. Además se repitió el enum a mano (`TIPOS_INSTITUCION`), y `codigoDe` llegó a la cuarta
+copia, así que propuse llevarlo a `shared/lib`. Formularios con campos que se vacían (`setValue(..., undefined)`) terminan en
+`as unknown as Resolver` + un segundo `parse`; el molde es `useForm<In, unknown, Out>` (`EstablecimientoFormPage`).
+
 **Why:** la fase B de cada corte copia el molde de la anterior, y estas tres cosas no las detecta el typecheck ni los tests.
 
 **How to apply:** en la crítica de código de cada corte con pantallas del portal o enums nuevos, buscar `isLoading` seguido de
