@@ -1,6 +1,6 @@
 # supabase-base: infraestructura de Supabase local
 
-- **Estado:** aprobada (v2, después de la crítica)
+- **Estado:** aprobada (v3: criterio 7 con falla cerrada y guardias globales, tras la crítica de código de la Fase B)
 - **Autor:** Joa Sanchez + Claude
 - **Fecha:** 2026-10-08
 

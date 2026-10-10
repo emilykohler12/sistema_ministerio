@@ -151,3 +151,102 @@ tsc -b · exit 0
 $ npm test
 Test Files  4 passed (4) · Tests  48 passed (48)
 ```
+
+## Segunda revisión
+
+- **Fecha:** 2026-10-10
+- **Código revisado:** `git diff 71f2137..HEAD` (commit `2edf66c`, working tree limpio), contra `spec.md` v3 (criterios 4 a 10;
+  el 7 ahora es "falla cerrada").
+
+### Veredicto
+**Aprobado.** El I1 y los seis menores están resueltos y cada uno tiene su test. Los criterios 4 a 10 se cumplen contra la
+base local. No hay bloqueantes ni importantes nuevos. Quedan tres menores: dos de documentación y uno de cobertura.
+
+### Estado de los problemas anteriores
+
+| Id | Estado | Cómo se resolvió |
+|---|---|---|
+| I1 | Resuelto (por cambio de spec) | El criterio 7 v3 pasa a falla cerrada: se quitó el `exception when ...` de `auditar()` (`base.sql:82-95`). Con `sub` inexistente, la FK aborta la escritura (23503). `auditar.test.sql:94-102` lo cubre con `throws_ok` para INSERT y UPDATE. No es un falso verde: el UPDATE apunta a la fila 100, que existe; si no disparara el trigger, `throws_ok` fallaría. También probé que un `sub` que no es uuid aborta (22P02) y que DELETE con `sub` inexistente aborta (23503) |
+| M1 | Resuelto | `base.sql:68` revoca la secuencia a anon, authenticated y service_role. ACL real: `{postgres=rwU/postgres}`. Tiene tres `sequence_privs_are` (`registro_operacion.test.sql:25-30`) |
+| M2 | Resuelto | `base.sql:99` también revoca a `public` y `service_role`. ACL real: `{postgres=X/postgres}`. Test en `auditar.test.sql:15` |
+| M3 | Resuelto | `table_privs_are` exacto para service_role (`registro_operacion.test.sql:19`). `funciones.test.sql` verifica `proconfig`, `volatility_is` y que `inmutable_unaccent('Educación Física')` dé `'Educacion Fisica'` |
+| M4 | Resuelto | `seed-usuarios.mjs:32-39` compara protocolo `http:` y hostname exacto (`127.0.0.1` / `localhost`). `localhost.evil.com` y `localhost.` quedan rechazados |
+| M5 | Resuelto | `.gitignore:10` `src/shared/types/*.tmp` (`git check-ignore` confirma) |
+| M6 | Resuelto | Diagrama ER y §8.3 usan `text`, documentan los NULL y la falla cerrada (`definicion-dam.md:388-390`, `:534-541`) |
+
+### Seguridad: privilegios de funciones
+- `es_admin()`: EXECUTE para PUBLIC, anon, authenticated y service_role. Los da el default privilege de Supabase; el `grant`
+  de `base.sql:34` es redundante. **Está bien:** no es SECURITY DEFINER, solo lee el JWT de quien la llama y las políticas RLS
+  la necesitan ejecutable para authenticated (y para anon, en las políticas futuras).
+- `inmutable_unaccent(text)`: EXECUTE para todos y expuesta como RPC (`POST /rest/v1/rpc/inmutable_unaccent` como anon → 200).
+  **Está bien:** es pura, no es SECURITY DEFINER y no lee datos.
+- `auditar()`: SECURITY DEFINER, dueño `postgres`, `search_path = ''`, nombres calificados (`auth.uid()`,
+  `public.registro_operacion`). Solo `postgres` tiene EXECUTE. Probé que `authenticated` no puede crear un trigger con ella
+  (`permission denied for function public.auditar`), así que no se pueden fabricar filas de auditoría desde la API.
+  anon y authenticated tampoco tienen CREATE en `public`.
+- Ojo para los cortes de dominio: los default privileges de `public` dan `arwdDxtm` sobre tablas y `rwU` sobre secuencias a
+  anon, authenticated y service_role. Cada tabla nueva nace con todos los privilegios y solo la RLS la protege. El skill
+  menciona solo `revoke truncate`. No afecta a esta fase, que no tiene tablas de dominio.
+
+### Problemas nuevos
+
+**Bloqueante:** ninguno. **Importante:** ninguno.
+
+**Menor**
+- **N1** `docs/definicion-dam.md:556` (§8.4): dice que el trigger guarda "el diff", pero la decisión (spec, "de la crítica")
+  y la migración guardan OLD/NEW completos. El texto viene de v2 (`6806aff`), pero ahora contradice §8.3.
+  **Arreglo:** "guarda `auth.uid()`, la operación y el estado anterior y posterior completos (OLD/NEW)".
+- **N2** `docs/specs/supabase-base/spec.md:3`: el estado sigue en "aprobada (v2, después de la crítica)", pero el criterio 7
+  ya es v3. **Arreglo:** "aprobada (v3, falla cerrada en `auditar()` tras la crítica de código de la Fase B)".
+- **N3** `supabase/tests/auditar.test.sql:94-102`: la falla cerrada se prueba con INSERT y UPDATE, pero no con DELETE ni con
+  un `sub` que no es uuid. Hoy funciona (lo verifiqué a mano), pero el contrato "la escritura falla" quedaría sin cubrir si
+  alguien vuelve a envolver el insert en un `exception`. **Arreglo (opcional):** un `throws_ok` de DELETE con el `sub`
+  inexistente y otro con `sub` `"no-uuid"` que espere `22P02`.
+
+### Evidencia
+
+```
+$ npm run db:reset
+Applying migration 20261010003733_base.sql...
+Finished supabase db reset on branch chore/supabase-base.
+admin@dam.local: creado
+sin-permiso@dam.local: creado
+
+$ npm run test:db
+auditar.test.sql ............. ok
+es_admin.test.sql ............ ok
+funciones.test.sql ........... ok
+registro_operacion.test.sql .. ok
+rls_global.test.sql .......... ok
+All tests successful.
+Files=5, Tests=49
+Result: PASS
+
+$ curl POST /auth/v1/token?grant_type=password
+admin@dam.local -> 200 {"admin":true,"provider":"email","providers":["email"]}
+sin-permiso@dam.local -> 200 {"provider":"email","providers":["email"]}
+$ curl POST /auth/v1/signup -> 422 signup_disabled
+
+Privilegios reales (psql):
+  EXECUTE   auditar(): anon f · authenticated f · service_role f   acl {postgres=X/postgres}
+  EXECUTE   es_admin(), inmutable_unaccent(text): anon t · authenticated t · service_role t (PUBLIC incluido)
+  tabla     registro_operacion: {postgres=arwdDxtm/postgres, authenticated=r/postgres}
+  secuencia registro_operacion_id_seq: {postgres=rwU/postgres}
+  schema public CREATE: anon f · authenticated f · service_role f
+  proconfig de las 3 funciones: search_path=""
+
+Probe de falla cerrada (transacción con rollback):
+  sub "no-uuid", INSERT              -> ERROR 22P02 invalid input syntax for type uuid (escritura abortada)
+  sub inexistente, DELETE            -> ERROR 23503 registro_operacion_usuario_id_fkey (escritura abortada)
+  authenticated CREATE TRIGGER ... auditar() -> ERROR permission denied for function public.auditar
+
+$ npx supabase gen types typescript --local > scratchpad/db.ts && diff scratchpad/db.ts src/shared/types/database.ts
+(sin diferencias)
+
+$ npm run lint
+exit 0 · 4 warnings preexistentes (react/incompatible-library x3, react/only-export-components), 0 errores
+$ npm run typecheck
+tsc -b · exit 0
+$ npm test
+Test Files  4 passed (4) · Tests  48 passed (48)
+```

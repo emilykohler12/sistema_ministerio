@@ -30,12 +30,19 @@ description: Cómo escribir y testear migraciones y políticas RLS de Supabase e
 ## Tests pgTAP
 - No dependen del seed: simular el JWT con `set local role authenticated` y
   `set local request.jwt.claims = '{"app_metadata":{"admin":true}}'`.
-- Hay un test que falla si alguna tabla de `public` tiene RLS desactivado.
+- Guardias globales (fallan solas si un corte se olvida algo): RLS activado (`rls_global`), trigger `auditar()`
+  en toda tabla de `public` salvo las excepciones listadas (`auditoria_global`) y sin TRUNCATE para anon ni
+  authenticated (`truncate_global`).
 
 ## Auditoría y privilegios
 - `registro_operacion` es append-only: solo escribe el trigger `auditar()` (SECURITY DEFINER, `search_path = ''`).
-- `TRUNCATE` no se audita (los triggers de fila no se disparan). Cada corte de dominio hace
-  `revoke truncate on <tabla> from anon, authenticated`.
+- `auditar()` falla cerrada: si no puede registrar, la escritura falla.
+- Cada tabla nueva lleva `create trigger <tabla>_auditar after insert or update or delete on <tabla>
+  for each row execute function public.auditar()`. Si una tabla no debe auditarse, agregala a la lista
+  de excepciones de `auditoria_global.test.sql` con su justificación.
+- `TRUNCATE` no se audita (los triggers de fila no se disparan). La migración de guardias le quita TRUNCATE a
+  anon y authenticated por privilegios por defecto; no hace falta repetirlo por tabla.
+- Supabase da a anon y authenticated los demás privilegios sobre cada tabla nueva: la RLS es la única barrera.
 
 ## Nube
 - `supabase/config.toml` solo aplica a la base local. En el proyecto de demos hay que deshabilitar el registro

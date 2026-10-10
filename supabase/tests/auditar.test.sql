@@ -2,7 +2,7 @@
 -- Las tablas de prueba viven solo dentro de esta transaccion (rollback al final).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(19);
 
 -- Funcion
 select has_function('public', 'auditar', array[]::text[], 'existe public.auditar()');
@@ -99,6 +99,14 @@ select throws_ok($$insert into public.zz_prueba_id values (200, 'huerfano')$$,
   '23503', null, 'INSERT con sub inexistente en auth.users falla (falla cerrada)');
 select throws_ok($$update public.zz_prueba_id set nombre = 'huerfano2' where id = 100$$,
   '23503', null, 'UPDATE con sub inexistente en auth.users falla (falla cerrada)');
+select throws_ok($$delete from public.zz_prueba_id where id = 100$$,
+  '23503', null, 'DELETE con sub inexistente en auth.users falla (falla cerrada)');
+
+-- sub que no es uuid: auth.uid() no puede castearlo
+set local request.jwt.claims =
+  '{"role":"authenticated","sub":"no-es-uuid","app_metadata":{"admin":true}}';
+select throws_ok($$update public.zz_prueba_id set nombre = 'x' where id = 100$$,
+  '22P02', null, 'sub que no es uuid hace fallar la escritura (falla cerrada)');
 reset role;
 
 select * from finish();

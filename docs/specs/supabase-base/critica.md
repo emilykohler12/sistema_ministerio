@@ -343,3 +343,91 @@ Hay mejoras. Lo demás está bien así:
    uno o dos `throws_ok` de comportamiento, y de la estructura solo `col_is_null`, `fk_ok` y RLS.
 - **Nota menor:** se deja el `grant execute` de `es_admin()` como documentación explícita de quién la usa.
 - **Proceso:** esta sección se agregó con heredoc de bash; los hooks no la vieron. Queda anotado para la próxima ronda.
+
+# Crítica del código (Fase B, ronda 2)
+
+Alcance: `git diff 71f2137..HEAD` (b27c4cb y 2edf66c). No repito lo que ya se resolvió en la ronda 1 (falla cerrada,
+`table_privs_are`, secuencia, `service_role`). Releí §8.3, §8.4 y §9.1 y la skill `supabase-rls`. No pude correr
+`npm run test:db` porque el perfil `lectura` del crítico no lo permite. Lo que sigue sale de leer el código.
+
+## Veredicto
+Hay mejoras, pero chicas. Lo demás está bien así:
+- **`auditar()` quedó en 15 líneas sin manejo de errores, y la falla cerrada es coherente con el frontend.** El único
+  error propio es `23503` por un `sub` que no existe en `auth.users`. Eso solo pasa si se *borra* un usuario que todavía
+  tiene un JWT vigente, y 0005 dice que se banea, no se borra. En la práctica no se alcanza, así que no hace falta un
+  mensaje especial. Única precaución: si un corte mapea `23503` a "está en uso" (bajas físicas de etiquetas o recursos,
+  §8.4), que mire el nombre de la constraint y no solo el código.
+- **El seed** sigue siendo lo más simple sin supabase-js: `fetch` a la Admin API, idempotente, con `[db.seed]` apagado y
+  explicado.
+- **Fragilidad de los tests:** no encontré dependencias de orden. Cada archivo hace `begin/rollback`, los `results_eq`
+  filtran por `tabla` y `registro_id` y ordenan por `id`. El nombre `registro_operacion_id_seq` es determinístico
+  (identity) y lo usan igual la migración y el test: si cambia, falla fuerte, no en silencio. El `insert` mínimo en
+  `auth.users` de `auditar.test.sql` depende del esquema interno de `auth`, lo mismo que el seed evitó. Aun así, en un
+  test es aceptable: si GoTrue agrega una columna `NOT NULL`, el test falla de forma visible y se arregla en una línea.
+- **`inmutable_unaccent()`** no es prematura: §8.4 pide índices únicos sobre `lower(unaccent(nombre))`, y un índice
+  exige una función `IMMUTABLE`.
+
+## Puntos
+
+### 1. Las dos reglas que cada corte tiene que recordar (trigger `auditar()` y `revoke truncate`) no tienen guardia; RLS sí
+- **Problema.**
+  - §8.4 dice "un único trigger aplicado a **todas** las tablas gestionables". Hoy eso depende de que cada corte se
+    acuerde de escribir `create trigger ... execute function public.auditar()`. Si un corte se lo olvida, la escritura
+    funciona y la auditoría no existe: es la misma pérdida silenciosa que la ronda 1 sacó de adentro del trigger, solo
+    que ahora desde afuera.
+  - La skill pide que cada corte haga `revoke truncate on <tabla> from anon, authenticated`. Es una línea por tabla
+    que nadie verifica. Supabase da `TRUNCATE` por defecto, y si alguien se lo olvida no se entera.
+  - Para RLS, con el mismo riesgo, ya hay un guardia global (`rls_global.test.sql`) que todos los cortes heredan gratis.
+- **Alternativa.**
+  - **Auditoría:** sumar al guardia global una consulta con una lista explícita de exclusiones. Hoy devuelve vacío:
+    ```sql
+    select is_empty(
+      $$select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and c.relkind in ('r', 'p')
+          and c.relname <> all (array['registro_operacion'])
+          and not exists (select 1 from pg_trigger t
+                          where t.tgrelid = c.oid and t.tgfoid = 'public.auditar'::regproc)$$,
+      'toda tabla gestionable de public tiene el trigger auditar()');
+    ```
+    Cuando un corte decida que una tabla no se audita (por ejemplo `registro_descarga`, que inserta `anon` por la Edge
+    Function), la suma a la lista. Así, no auditar es una decisión visible en el diff y no un olvido.
+  - **TRUNCATE:** una sola línea en la migración base,
+    `alter default privileges in schema public revoke truncate on tables from anon, authenticated;`. Se aplica a las
+    tablas que cree `postgres`, que es el rol de las migraciones. Antes conviene confirmar con `\ddp` que los defaults
+    de Supabase para `public` están a nombre de `postgres`. Además, un `is_empty` sobre
+    `information_schema.role_table_grants` (`privilege_type = 'TRUNCATE'`, `grantee in ('anon','authenticated')`,
+    `table_schema = 'public'`) en el mismo guardia. La línea de la skill pasa de "cada corte hace el revoke" a "lo
+    cubre la base; el guardia lo verifica". Si `\ddp` no confirma lo de `postgres`, queda el revoke por corte y el
+    guardia lo controla igual.
+- **Qué se gana.** Las tres reglas transversales (RLS, auditoría y sin TRUNCATE) quedan verificadas por la máquina en
+  un solo lugar, con unas 12 líneas de test y 1 de migración, y cada corte las hereda. El argumento es nuevo: la
+  ronda 1 cerró la pérdida silenciosa *dentro* del trigger, y esta es la que queda *fuera* de él.
+- **Severidad:** media. Hoy no hay tablas de dominio, así que no se pierde nada, pero el primer corte ya cae en esto.
+- **Recomendación:** hacerlo en este PR. Es la pieza transversal que justifica la Fase B. Si la migración base ya se
+  aplicó en algún lado fuera de local, el `alter default privileges` va en una migración nueva y no se edita la
+  existente.
+
+### 2. `db:start` no siembra: en un contenedor nuevo el login falla hasta correr `db:reset`
+- **Problema.** `supabase start` aplica las migraciones la primera vez, pero el seed solo está encadenado a `db:reset`.
+  La otra persona reconstruye el contenedor, corre `npm run db:start`, intenta entrar con `admin@dam.local` y recibe
+  "Invalid login credentials", sin una pista de por qué.
+- **Alternativa.** `"db:start": "supabase start && node scripts/seed-usuarios.mjs"`. El seed ya es idempotente
+  ("ya existía"), así que correrlo de nuevo no cuesta nada.
+- **Qué se gana.** Un solo comando deja el entorno listo para usar, y desaparece una trampa de onboarding sin agregar
+  código.
+- **Severidad:** baja.
+- **Recomendación:** hacerlo en este PR si se toca `package.json` por el punto 1; si no, dejarlo para el primer corte.
+
+Nada más relevante. No veo nada que sobre: `database.ts`, `db:types` con `.tmp` y el `grant execute` documental ya
+se discutieron, y no hay argumento nuevo.
+
+## Respuesta (código, Fase B, ronda 2)
+
+1. **Acepto los dos.** `auditoria_global.test.sql` exige el trigger `auditar()` en toda tabla de `public`, con
+   lista de excepciones justificadas (hoy `registro_operacion`). La migración nueva `guardias` quita TRUNCATE por
+   privilegios por defecto del rol `postgres`, y `truncate_global.test.sql` lo verifica sobre tablas existentes
+   y nuevas. Límite aceptado: los defaults de `supabase_admin` (tablas creadas a mano en Studio) siguen dando
+   TRUNCATE; esas tablas no viven en migraciones y la guardia sobre tablas existentes las detectaría.
+2. **Acepto.** `db:start` siembra los usuarios.
+- De la segunda revisión: N1 y N2 corregidos en la definición y la spec; N3 con `throws_ok` para DELETE (23503) y
+  `sub` no uuid (22P02). Skill `supabase-rls` actualizada con las guardias.

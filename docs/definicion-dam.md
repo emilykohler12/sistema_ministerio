@@ -553,7 +553,7 @@ La auditoría falla cerrada (§9.1): si el trigger `auditar()` no puede registra
 - **Cargo como texto con CHECK.** Lista corta y estable; el invariante de "Otro" queda completo en la base sin depender de un identificador. Localidad y establecimiento, en cambio, son tablas.
 - **Institución explícita.** `institucion_tipo` distingue padrón, otra y sin institución, para que un dato faltante por error no se confunda con una elección.
 - **Recurso como archivo o enlace.** Un CHECK garantiza exactamente una de las dos ubicaciones (0009).
-- **Auditoría genérica.** Un único trigger aplicado a todas las tablas gestionables guarda `auth.uid()`, la operación y el diff. La identidad sale de la sesión autenticada, no de un dato que envía el cliente (0005).
+- **Auditoría genérica.** Un único trigger aplicado a todas las tablas gestionables guarda `auth.uid()`, la operación y el estado anterior y posterior completos (OLD/NEW). Un test global falla si una tabla de `public` no tiene el trigger. La identidad sale de la sesión autenticada, no de un dato que envía el cliente (0005).
 - **Cuentas fuera del modelo propio.** Los usuarios viven en `auth.users`. Una marca `app_metadata.admin = true` distingue administradores; las políticas RLS la exigen.
 - **Archivos fuera de la base.** Bucket privado para recursos de talleres (enlaces firmados), buckets públicos para normativas y logo.
 - **Búsqueda en el cliente.** El catálogo publicado (cientos de talleres) se obtiene una vez y se filtra en el navegador, normalizando tildes. Si crece, se reemplaza por una función RPC sin cambiar las pantallas.
