@@ -25,6 +25,15 @@ En la crítica del código de la Fase A (2026-10-10) aparecieron dos cosas más:
   inofensivo) y `_signOut` borra la sesión local aunque falle la red. Verificar en `node_modules` antes de citar
   comportamiento de la librería.
 
+En la crítica del código de la Fase B (configuración, 2026-10-10):
+- **Formulario de edición sin guarda de error:** con solo `isLoading`, si la query falla se ve el form vacío y guardar
+  pisa la fila con `''`. Pedir `if (!data) return <alert + reintentar>`.
+- **`reset` campo por campo "para no mandar id/updated_at":** no hace falta, porque `zodResolver` (con `raw` en false) entrega
+  la salida de zod y `z.object` descarta las claves extra. Alcanza con `useForm({ values: data })`.
+- **pgTAP por rol:** `DO` + `GET DIAGNOSTICS` + tabla temporal para contar filas es redundante si después se chequea el
+  valor. Un `update`/`delete` suelto en el script funciona.
+- **`tocar_updated_at()`** es una cuarta regla por corte. Propuse la guardia `updated_at_global` (ver [[auditoria-falla-cerrada]]).
+
 **Why:** son errores de diseño que no saltan en el typecheck, y los cortes siguientes copian el patrón de este.
 
 **How to apply:** en cada spec de corte, revisar los esperados de los tests pgTAP (qué código de error y en qué

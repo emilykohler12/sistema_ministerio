@@ -17,7 +17,18 @@ que pase de mocks a `consultas.ts`:
 - Cuando la spec se entrega en fases con PR separados, `docs/arquitectura.md` y "Estado actual" en `CLAUDE.md` quedan
   desactualizados en `main`.
 
+En la Fase B (configuración, 2026-10-10) se repitió con otra forma:
+- Se manejó el error de *guardar*, pero no el de *cargar*. Si `useX()` falla, el formulario de edición del admin se
+  muestra vacío sin aviso, y guardar manda todos los campos, así que puede pisar datos reales con `''`. En cada pantalla
+  de edición, revisá el `isError` de la query además del de la mutation.
+- La verificación en el navegador (el paso de punta a punta) vuelve a quedar como "no se verificó" en `notas.md`.
+- Hay un criterio de la spec reescrito durante la implementación que no figura en los desvíos de `notas.md`. Hacé
+  `git diff main -- spec.md`.
+
 Datos de la librería, para no reportar falsos positivos:
+- En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF
+  y `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema de una edición por shell:
+  compará con `git ls-files --eol` y mirá si el diff quedó limpio.
 - En auth-js 2.117.3, `signOut()` borra la sesión local aunque `/logout` falle por red y devuelve `{ error }` sin
   lanzar. El `SIGNED_OUT` llega igual.
 - El bundle contiene el string `sb_secret_` porque supabase-js detecta el prefijo de la clave: no es una fuga. Para

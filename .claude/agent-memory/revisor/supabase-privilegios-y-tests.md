@@ -19,6 +19,12 @@ es probable que se repitan en cada corte de dominio:
 - Las defensas "solo local" en scripts comparan la URL por prefijo (`startsWith('http://localhost')`).
 - La definición queda desalineada con la migración: `varchar` contra `text` en §8.3 y "diff" contra OLD/NEW completos en §8.4.
 
+En la Fase B de auth-configuracion (tabla `configuracion`, 2026-10-10) la base quedó bien. Lo que faltó, y probablemente
+se repita, son los asserts de las barreras que existen pero no tienen test: el `CHECK` que impide cambiar la PK desde
+la API (solo se probó el INSERT como postgres) y el `revoke execute` de las funciones de trigger. Para probar por API
+sirve el script del scratchpad (`supabase status -o json` por stdin). Las contraseñas del seed están en
+`scripts/seed-usuarios.mjs` y son distintas por usuario.
+
 **Why:** el criterio 6 pedía que nadie de la API escriba, y el contrato de auditoría es "NULL = sistema" con falla cerrada.
 Si solo se mira `has_table_privilege` sobre la tabla, el hueco de la secuencia no aparece.
 **How to apply:** en cada migración, consultá los privilegios reales con psql (`docker exec supabase_db_sistema_ministerio

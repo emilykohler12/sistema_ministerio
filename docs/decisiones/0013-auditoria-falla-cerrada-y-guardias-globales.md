@@ -28,3 +28,6 @@ TRUNCATE a anon y authenticated por privilegios por defecto del rol `postgres`.
 - No hace falta `revoke truncate` por tabla. Límite: las tablas creadas a mano como `supabase_admin` (Studio) no
   heredan el default, pero no viven en migraciones y la guardia sobre tablas existentes las detecta.
 - Un error 23503 por la FK de `registro_operacion` no debe traducirse como "registro en uso" en el frontend.
+- Ampliación (auth-configuracion, 2026-10): con el mismo criterio se suma `updated_at_global`. Toda tabla de `public`
+  con columna `updated_at` debe tener un trigger `before update` con `tocar_updated_at()`. Si falta, el valor queda
+  congelado sin que nada lo detecte.

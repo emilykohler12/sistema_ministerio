@@ -31,10 +31,10 @@ export function HomePage() {
             <h1 className="text-4xl font-bold leading-tight sm:text-5xl">
               {config?.nombre || 'Sitio institucional'}
             </h1>
-            {config?.quienesSomos && (
+            {config?.quienes_somos && (
               <div className="mt-4 max-w-md">
                 <h2 className="text-lg font-semibold">Quiénes somos</h2>
-                <p className="mt-1 text-sm text-white/90">{config.quienesSomos}</p>
+                <p className="mt-1 text-sm text-white/90">{config.quienes_somos}</p>
               </div>
             )}
           </div>

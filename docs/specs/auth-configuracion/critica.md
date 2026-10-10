@@ -285,3 +285,126 @@ Revisión (`revision.md`):
 - 1 (verificación manual de recarga, cierre del navegador y logout): **acepto**. Necesita un navegador; la hace la persona antes del PR
   y queda anotada en `notas.md`.
 
+# Crítica de código: Fase B
+
+- **Crítico:** subagente `critico`
+- **Fecha:** 2026-10-10
+- **Leído:** `20261010015619_configuracion.sql` (contra `_base.sql` y `_guardias.sql`), `configuracion.test.sql`,
+  `funciones.test.sql`, las tres guardias globales, `configuracion/{types,consultas}.ts`, `useConfiguracion.ts` y su
+  test, `ConfiguracionPage.tsx` y su test, `HomePage.tsx`, `PublicHeader.tsx`, `PublicFooter.tsx` y su test, la sección
+  "Fase B" de `notas.md`, ADR 0012 y 0013, §8 de la definición, y `zodResolver` de `@hookform/resolvers` 5.9.1 en
+  `node_modules`. No corrí `npm run test:db`, porque mi perfil es de solo lectura: critico leyendo el código.
+
+## Veredicto
+Hay mejoras, todas chicas. La migración es corta y se puede copiar tal cual. La capa de dominio (`types` → `consultas` →
+hook delgado) es la que pide 0012, sin mapeos ni mocks de supabase-js. Encontré un caso de pérdida de datos en
+`ConfiguracionPage` y dos simplificaciones que conviene hacer antes de que los cortes de talleres y normativas copien
+el patrón.
+
+## Hallazgos
+
+### 1. Si la carga falla, el formulario aparece vacío y guardar pisa la fila (media)
+**Problema.** `ConfiguracionPage.tsx:30` solo mira `isLoading`. Si `obtenerConfiguracion` falla (después de los 3
+reintentos de React Query), `isLoading` es `false` y `data` es `undefined`. Entonces el formulario se renderiza con los
+inputs vacíos (`:79` en adelante) y no hay ningún aviso. Si el admin completa el nombre y guarda, el `update` manda `''`
+en los otros 8 campos y borra la misión, la visión, el contacto y las redes. Se puede recuperar desde
+`registro_operacion.datos_anteriores`, pero nadie se entera de que hace falta hacerlo. Este patrón (formulario de
+edición que se carga desde una query) lo van a copiar `TallerFormPage` y `NormativaFormPage`.
+
+**Propuesta.** Después del skeleton, cortar si no hay fila:
+```tsx
+const { data, isLoading, refetch } = useConfiguracion()
+// ...
+if (isLoading) return <Skeleton ... />
+if (!data) return <p role="alert">No se pudo cargar la configuración. <Button onClick={() => refetch()}>Reintentar</Button></p>
+```
+Agregar un caso en `ConfiguracionPage.test.tsx`: con `obtenerConfiguracion` rechazado, aparece el alert y no aparece el
+botón "Guardar cambios".
+
+**Qué se gana.** Ya no se puede guardar un formulario que nunca se cargó, y los formularios de edición que vengan
+copian la guarda.
+
+### 2. pgTAP: el bloque que se repite por rol tiene andamiaje que no prueba nada nuevo (baja)
+**Problema.**
+- Los tres `do $$ ... get diagnostics ... insert into pg_temp.zz_filas` (`configuracion.test.sql:127-133`, `149-155` y
+  `169-175`), la tabla `zz_filas` y su `grant` (`:99-100`) sirven para contar filas afectadas. Pero cada uno va seguido
+  de un `results_eq` sobre el valor (`:138`, `:160` y `:182`), que ya prueba lo mismo: si `mision` sigue en `'base'`, el
+  UPDATE no tocó nada. Si cambió a `'nueva mision'`, el UPDATE pasó. El script ya ejecuta `update` sueltos en el nivel
+  superior (`:109`), así que no hace falta un `DO`.
+- El `exception when insufficient_privilege then null` de los DELETE (`:136`, `:158` y `:178`) es código muerto:
+  Supabase da DELETE por defecto y sin política el resultado es 0 filas, no un error. Con el handler, el test acepta las
+  dos semánticas y no documenta cuál es la real.
+- `'updated_at no cambia sin un UPDATE'` (`:106-108`) compara un valor con una copia que se tomó dos líneas antes. Pasa
+  aunque no exista el trigger. El que prueba el trigger es el de `:110-112`.
+- `tocar_updated_at()` es una regla nueva que cada corte tiene que recordar (6 tablas de §8 tienen `updated_at`), y
+  nada la verifica. Es el mismo caso que 0013 resolvió para `auditar()`, RLS y TRUNCATE: si alguien se olvida el
+  trigger, `updated_at` queda congelado sin que nadie lo note.
+
+**Propuesta.**
+- Reemplazar cada `DO` por la sentencia suelta (`update public.configuracion set mision = 'hack' where id = 1;`) y los
+  DELETE por `delete from public.configuracion;`, sin handler. Borrar `zz_filas`, su `grant`, los tres
+  `results_eq` de conteo y el de `:106-108`. Quedan 20 asserts y se mantiene la cobertura del criterio 8.
+- Agregar `supabase/tests/updated_at_global.test.sql`, que copia `auditoria_global.test.sql`: toda tabla de `public`
+  que tenga una columna `updated_at` (`join pg_attribute a on a.attrelid = c.oid and a.attname = 'updated_at' and not
+  a.attisdropped`) debe tener un trigger con `to_regproc('public.tocar_updated_at')`. Lleva su autoverificación y no
+  necesita lista de excepciones. Lo que sí hay que hacer es sumar la línea correspondiente en 0013 o en
+  `arquitectura.md`.
+
+**Qué se gana.** Cada test de tabla queda unas 20 líneas más corto y sin trucos. Esto pesa porque talleres, categorías,
+recursos y normativas lo van a copiar. Y la cuarta regla por corte pasa a fallar sola, como las otras tres.
+
+### 3. `reset` con los 9 campos escritos a mano: usar `values: data` (baja)
+**Problema.** `ConfiguracionPage.tsx:42-55` es la tercera copia de la lista de campos. Las otras dos son el schema
+(`:15-25`) y el JSX. Además, la razón que da `notas.md` ("no con la fila entera, que trae `id`, `logo_ruta` y
+`updated_at`") no aplica. `zodResolver` le pasa a `onSubmit` la *salida* del schema (`values: u.raw ? input : parsed`, con
+`raw` en `false` por defecto), y `z.object` de zod 4 descarta las claves que no declara. O sea que `id`, `logo_ruta` y
+`updated_at` nunca llegan a `guardarConfiguracion`, aunque estén cargados en el formulario.
+
+**Propuesta.** `useForm<FormValues>({ resolver: zodResolver(schema), values: data })`, y borrar el `useEffect`. RHF
+hace el `reset` solo cuando cambia `data`, incluida la fila que deja `setQueryData` después de guardar. Para fijar el
+contrato, en el test de guardado agregar
+`expect(vi.mocked(guardarConfiguracion).mock.calls[0][0]).not.toHaveProperty('id')`.
+
+**Qué se gana.** Se van 14 líneas y una lista que había que mantener sincronizada. Para agregar una columna editable se
+tocan dos lugares (schema y JSX), no tres. Los formularios de taller y normativa heredan la forma corta.
+
+## Lo que está bien así
+- **`varchar` sin largo.** En Postgres es idéntico a `text`: mismo almacenamiento, sin límite, y el tipo generado es
+  `string` en los dos casos. Unificar no cambia nada y seguir el diagrama evita documentar un desvío. En los cortes con
+  `varchar(n)` del diccionario, el detalle a copiar es replicar el `n` en el `.max(n)` del zod, porque si no el error
+  `22001` llega como "no se pudieron guardar los cambios".
+- **Sin `revoke insert/delete`.** Con la RLS activada y sin políticas, anon y authenticated ya no pueden insertar
+  (`42501`) ni borrar (0 filas). `rls_global` garantiza que la RLS no se apague. Un `revoke` por tabla sería otra regla
+  más para recordar, justo lo que 0013 quiso evitar. `service_role` saltea la RLS igual, pero no llega al navegador.
+- **`tocar_updated_at()` en la migración de configuración.** Está en la primera migración que la necesita y
+  `arquitectura.md` la registra como transversal. Moverla a `_base.sql` obligaría a reescribir una migración ya aplicada.
+  El `revoke execute` sobra (una función de trigger no se puede llamar directo y no es `security definer`), pero no
+  cuesta nada y mantiene la simetría con `auditar()`.
+- **Defaults y CHECKs.** `nombre` con `btrim(...) <> ''` coincide con `z.string().trim().min(1)`, y el resto en `''`
+  coincide con el zod relajado (hallazgo 3 de la spec). `CHECK (id = 1)` con el default en `1` es la forma mínima de
+  tener una sola fila.
+- **`consultas.ts` y el hook.** Son dos envoltorios de 6 líneas, y `.select().single()` convierte "la RLS filtró la fila"
+  en un error sin código extra. `setQueryData` con la fila devuelta, no con los cambios, está bien probado.
+- **Manejo de errores al guardar.** `mutateAsync` con `try/catch` y `guardar.isError` es directo. Pasar a `mutate` con
+  callbacks obligaría a usar `isPending` en vez de `isSubmitting`, y no simplifica nada.
+- **Sacar la rama `<img>` de header y footer.** Volver a ponerla son unas 5 líneas por componente. En el corte del logo
+  conviene que sea un solo componente `LogoInstitucional`, porque ya está duplicado en los dos, pero eso queda fuera de
+  alcance.
+- **0012.** Las páginas no importan `database.ts` (los tests usan `types.ts`), y los tres tests mockean
+  `consultas` con una factory simple, sin `importActual` ni mock del cliente. Es lo que se acordó en la Fase A.
+
+## Respuesta (Fase B)
+
+1. **Acepto.** Es pérdida de datos y el revisor la marcó igual (problema 1). `ConfiguracionPage` no muestra el formulario
+   sin datos: muestra un error en `role="alert"` con un botón "Reintentar", y se agrega un test con la carga rechazada.
+2. **Acepto.** Se quita el andamiaje de los bloques `DO`, `zz_filas`, el handler y el assert que se compara consigo mismo.
+   También se agrega la guardia `updated_at_global.test.sql`: es una cuarta regla por corte que nada verificaba, en la línea de 0013.
+   Del revisor se suman dos asserts: el admin no puede cambiar `id` (`23514`) y ningún rol de la API tiene EXECUTE sobre `tocar_updated_at`.
+3. **Acepto.** `useForm({ values: data })` sin `useEffect` + `reset`. Se agrega un test de que `guardarConfiguracion`
+   no recibe `id`, `logo_ruta` ni `updated_at`.
+
+Revisión (Fase B):
+- 1: es el mismo hallazgo que el punto 1 de arriba.
+- 2 (verificación en el navegador): **acepto**. La hace la persona antes del PR.
+- Menores: los asserts se agregan (ver punto 2). El estado de la spec y el desvío del criterio 6 los anota el agente principal.
+

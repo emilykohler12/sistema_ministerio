@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { type ChangeEvent, useEffect, useId, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useConfiguracion, useGuardarConfiguracion } from '@/features/configuracion/hooks/useConfiguracion'
 import { getInitials } from '@/shared/lib/utils'
 import { Label } from '@/shared/components/ui/Label'
@@ -13,14 +13,13 @@ import { Card } from '@/shared/components/ui/Card'
 import { Skeleton } from '@/shared/components/ui/Skeleton'
 
 const schema = z.object({
-  nombre: z.string().min(2, 'Ingresá el nombre de la institución'),
-  logoUrl: z.string(),
-  telefono: z.string().min(1, 'Ingresá un teléfono'),
-  correo: z.string().email('Ingresá un correo válido'),
-  direccion: z.string().min(1, 'Ingresá una dirección'),
+  nombre: z.string().trim().min(1, 'Ingresá el nombre de la institución'),
+  telefono: z.string(),
+  correo: z.union([z.literal(''), z.email('Ingresá un correo válido')]),
+  direccion: z.string(),
   facebook: z.string(),
   instagram: z.string(),
-  quienesSomos: z.string(),
+  quienes_somos: z.string(),
   mision: z.string(),
   vision: z.string(),
 })
@@ -28,36 +27,28 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function ConfiguracionPage() {
-  const { data, isLoading } = useConfiguracion()
+  const { data, isLoading, refetch } = useConfiguracion()
   const guardar = useGuardarConfiguracion()
   const [guardado, setGuardado] = useState(false)
-  const logoInputId = useId()
-  const logoInputRef = useRef<HTMLInputElement>(null)
 
+  // `values` recarga el formulario cuando cambia la fila (también tras guardar). El schema descarta
+  // las claves que no declara, así que id, logo_ruta y updated_at nunca llegan a guardarConfiguracion.
   const {
     register,
     handleSubmit,
-    reset,
     watch,
-    setValue,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
-
-  useEffect(() => {
-    if (data) reset(data)
-  }, [data, reset])
+  } = useForm<FormValues>({ resolver: zodResolver(schema), values: data })
 
   const nombre = watch('nombre')
-  const logoUrl = watch('logoUrl')
-
-  function handleLogoChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setValue('logoUrl', URL.createObjectURL(file), { shouldDirty: true })
-  }
 
   async function onSubmit(values: FormValues) {
-    await guardar.mutateAsync(values)
+    setGuardado(false)
+    try {
+      await guardar.mutateAsync(values)
+    } catch {
+      return // el error se muestra desde guardar.isError
+    }
     setGuardado(true)
     setTimeout(() => setGuardado(false), 2500)
   }
@@ -67,6 +58,20 @@ export function ConfiguracionPage() {
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-64 w-full" />
+      </div>
+    )
+  }
+
+  // Sin fila no se muestra el formulario: guardarlo vacío pisaría la configuración real.
+  if (!data) {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p role="alert" className="text-sm font-medium text-red-600">
+          No se pudo cargar la configuración.
+        </p>
+        <Button type="button" variant="outline" onClick={() => void refetch()}>
+          Reintentar
+        </Button>
       </div>
     )
   }
@@ -81,30 +86,12 @@ export function ConfiguracionPage() {
           <h2 className="text-base font-semibold text-primary-700">Datos institucionales</h2>
           <div className="mt-4 flex flex-col gap-4 sm:flex-row">
             <div className="flex flex-col items-center gap-2">
-              {logoUrl ? (
-                <img src={logoUrl} alt="Logo de la institución" className="h-16 w-16 rounded-full object-cover" />
-              ) : (
-                <span
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-800 text-lg font-bold text-white"
-                  aria-hidden="true"
-                >
-                  {getInitials(nombre ?? '')}
-                </span>
-              )}
-              <label htmlFor={logoInputId} className="sr-only">
-                Cambiar logo de la institución
-              </label>
-              <input
-                ref={logoInputRef}
-                id={logoInputId}
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={handleLogoChange}
-              />
-              <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()}>
-                Cambiar logo
-              </Button>
+              <span
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-800 text-lg font-bold text-white"
+                aria-hidden="true"
+              >
+                {getInitials(nombre ?? '')}
+              </span>
             </div>
             <div className="flex-1 space-y-4">
               <div>
@@ -149,8 +136,8 @@ export function ConfiguracionPage() {
           <h2 className="text-base font-semibold text-primary-700">Quienes somos</h2>
           <div className="mt-4 space-y-4">
             <div>
-              <Label htmlFor="quienesSomos">Quiénes somos</Label>
-              <Textarea id="quienesSomos" rows={2} {...register('quienesSomos')} />
+              <Label htmlFor="quienes_somos">Quiénes somos</Label>
+              <Textarea id="quienes_somos" rows={2} {...register('quienes_somos')} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -166,6 +153,11 @@ export function ConfiguracionPage() {
         </Card>
 
         <div className="flex items-center justify-end gap-3 lg:col-span-3">
+          {guardar.isError && (
+            <p role="alert" className="text-sm font-medium text-red-600">
+              No se pudieron guardar los cambios. Intentá de nuevo.
+            </p>
+          )}
           {guardado && <span className="text-sm font-medium text-green-600">Cambios guardados</span>}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Guardando...' : 'Guardar cambios'}

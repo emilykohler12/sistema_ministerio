@@ -1,6 +1,6 @@
 # auth-configuracion: primer corte vertical
 
-- **Estado:** aprobada (v2) · Fase A implementada
+- **Estado:** implementada (v2; Fase A en PR #5, Fase B en `feat/configuracion-supabase`)
 - **Autor:** Joa Sanchez + Claude
 - **Fecha:** 2026-10-10
 
@@ -21,7 +21,7 @@ Se entrega en **dos PRs**: Fase A (cliente + auth) y Fase B (configuración).
 
 **Fase B: configuración**
 
-6. El portal público (header, footer y Home) lee la configuración sin sesión. Si la consulta falla, se ven los fallbacks ('Sitio institucional' e iniciales).
+6. El portal público (header, footer y Home) lee la configuración sin sesión. Si la consulta falla, se ven los fallbacks ('Sitio institucional'; el header mantiene su ícono).
 7. El admin edita y guarda; solo `nombre` es obligatorio. El portal muestra los cambios y queda una fila en `registro_operacion` con su `usuario_id`,
    `operacion = 'UPDATE'` y `registro_id = '1'`. Si guardar falla, el formulario muestra un error y no "Cambios guardados".
 8. pgTAP (`supabase/tests/configuracion.test.sql`):
