@@ -11,8 +11,9 @@ sin pedirlos individualmente al Ministerio.
 - Diseño funcional (requisitos y modelo de datos): `docs/definicion-dam.md`. Leelo antes de una feature o migración.
 
 ## Estado actual
-- Solo frontend. Los datos salen de mocks (`src/features/*/mocks/`) a través de hooks de React Query.
-- Supabase (Postgres, Auth, Storage, Edge Functions) está decidido pero NO integrado todavía. Sin API propia
+- Los datos de dominio salen de mocks (`src/features/*/mocks/`) a través de hooks de React Query, salvo los dominios
+  ya migrados. El login del admin ya usa Supabase Auth (`src/shared/lib/supabase.ts`, variables en `.env.local`).
+- Supabase (Postgres, Auth, Storage, Edge Functions) se integra por cortes. Sin API propia
   (decisión 0004). Se migra un dominio por vez (0012): tipos derivados de la base, `consultas.ts` y hook delgado;
   la firma del hook se ajusta una vez al migrar su dominio y después queda estable.
 

@@ -29,7 +29,7 @@ export function NormativaFormPage() {
   const editarId = searchParams.get('editar') ?? undefined
   const normativaExistente = useNormativa(editarId)
   const navigate = useNavigate()
-  const { responsable } = useAuth()
+  const { usuario } = useAuth()
   const [archivo, setArchivo] = useState<string[]>([])
 
   const {
@@ -133,7 +133,7 @@ export function NormativaFormPage() {
 
         <div>
           <Label htmlFor="responsable">Nombre del encargado de subir</Label>
-          <Input id="responsable" value={responsable ?? ''} disabled />
+          <Input id="responsable" value={usuario?.email ?? ''} disabled />
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

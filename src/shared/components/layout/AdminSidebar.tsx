@@ -1,5 +1,5 @@
 import { Home, LayoutGrid, LogOut, ScrollText, Settings, BookOpen } from 'lucide-react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/shared/lib/utils'
 
@@ -11,12 +11,12 @@ const links = [
 ]
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const { logout } = useAuth()
-  const navigate = useNavigate()
+  const { cerrarSesion } = useAuth()
 
+  // La redirección al login la hace AdminLayout cuando `usuario` pasa a null.
+  // signOut borra la sesión local aunque falle la red: el rechazo no tiene nada más que hacer.
   function handleLogout() {
-    logout()
-    navigate('/admin/login')
+    cerrarSesion().catch(() => {})
   }
 
   return (

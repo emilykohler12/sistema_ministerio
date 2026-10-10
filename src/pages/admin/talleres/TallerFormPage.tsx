@@ -32,7 +32,7 @@ type FormValues = z.infer<typeof schema>
 export function TallerFormPage() {
   const { nivel, categoriaId, tallerId } = useParams<{ nivel: Nivel; categoriaId: string; tallerId?: string }>()
   const navigate = useNavigate()
-  const { responsable } = useAuth()
+  const { usuario } = useAuth()
   const categoria = useCategoria(categoriaId)
   const tallerExistente = useTaller(tallerId)
   const etiquetasSugeridas = useEtiquetasSugeridas()
@@ -166,7 +166,7 @@ export function TallerFormPage() {
 
         <div>
           <Label htmlFor="responsable">Nombre del encargado de subir</Label>
-          <Input id="responsable" value={responsable ?? ''} disabled />
+          <Input id="responsable" value={usuario?.email ?? ''} disabled />
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

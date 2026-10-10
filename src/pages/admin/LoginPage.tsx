@@ -3,25 +3,30 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff } from 'lucide-react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '@/features/auth/AuthContext'
+import { Navigate, useLocation } from 'react-router-dom'
+import { useAuth, type ErrorInicioSesion } from '@/features/auth/AuthContext'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
 import { Label } from '@/shared/components/ui/Label'
 import { FieldError } from '@/shared/components/ui/FieldError'
 
 const schema = z.object({
-  correo: z.string().min(1, 'Ingresá tu usuario o correo'),
+  correo: z.email('Ingresá un correo válido'),
   password: z.string().min(1, 'Ingresá tu contraseña'),
-  recordarme: z.boolean().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
 
+const MENSAJES_ERROR: Record<ErrorInicioSesion, string> = {
+  credenciales: 'Correo o contraseña incorrectos',
+  'sin-permiso': 'Tu cuenta no tiene permisos de administrador',
+  red: 'No se pudo iniciar sesión. Intentá de nuevo.',
+}
+
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
-  const { login } = useAuth()
-  const navigate = useNavigate()
+  const [errorSesion, setErrorSesion] = useState<ErrorInicioSesion | null>(null)
+  const { usuario, iniciarSesion } = useAuth()
   const location = useLocation() as { state?: { from?: { pathname: string } } }
 
   const {
@@ -30,11 +35,13 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
 
+  if (usuario) {
+    return <Navigate to={location.state?.from?.pathname ?? '/admin'} replace />
+  }
+
   async function onSubmit(values: FormValues) {
-    await new Promise((r) => setTimeout(r, 500))
-    const nombre = values.correo.split('@')[0] || 'Administrador'
-    login(nombre)
-    navigate(location.state?.from?.pathname ?? '/admin', { replace: true })
+    setErrorSesion(null)
+    setErrorSesion(await iniciarSesion(values.correo, values.password))
   }
 
   return (
@@ -52,8 +59,9 @@ export function LoginPage() {
             <Label htmlFor="correo">Correo electrónico</Label>
             <Input
               id="correo"
-              type="text"
-              placeholder="Ingrese su usuario o correo"
+              type="email"
+              autoComplete="username"
+              placeholder="Ingrese su correo"
               error={!!errors.correo}
               aria-describedby={errors.correo ? 'correo-error' : undefined}
               {...register('correo')}
@@ -62,16 +70,12 @@ export function LoginPage() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Contraseña</Label>
-              <a href="#recuperar" className="text-sm font-medium text-primary-600 hover:underline">
-                ¿Olvidaste tu contraseña?
-              </a>
-            </div>
+            <Label htmlFor="password">Contraseña</Label>
             <div className="relative">
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 placeholder="Ingrese su contraseña"
                 error={!!errors.password}
                 aria-describedby={errors.password ? 'password-error' : undefined}
@@ -90,17 +94,11 @@ export function LoginPage() {
             <FieldError id="password-error" message={errors.password?.message} />
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              id="recordarme"
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
-              {...register('recordarme')}
-            />
-            <Label htmlFor="recordarme" className="mb-0">
-              Recordarme
-            </Label>
-          </div>
+          {errorSesion && (
+            <p role="alert" className="text-sm text-red-600">
+              {MENSAJES_ERROR[errorSesion]}
+            </p>
+          )}
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? 'Ingresando...' : 'Ingresar'}

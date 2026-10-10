@@ -26,7 +26,7 @@ los datos. Solo la descarga de talleres (y luego la gestión de usuarios) pasa p
 | `descargas` | Modal de descarga. Hoy: escuela, localidad y rol. Destino (0010): cargo, localidad, institución del padrón |
 | `dashboard` | KPIs y métricas para el administrador |
 | `configuracion` | Ajustes generales del sitio |
-| `auth` | Sesión del administrador (hoy simulada con sessionStorage; destino: un usuario de Supabase Auth por persona, 0005) |
+| `auth` | Sesión del administrador con Supabase Auth (0005). `AuthContext` escucha solo `onAuthStateChange`; `esAdmin.ts` (puro, solo UX) exige `app_metadata.admin`; sesión en `sessionStorage` |
 
 ## Rutas
 
@@ -50,8 +50,9 @@ usuarios con `scripts/seed-usuarios.mjs`), `test:db` (pgTAP en `supabase/tests/`
 
 ## Brechas entre el código y la definición v2
 
-- Integrar Supabase: la base transversal está lista; faltan tablas de dominio, supabase-js, Auth por persona en el
-  frontend, Storage y la Edge Function `descargar-taller` (0004–0006).
+- Integrar Supabase: la base transversal, el cliente (`src/shared/lib/supabase.ts`, variables `VITE_SUPABASE_URL` y
+  `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`) y el login real están listos; faltan tablas de dominio, Storage y la
+  Edge Function `descargar-taller` (0004–0006). Recuperación de contraseña y cierre por inactividad (§5.2) pendientes.
 - Niveles: quitar "todos" y el `nivel` duplicado en `Taller` (0008).
 - Quitar los contadores `descargas` de `Taller`; el portal debe filtrar talleres publicados.
 - Recursos: id, ruta/url, tamaño, orden, tipos PPTX/DOCX/ENLACE y límite de 50 MB (0009).

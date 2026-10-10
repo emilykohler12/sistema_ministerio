@@ -1,18 +1,31 @@
 import { useState } from 'react'
 import { Navigate, Outlet, useLocation, useMatches } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
+import { Skeleton } from '@/shared/components/ui/Skeleton'
 import { SkipLink } from '@/shared/components/ui/SkipLink'
 import { AdminHeader } from './AdminHeader'
 import { AdminSidebar } from './AdminSidebar'
 
 export function AdminLayout() {
-  const { isAuthenticated } = useAuth()
+  const { usuario, cargando } = useAuth()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const matches = useMatches() as { handle?: { title?: string } }[]
   const title = matches.findLast((m) => m.handle?.title)?.handle?.title ?? 'Panel de Administración'
 
-  if (!isAuthenticated) {
+  if (cargando) {
+    return (
+      <div role="status" aria-label="Cargando" className="flex min-h-screen bg-gray-50">
+        <Skeleton className="hidden h-screen w-64 rounded-none lg:block" />
+        <div className="flex-1 space-y-4 p-6 lg:p-10">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!usuario) {
     return <Navigate to="/admin/login" state={{ from: location }} replace />
   }
 
