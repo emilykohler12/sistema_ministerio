@@ -1,6 +1,6 @@
 # supabase-base: infraestructura de Supabase local
 
-- **Estado:** aprobada (v2, después de la crítica)
+- **Estado:** aprobada (v3: criterio 7 con falla cerrada y guardias globales, tras la crítica de código de la Fase B)
 - **Autor:** Joa Sanchez + Claude
 - **Fecha:** 2026-10-08
 
@@ -26,7 +26,9 @@ después como un corte vertical (0012). No crea tablas de dominio. Se entrega en
 6. Sobre `registro_operacion`, `anon`, `authenticated` y `service_role` no pueden hacer INSERT, UPDATE, DELETE ni TRUNCATE.
    Solo un admin puede hacer SELECT.
 7. Con el trigger `auditar()`, una tabla con `id` y otra con PK compuesta registran `auth.uid()`, la operación, la tabla,
-   `registro_id` (NULL si no hay `id`) y OLD/NEW completos. Sin sesión, `usuario_id` queda NULL. La escritura nunca aborta.
+   `registro_id` (NULL si no hay `id`) y OLD/NEW completos. Sin sesión, `usuario_id` queda NULL. La forma de la tabla
+   (sin `id`) nunca aborta la escritura; si el registro de auditoría no se puede escribir (p. ej. `sub` inexistente en
+   `auth.users`), la escritura falla (falla cerrada, §9.1). *(v3, tras la crítica de código de la Fase B)*
 8. Un test falla si alguna tabla de `public` tiene RLS desactivado.
 9. `npm run test:db` pasa los puntos 5 a 8 sin depender del seed: el JWT se simula con `request.jwt.claims`.
 10. `npm run db:types` regenera `src/shared/types/database.ts`, y `typecheck`, `lint` y `npm test` pasan.

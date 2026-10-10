@@ -37,11 +37,21 @@ los datos. Solo la descarga de talleres (y luego la gestión de usuarios) pasa p
 
 Todo el desarrollo corre en el Dev Container (`.devcontainer/`, decisión 0003): Node, dependencias,
 tests (Vitest + jsdom + Testing Library, setup en `src/test/`), hooks y Claude Code.
-Supabase local se levantará con Docker-in-Docker (0011).
+Supabase local corre con Docker-in-Docker (0011): `npm run db:start`, `db:reset` (migraciones + seed de
+usuarios con `scripts/seed-usuarios.mjs`), `test:db` (pgTAP en `supabase/tests/`) y `db:types`
+(genera `src/shared/types/database.ts`, no se edita a mano).
+
+## Base de datos (`supabase/`)
+
+- `migrations/<ts>_base.sql`: piezas transversales, sin tablas de dominio. `es_admin()` (lee
+  `app_metadata` del JWT), `inmutable_unaccent()` para búsquedas sin tildes, `registro_operacion`
+  (append-only, solo SELECT para el admin) y el trigger `auditar()`, que falla cerrada.
+- Cada corte de dominio agrega su migración, sus tablas con RLS, el trigger `auditar()` y sus tests.
 
 ## Brechas entre el código y la definición v2
 
-- Integrar Supabase: migraciones, RLS, Auth por persona, Storage, Edge Function `descargar-taller` (0004–0006).
+- Integrar Supabase: la base transversal está lista; faltan tablas de dominio, supabase-js, Auth por persona en el
+  frontend, Storage y la Edge Function `descargar-taller` (0004–0006).
 - Niveles: quitar "todos" y el `nivel` duplicado en `Taller` (0008).
 - Quitar los contadores `descargas` de `Taller`; el portal debe filtrar talleres publicados.
 - Recursos: id, ruta/url, tamaño, orden, tipos PPTX/DOCX/ENLACE y límite de 50 MB (0009).

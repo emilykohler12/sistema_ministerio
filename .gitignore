@@ -5,6 +5,9 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Temporal de `npm run db:types`
+src/shared/types/*.tmp
 .DS_Store
 
 # Claude Code: archivos personales
