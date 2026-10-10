@@ -68,3 +68,16 @@ test('taller: alta con sugerencias de etiqueta, estados, edición y DA002', asyn
   await page.getByRole('row', { name: new RegExp(nombre) }).getByRole('button', { name: 'Reactivar' }).click()
   await expect(page.getByText('La categoría está dada de baja: reactivala primero')).toBeVisible()
 })
+
+test('breadcrumb: categoría y taller con el mismo nombre no repiten key en React', async ({ page }) => {
+  const s = sufijoUnico()
+  const nombre = `Igual ${s}`
+  const errores: string[] = []
+  page.on('console', (m) => {
+    if (m.type() === 'error' || m.type() === 'warning') errores.push(m.text())
+  })
+  await loginAdmin(page)
+  await crearTaller(page, { nombre, categoria: nombre, estado: 'Borrador' })
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).getByText(nombre)).toHaveCount(2)
+  expect(errores.filter((e) => e.includes('same key'))).toEqual([])
+})

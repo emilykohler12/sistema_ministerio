@@ -160,6 +160,46 @@ describe('NormativaFormPage: alta (criterio 1)', () => {
     expect(screen.getByRole('heading', { name: 'Nueva Normativa' })).toBeInTheDocument()
   })
 
+  it('si el número y año ya existen (23505) marca ambos campos y deja el mensaje bajo el número, sin alerta general', async () => {
+    vi.mocked(guardarNormativa).mockRejectedValue({ code: '23505', message: 'duplicate key' })
+    const { container } = renderPagina('/admin/normativas/nueva')
+    await screen.findByRole('heading', { name: 'Nueva Normativa' })
+    await completarMinimo(container)
+    await userEvent.click(guardar())
+
+    await waitFor(() => expect(numero()).toHaveAttribute('aria-invalid', 'true'))
+    expect(anio()).toHaveAttribute('aria-invalid', 'true')
+    const alertas = screen.getAllByRole('alert')
+    expect(alertas).toHaveLength(1)
+    expect(alertas[0]).toHaveTextContent('Ya existe una normativa con ese número y año.')
+    expect(numero().closest('div')).toContainElement(alertas[0])
+    expect(document.getElementById('normativa-error')).toBeNull()
+    expect(numero()).toHaveAccessibleDescription('Ya existe una normativa con ese número y año.')
+    expect(anio()).toHaveAccessibleDescription('Ya existe una normativa con ese número y año.')
+  })
+
+  it.each([
+    ['el número', numero, '1235/24'],
+    ['el año', anio, '2025'],
+  ])('tras un 23505, al corregir %s se limpian ambos errores y el reintento guarda y vuelve a la lista', async (_nombre, campo, valor) => {
+    vi.mocked(guardarNormativa).mockRejectedValueOnce({ code: '23505', message: 'duplicate key' })
+    const { container } = renderPagina('/admin/normativas/nueva')
+    await screen.findByRole('heading', { name: 'Nueva Normativa' })
+    await completarMinimo(container)
+    await userEvent.click(guardar())
+    await waitFor(() => expect(numero()).toHaveAttribute('aria-invalid', 'true'))
+
+    fireEvent.change(campo(), { target: { value: valor } })
+
+    await waitFor(() => expect(numero()).not.toHaveAttribute('aria-invalid', 'true'))
+    expect(anio()).not.toHaveAttribute('aria-invalid', 'true')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    await userEvent.click(guardar())
+    expect(await screen.findByText('Lista de normativas')).toBeInTheDocument()
+    expect(guardarNormativa).toHaveBeenCalledTimes(2)
+  })
+
   it('ante otro error de guardado muestra un mensaje genérico', async () => {
     vi.mocked(guardarNormativa).mockRejectedValue({ code: '42501', message: 'rls' })
     const { container } = renderPagina('/admin/normativas/nueva')

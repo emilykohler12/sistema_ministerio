@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useEtiquetas } from '@/features/etiquetas/hooks/useEtiquetas'
 import { validarPdf } from '@/features/normativas/archivos'
-import { mensajeDeErrorNormativa } from '@/features/normativas/errores'
+import { esNormativaDuplicada, MENSAJE_DUPLICADA, mensajeDeErrorNormativa } from '@/features/normativas/errores'
 import { useGuardarNormativa, useNormativa } from '@/features/normativas/hooks/useNormativas'
 import type { Normativa } from '@/features/normativas/types'
 
@@ -54,6 +54,9 @@ function crearSchema(esAlta: boolean) {
 
 type FormValues = z.infer<ReturnType<typeof crearSchema>>
 
+// Tipo del error de número y año repetidos: se limpia en cuanto se corrige cualquiera de los dos.
+const TIPO_DUPLICADA = 'duplicada'
+
 const NORMATIVA_NO_ENCONTRADA = 'Normativa no encontrada'
 
 export function NormativaFormPage() {
@@ -84,6 +87,8 @@ function Formulario({ normativa }: { normativa?: Normativa }) {
     register,
     handleSubmit,
     control,
+    setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -96,6 +101,12 @@ function Formulario({ normativa }: { normativa?: Normativa }) {
       archivo: null,
     },
   })
+
+  function limpiarDuplicada() {
+    if (errors.numero?.type === TIPO_DUPLICADA || errors.anio?.type === TIPO_DUPLICADA) {
+      clearErrors(['numero', 'anio'])
+    }
+  }
 
   async function onSubmit(valores: FormValues) {
     setErrorGuardado(null)
@@ -113,6 +124,12 @@ function Formulario({ normativa }: { normativa?: Normativa }) {
       })
       navigate(LISTA)
     } catch (error) {
+      if (esNormativaDuplicada(error)) {
+        // El mensaje va bajo el número; el año solo se marca (aria-invalid) para no repetirlo.
+        setError('numero', { type: TIPO_DUPLICADA, message: MENSAJE_DUPLICADA })
+        setError('anio', { type: TIPO_DUPLICADA, message: '' })
+        return
+      }
       setErrorGuardado(mensajeDeErrorNormativa(error))
     }
   }
@@ -161,7 +178,13 @@ function Formulario({ normativa }: { normativa?: Normativa }) {
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <Label htmlFor="numero">Número</Label>
-            <Input id="numero" placeholder="Ej: 1234/24" error={!!errors.numero} {...register('numero')} />
+            <Input
+              id="numero"
+              placeholder="Ej: 1234/24"
+              error={!!errors.numero}
+              aria-describedby={errors.numero ? 'numero-error' : undefined}
+              {...register('numero', { onChange: limpiarDuplicada })}
+            />
             <FieldError id="numero-error" message={errors.numero?.message} />
           </div>
           <div>
@@ -172,7 +195,8 @@ function Formulario({ normativa }: { normativa?: Normativa }) {
               maxLength={4}
               placeholder="Ej: 2024"
               error={!!errors.anio}
-              {...register('anio')}
+              aria-describedby={errors.anio ? (errors.anio.message ? 'anio-error' : 'numero-error') : undefined}
+              {...register('anio', { onChange: limpiarDuplicada })}
             />
             <FieldError id="anio-error" message={errors.anio?.message} />
           </div>

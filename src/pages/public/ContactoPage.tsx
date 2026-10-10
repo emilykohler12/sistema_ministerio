@@ -1,34 +1,63 @@
-import { Mail, MapPin, Phone } from 'lucide-react'
+import { Mail, MapPin, Phone, type LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { useConfiguracion } from '@/features/configuracion/hooks/useConfiguracion'
+import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
+import { ListSkeleton } from '@/shared/components/ui/Skeleton'
+
+function DatoDeContacto({ icono: Icono, etiqueta, children }: { icono: LucideIcon; etiqueta: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4">
+      <Icono className="h-5 w-5 text-primary-600" aria-hidden="true" />
+      <div>
+        <dt className="text-xs text-gray-400">{etiqueta}</dt>
+        <dd className="font-medium text-gray-800">{children}</dd>
+      </div>
+    </div>
+  )
+}
 
 export function ContactoPage() {
+  const { data: config, isPending, isError, refetch } = useConfiguracion()
+  const hayDatos = Boolean(config?.telefono || config?.correo || config?.direccion)
+
   return (
     <div className="px-4 py-10 sm:px-6">
       <h1 className="text-2xl font-bold text-primary-800">Contacto</h1>
-      <p className="mt-1 text-sm text-gray-500">Comunicate con la Subsecretaría de Educación.</p>
+      <p className="mt-1 text-sm text-gray-500">Comunicate con {config?.nombre || 'nosotros'}.</p>
 
-      <dl className="mt-6 space-y-4">
-        <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4">
-          <Phone className="h-5 w-5 text-primary-600" aria-hidden="true" />
-          <div>
-            <dt className="text-xs text-gray-400">Teléfono</dt>
-            <dd className="font-medium text-gray-800">0800 555 1234</dd>
-          </div>
+      {isError ? (
+        <div className="mt-6">
+          <ErrorFallback message="No pudimos cargar los datos de contacto." onRetry={() => void refetch()} />
         </div>
-        <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4">
-          <Mail className="h-5 w-5 text-primary-600" aria-hidden="true" />
-          <div>
-            <dt className="text-xs text-gray-400">Correo</dt>
-            <dd className="font-medium text-gray-800">info@educacion.gob.ar</dd>
-          </div>
+      ) : isPending ? (
+        <div className="mt-6">
+          <ListSkeleton />
         </div>
-        <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4">
-          <MapPin className="h-5 w-5 text-primary-600" aria-hidden="true" />
-          <div>
-            <dt className="text-xs text-gray-400">Dirección</dt>
-            <dd className="font-medium text-gray-800">Pizzurno 935, C1020ACA CABA</dd>
-          </div>
-        </div>
-      </dl>
+      ) : hayDatos ? (
+        <dl className="mt-6 space-y-4">
+          {config?.telefono && (
+            <DatoDeContacto icono={Phone} etiqueta="Teléfono">
+              <a href={`tel:${config.telefono.replace(/\s+/g, '')}`} className="hover:underline">
+                {config.telefono}
+              </a>
+            </DatoDeContacto>
+          )}
+          {config?.correo && (
+            <DatoDeContacto icono={Mail} etiqueta="Correo">
+              <a href={`mailto:${config.correo}`} className="hover:underline">
+                {config.correo}
+              </a>
+            </DatoDeContacto>
+          )}
+          {config?.direccion && (
+            <DatoDeContacto icono={MapPin} etiqueta="Dirección">
+              {config.direccion}
+            </DatoDeContacto>
+          )}
+        </dl>
+      ) : (
+        <p className="mt-6 text-sm text-gray-500">Todavía no hay datos de contacto</p>
+      )}
     </div>
   )
 }

@@ -11,7 +11,7 @@ export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
     <nav aria-label="Breadcrumb" className="mb-4">
       <ol className="flex items-center gap-1.5 text-sm text-gray-500">
         {items.map((item, i) => (
-          <li key={item.label} className="flex items-center gap-1.5">
+          <li key={`${i}-${item.label}`} className="flex items-center gap-1.5">
             {i > 0 && <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />}
             {item.to ? (
               <Link to={item.to} className="text-primary-600 hover:underline">

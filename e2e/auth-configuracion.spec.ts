@@ -64,3 +64,34 @@ test('editar la configuración se refleja en el portal público', async ({ page,
   await page.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(page.getByText('Cambios guardados')).toHaveCount(0)
 })
+
+test('/contacto muestra los datos de la configuración con tel:/mailto: y sin texto de CABA', async ({ page, browser }) => {
+  const s = sufijoUnico()
+  const telefono = `376 4${s.slice(0, 6)}`
+  const correo = `contacto${s}@dam.local`
+  await loginAdmin(page)
+  await page.goto('/admin/configuracion')
+  await page.getByLabel('Teléfono').fill(telefono)
+  await page.getByLabel('Correo de contacto').fill(correo)
+  await page.getByLabel('Dirección').fill(`Calle QA ${s}`)
+  await page.getByRole('button', { name: 'Guardar cambios' }).click()
+  await expect(page.getByText('Cambios guardados')).toBeVisible()
+
+  const ctx = await browser.newContext()
+  const anon = await ctx.newPage()
+  await anon.goto('/contacto')
+  const principal = anon.locator('#main-content')
+  await expect(principal.getByRole('link', { name: telefono })).toHaveAttribute('href', `tel:${telefono.replace(/\s+/g, '')}`)
+  await expect(principal.getByRole('link', { name: correo })).toHaveAttribute('href', `mailto:${correo}`)
+  await expect(principal.getByText(`Calle QA ${s}`)).toBeVisible()
+  await expect(anon.getByText(/Pizzurno|CABA/)).toHaveCount(0)
+
+  // Editar el teléfono se refleja.
+  const nuevo = `376 5${s.slice(0, 6)}`
+  await page.getByLabel('Teléfono').fill(nuevo)
+  await page.getByRole('button', { name: 'Guardar cambios' }).click()
+  await expect(page.getByText('Cambios guardados')).toBeVisible()
+  await anon.reload()
+  await expect(principal.getByRole('link', { name: nuevo })).toBeVisible()
+  await ctx.close()
+})

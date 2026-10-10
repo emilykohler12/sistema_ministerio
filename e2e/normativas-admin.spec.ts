@@ -67,3 +67,26 @@ test('normativas admin: alta, duplicado, edición con y sin PDF y baja', async (
   await page.getByRole('dialog').getByRole('button', { name: 'Eliminar' }).click()
   await expect(filaEd).toHaveCount(0)
 })
+
+test('normativas admin: duplicado marca número y año, sin alerta general, y se corrige', async ({ page }) => {
+  const s = sufijoUnico()
+  const numero = `D-${s}`
+  await loginAdmin(page)
+  await alta(page, `Original ${s}`, numero, '2022')
+  await expect(page).toHaveURL(/\/admin\/normativas$/)
+
+  await alta(page, `Repetida ${s}`, numero, '2022')
+  await expect(page).toHaveURL(/\/nueva$/)
+  await expect(page.getByLabel('Número')).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByLabel('Año')).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Ya existe una normativa con ese número y año.')).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Ya existe' })).toHaveCount(1)
+  await expect(page.locator('#normativa-error')).toHaveCount(0)
+
+  await page.getByLabel('Número').fill(`E-${s}`)
+  await expect(page.getByLabel('Número')).not.toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByLabel('Año')).not.toHaveAttribute('aria-invalid', 'true')
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click()
+  await expect(page).toHaveURL(/\/admin\/normativas$/)
+  await expect(page.getByRole('row', { name: new RegExp(`Repetida ${s}`) })).toBeVisible()
+})
