@@ -1,6 +1,6 @@
 # 0006 · Descarga: un formulario por taller y un enlace por recurso
 
-- **Estado:** aceptada (pendiente de validar con el referente)
+- **Estado:** aceptada (pendiente de validar con el referente); el mecanismo (Edge Function) lo reemplaza 0022
 - **Fecha:** 2026-10
 
 ## Contexto

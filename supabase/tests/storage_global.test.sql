@@ -1,7 +1,8 @@
 -- Guardia global de Storage: toda politica de storage.objects que escribe (INSERT, UPDATE, DELETE o ALL) debe ser
 -- solo para {authenticated} y mencionar es_admin en qual o with_check. Cubre al anon, a public, a un authenticated
 -- sin la marca de admin y a las politicas for all. Cada bucket nuevo queda cubierto sin acordarse de nada.
--- Las politicas de SELECT quedan fuera: un bucket publico se lee sin RLS y uno privado lee con la del admin.
+-- Las politicas de SELECT quedan fuera: un bucket publico se lee sin RLS y uno privado lee con la del admin, salvo
+-- talleres, que ademas deja leer a anon los objetos con fila en recurso de un taller publicado (0022; lo prueba descargas.test.sql).
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(5);
