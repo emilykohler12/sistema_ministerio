@@ -5,7 +5,9 @@
   "image": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm",
   "features": {
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    // Docker para Supabase local (decisión 0011). La feature ya declara privileged y el volumen de /var/lib/docker.
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "remoteUser": "node",
   "mounts": [
@@ -21,9 +23,12 @@
   },
   // Los volúmenes se crean como root: se los damos al usuario node antes de instalar.
   "postCreateCommand": "sudo chown node:node node_modules /home/node/.claude && npm ci",
-  "forwardPorts": [5173],
+  "forwardPorts": [5173, 54321, 54323, 54324],
   "portsAttributes": {
-    "5173": { "label": "DAM (Vite)", "onAutoForward": "notify" }
+    "5173": { "label": "DAM (Vite)", "onAutoForward": "notify" },
+    "54321": { "label": "Supabase API", "onAutoForward": "silent" },
+    "54323": { "label": "Supabase Studio", "onAutoForward": "notify" },
+    "54324": { "label": "Supabase Mailpit", "onAutoForward": "notify" }
   },
   "customizations": {
     "vscode": {

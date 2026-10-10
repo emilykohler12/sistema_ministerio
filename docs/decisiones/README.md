@@ -16,3 +16,4 @@ Al crear un ADR con `/decision`, agregá su fila acá.
 | [0009](0009-videos-como-enlace.md) | Recursos de tipo `ENLACE` (YouTube) además de archivos | aceptada | Recursos, carga de archivos, tipos de archivo, videos |
 | [0010](0010-padron-de-establecimientos.md) | Padrón de establecimientos; formulario cargo → localidad → institución | aceptada | Formulario de descarga, establecimientos, instituciones sin vincular, métricas por institución |
 | [0011](0011-supabase-local-docker-in-docker.md) | Supabase local con Docker-in-Docker; proyecto en la nube para demos | aceptada | Supabase local, migraciones, tests de RLS, `.devcontainer/` |
+| [0012](0012-tipos-derivados-y-consultas-por-dominio.md) | Tipos del dominio derivados de la base (snake_case), `consultas.ts` por dominio, migración por cortes verticales | aceptada | Tipos del dominio, hooks de datos, tests de hooks, integración de un dominio con Supabase |

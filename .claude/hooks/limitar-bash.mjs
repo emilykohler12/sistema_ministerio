@@ -13,7 +13,9 @@ const LECTURA = [
 ]
 const CHECKS = [
   ...LECTURA,
-  /^npm (test|run (test|lint|typecheck))\b(?!.*--fix)/,
+  /^npm (test|run (test(?!:db)|lint|typecheck))\b(?!.*--fix)/,
+  // Base local: anclados y sin argumentos extra (un `-- --db-url ...` no pasa).
+  /^npm run (db:reset|test:db)$/,
   /^npx (vitest|tsc --noEmit|oxlint)\b(?!.*--fix)/,
 ]
 const PERFILES = { lectura: LECTURA, checks: CHECKS }

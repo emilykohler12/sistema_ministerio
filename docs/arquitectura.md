@@ -11,6 +11,9 @@ pages/ (pantallas)  →  features/<dominio>/hooks (React Query)  →  mocks hoy 
 shared/components/ui  (UI base reutilizable)
 ```
 
+Destino (0012): `pages → hooks → features/<dominio>/consultas.ts → supabase-js`, con `types.ts` derivado
+de `src/shared/types/database.ts` (generado). Se migra un dominio por vez.
+
 Destino (decisión 0004): sin API propia. Los hooks llaman a Supabase con supabase-js y RLS protege
 los datos. Solo la descarga de talleres (y luego la gestión de usuarios) pasa por Edge Functions.
 
