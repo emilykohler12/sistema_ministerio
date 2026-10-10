@@ -1,6 +1,6 @@
 ---
 name: frontend-cortes-patrones
-description: Patrones recurrentes del frontend en los cortes Supabase (fase B de talleres, 2026-10-10): isLoading vs isPending, enums duplicados en vez de Constants, mensajes de error copiados por pantalla
+description: Patrones recurrentes del frontend en los cortes Supabase (fases B de talleres, recursos y normativas): isLoading vs isPending, enums duplicados, mensajes copiados, piezas genéricas importadas de otro dominio, ruta de caché al borrar
 metadata:
   type: project
 ---
@@ -20,6 +20,12 @@ son patrones que es probable que se copien en recursos y normativas:
 En la fase B de recursos (2026-10-10) se adoptó `useCategoriaDeRuta`, pero la escalera del taller (id inválido / error / cargando /
 de otra categoría) quedó copiada en `TallerFormPage` y `RecursosPage`. Propuse `useTallerDeRuta`; ver en la Respuesta si se aceptó.
 Además, una página llamaba a `consultas` directamente (`urlFirmada`), contra `.claude/rules/react.md`.
+
+En la fase B de normativas (2026-10-10, segundo dominio con pantallas) apareció el **acoplamiento entre dominios**: normativas importaba
+`normalizar`, `idDeRuta` y `TallerBuscador` de talleres, y `NoEncontrado` de `pages/admin/talleres`. Además, `codigos()` (413/415) estaba
+copiado en los `errores.ts` de recursos y normativas. Propuse mudarlos a `shared/`. También: la baja borraba la ruta de la caché, mientras
+que la edición ya usaba la de la base. El molde bueno: que la firma reciba solo el id y que la ruta salga de la RPC o del `delete ... select`.
+Hooks `use*` que no llaman a ningún hook.
 
 **Why:** la fase B de cada corte copia el molde de la anterior, y estas tres cosas no las detecta el typecheck ni los tests.
 

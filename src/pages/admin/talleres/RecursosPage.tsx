@@ -16,7 +16,7 @@ import {
 import { ETIQUETA_TIPO_RECURSO, type Recurso } from '@/features/recursos/types'
 import { useCategoriaDeRuta } from '@/features/talleres/hooks/useCategoriaDeRuta'
 import { useTaller } from '@/features/talleres/hooks/useTalleres'
-import { NIVELES, idDeRuta, type Taller } from '@/features/talleres/types'
+import { NIVELES, type Taller } from '@/features/talleres/types'
 import { Badge } from '@/shared/components/ui/Badge'
 import { Breadcrumb } from '@/shared/components/ui/Breadcrumb'
 import { Button } from '@/shared/components/ui/Button'
@@ -25,7 +25,8 @@ import { EmptyState } from '@/shared/components/ui/EmptyState'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
 import { FileDropzone } from '@/shared/components/ui/FileDropzone'
 import { CardSkeleton } from '@/shared/components/ui/Skeleton'
-import { NoEncontrado } from './NoEncontrado'
+import { NoEncontrado } from '@/shared/components/ui/NoEncontrado'
+import { idDeRuta } from '@/shared/lib/rutas'
 
 const FORMATOS_ACEPTADOS = '.pdf,.pptx,.docx,.jpg,.jpeg,.png,.webp,.mp4'
 
@@ -36,7 +37,7 @@ export function RecursosPage() {
   const tallerId = idDeRuta(params.tallerId)
   const tallerRuta = useTaller(tallerId)
 
-  if (!nivel) return <NoEncontrado titulo="Nivel no encontrado" />
+  if (!nivel) return <NoEncontrado titulo="Nivel no encontrado" volverA="/admin/talleres" />
   if (categoriaRuta.estado === 'cargando') return <CardSkeleton />
   if (categoriaRuta.estado === 'error') return <ErrorFallback onRetry={categoriaRuta.reintentar} />
   if (categoriaRuta.estado === 'no-encontrada') {

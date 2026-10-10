@@ -1,5 +1,6 @@
-import { idDeRuta, type Categoria } from '../types'
+import type { Categoria } from '../types'
 import { useCategorias } from './useCategorias'
+import { idDeRuta } from '@/shared/lib/rutas'
 
 export type CategoriaDeRuta =
   | { estado: 'cargando' }

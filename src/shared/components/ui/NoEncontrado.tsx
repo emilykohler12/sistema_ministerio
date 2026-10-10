@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
-import { Button } from '@/shared/components/ui/Button'
-import { EmptyState } from '@/shared/components/ui/EmptyState'
+import { Button } from './Button'
+import { EmptyState } from './EmptyState'
 
-/** Pantalla para una URL del panel de talleres con un id inválido o inexistente. */
-export function NoEncontrado({ titulo, volverA = '/admin/talleres' }: { titulo: string; volverA?: string }) {
+/** Pantalla para una URL del panel con un id inválido o inexistente; `volverA` es la lista a la que se regresa. */
+export function NoEncontrado({ titulo, volverA }: { titulo: string; volverA: string }) {
   return (
     <EmptyState
       title={titulo}

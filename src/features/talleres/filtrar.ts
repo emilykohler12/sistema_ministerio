@@ -1,11 +1,7 @@
+import { normalizar } from '@/shared/lib/texto'
 import type { Taller } from './types'
 
 /** Módulo puro: sin imports de Supabase, para probarlo y usarlo sin cargar el cliente. */
-
-/** Minúsculas y sin tildes ni diacríticos (NFD): "Cuidádos" y "cuidados" son el mismo texto. */
-export function normalizar(texto: string): string {
-  return texto.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
-}
 
 export interface FiltrosTalleres {
   nivelId?: number

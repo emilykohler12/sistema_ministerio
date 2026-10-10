@@ -1,17 +1,28 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useNormativas } from '@/features/normativas/hooks/useNormativas'
-import { TallerBuscador } from '@/features/talleres/components/TallerBuscador'
+import { mensajeDeErrorNormativa } from '@/features/normativas/errores'
+import { useEliminarNormativa, useNormativas } from '@/features/normativas/hooks/useNormativas'
+import type { Normativa } from '@/features/normativas/types'
+import { Buscador } from '@/shared/components/ui/Buscador'
 import { Button } from '@/shared/components/ui/Button'
 import { TableSkeleton } from '@/shared/components/ui/Skeleton'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
 import { EmptyState } from '@/shared/components/ui/EmptyState'
+import { FieldError } from '@/shared/components/ui/FieldError'
 import { ConfirmDialog } from '@/shared/components/ui/ConfirmDialog'
 
 export function NormativasAdminPage() {
   const [busqueda, setBusqueda] = useState('')
-  const [aEliminar, setAEliminar] = useState<string | null>(null)
+  const [aEliminar, setAEliminar] = useState<Normativa | null>(null)
+  const [errorBaja, setErrorBaja] = useState<string | null>(null)
   const normativas = useNormativas({ busqueda: busqueda || undefined })
+  const eliminar = useEliminarNormativa()
+
+  function confirmarBaja() {
+    if (!aEliminar) return
+    setErrorBaja(null)
+    eliminar.mutate(aEliminar.id, { onError: (error) => setErrorBaja(mensajeDeErrorNormativa(error)) })
+  }
 
   return (
     <div>
@@ -23,11 +34,13 @@ export function NormativasAdminPage() {
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <TallerBuscador value={busqueda} onChange={setBusqueda} />
+        <Buscador value={busqueda} onChange={setBusqueda} etiqueta="Buscar por título, número o etiqueta" placeholder="Buscar por título, número o etiqueta..." />
       </div>
 
+      {errorBaja && <FieldError id="baja-error" message={errorBaja} />}
+
       <div className="mt-4">
-        {normativas.isLoading && <TableSkeleton />}
+        {normativas.isPending && <TableSkeleton />}
         {normativas.isError && <ErrorFallback onRetry={() => normativas.refetch()} />}
         {normativas.isSuccess && normativas.data.length === 0 && (
           <EmptyState
@@ -57,7 +70,7 @@ export function NormativasAdminPage() {
                   <tr key={n.id}>
                     <td className="px-4 py-3 font-medium text-gray-800">{n.titulo}</td>
                     <td className="px-4 py-3 text-gray-600">{n.numero}</td>
-                    <td className="px-4 py-3 text-gray-600">{n.etiquetas.join(', ')}</td>
+                    <td className="px-4 py-3 text-gray-600">{n.etiqueta.map((e) => e.nombre).join(', ')}</td>
                     <td className="px-4 py-3 text-gray-600">{n.anio}</td>
                     <td className="px-4 py-3 text-gray-600">{n.descargas}</td>
                     <td className="px-4 py-3">
@@ -67,7 +80,7 @@ export function NormativasAdminPage() {
                         </Link>
                         <button
                           type="button"
-                          onClick={() => setAEliminar(n.id)}
+                          onClick={() => setAEliminar(n)}
                           className="text-red-600 hover:underline"
                         >
                           Eliminar
@@ -85,7 +98,7 @@ export function NormativasAdminPage() {
       <ConfirmDialog
         open={!!aEliminar}
         onClose={() => setAEliminar(null)}
-        onConfirm={() => setAEliminar(null)}
+        onConfirm={confirmarBaja}
         title="Eliminar normativa"
         description="Esta acción no se puede deshacer."
       />

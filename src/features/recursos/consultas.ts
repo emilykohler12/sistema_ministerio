@@ -1,28 +1,17 @@
+import { borrarArchivo as borrarDelBucket, subirArchivo as subirAlBucket } from '@/shared/lib/storage'
 import { supabase } from '@/shared/lib/supabase'
 import type { TablesInsert } from '@/shared/types/database'
 import type { CambiosRecurso, Recurso } from './types'
 
 const BUCKET = 'talleres'
 
-/**
- * Sube un objeto nuevo (nunca `upsert`: cada subida usa una ruta nueva). storage-js ignora `contentType` cuando el
- * cuerpo es un `File`, así que el MIME canónico viaja en un `File` nuevo; el bucket valida contra ese tipo.
- */
-export async function subirArchivo(ruta: string, file: File, mime: string): Promise<void> {
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(ruta, new File([file], file.name, { type: mime }), { upsert: false })
-  if (error) throw error
+/** Wrappers finos sobre `shared/lib/storage` con el bucket `talleres`. */
+export function subirArchivo(ruta: string, file: File, mime: string): Promise<void> {
+  return subirAlBucket(BUCKET, ruta, file, mime)
 }
 
-/**
- * `remove()` devuelve `data: []` sin error cuando no borró nada (la RLS lo oculta o no existe): se trata como falla,
- * para que el aviso de huérfano de las secuencias no se pierda.
- */
-export async function borrarArchivo(ruta: string): Promise<void> {
-  const { data, error } = await supabase.storage.from(BUCKET).remove([ruta])
-  if (error) throw error
-  if (data.length === 0) throw new Error(`Storage no borró el objeto ${ruta}`)
+export function borrarArchivo(ruta: string): Promise<void> {
+  return borrarDelBucket(BUCKET, ruta)
 }
 
 export async function insertarRecurso(nuevo: TablesInsert<'recurso'>): Promise<Recurso> {

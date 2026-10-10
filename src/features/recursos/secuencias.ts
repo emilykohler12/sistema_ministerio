@@ -1,7 +1,10 @@
 import { MOTIVO_FORMATO, extensionDe, formatoDeArchivo, nombreSinExtension, rutaNueva } from './archivos'
-import { esRechazoDelServidor } from './errores'
+import { borrarOAvisar as borrarOAvisarEn, compensar as compensarEn } from '@/shared/lib/storage'
 import { actualizarRecurso, borrarArchivo, eliminarFilaRecurso, insertarRecurso, subirArchivo } from './consultas'
 import type { Recurso } from './types'
+
+const borrarOAvisar = (ruta: string, contexto: string) => borrarOAvisarEn(borrarArchivo, ruta, contexto)
+const compensar = (ruta: string, error: unknown, contexto: string) => compensarEn(borrarArchivo, ruta, error, contexto)
 
 /*
  * Base y Storage no comparten transacción. Invariante: ninguna operación deja una fila apuntando a un archivo que no
@@ -14,28 +17,6 @@ function datosDeArchivo(file: File) {
   const ext = extensionDe(file.name)
   if (!formato || !ext) throw new Error(MOTIVO_FORMATO)
   return { formato, ext }
-}
-
-/** Borra un archivo como compensación o limpieza: si falla, queda un huérfano y solo se avisa. */
-async function borrarOAvisar(ruta: string, contexto: string) {
-  try {
-    await borrarArchivo(ruta)
-  } catch (error) {
-    console.warn(`Archivo huérfano en Storage (${contexto}): ${ruta}`, error)
-  }
-}
-
-/**
- * Compensa una escritura fallida borrando el archivo recién subido, pero solo si el servidor la rechazó. Ante una falla
- * ambigua (corte de red: la escritura pudo confirmarse) borrar dejaría una fila apuntando a la nada; es preferible un
- * huérfano, el único modo de falla aceptado. El error original lo propaga quien llama.
- */
-async function compensar(ruta: string, error: unknown, contexto: string) {
-  if (esRechazoDelServidor(error)) {
-    await borrarOAvisar(ruta, contexto)
-  } else {
-    console.warn(`Posible archivo huérfano en Storage (${contexto}, respuesta incierta): ${ruta}`, error)
-  }
 }
 
 /** Sube el archivo y recién entonces inserta la fila; si el servidor rechaza el insert, borra el archivo y propaga el error. */

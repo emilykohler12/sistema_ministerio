@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { idDeRuta, NIVELES, nombreNivel } from '@/features/talleres/types'
+import { NIVELES, nombreNivel } from '@/features/talleres/types'
 import { useActualizarCategoria, useCategorias } from '@/features/talleres/hooks/useCategorias'
 import { useTalleres } from '@/features/talleres/hooks/useTalleres'
 import { mensajeDeError } from '@/features/talleres/errores'
@@ -11,7 +11,8 @@ import { CardSkeleton } from '@/shared/components/ui/Skeleton'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
 import { EmptyState } from '@/shared/components/ui/EmptyState'
 import { ConfirmDialog } from '@/shared/components/ui/ConfirmDialog'
-import { NoEncontrado } from './NoEncontrado'
+import { NoEncontrado } from '@/shared/components/ui/NoEncontrado'
+import { idDeRuta } from '@/shared/lib/rutas'
 
 function pluralTalleres(n: number) {
   return `${n} ${n === 1 ? 'taller' : 'talleres'}`
@@ -25,7 +26,7 @@ export function CategoriasPage() {
   const talleres = useTalleres()
   const actualizar = useActualizarCategoria()
 
-  if (!nivel) return <NoEncontrado titulo="Nivel no encontrado" />
+  if (!nivel) return <NoEncontrado titulo="Nivel no encontrado" volverA="/admin/talleres" />
 
   // Los talleres en borrador o publicados: son los que impiden dar de baja la categoría (DA001).
   function contarTalleres(categoriaId: number) {

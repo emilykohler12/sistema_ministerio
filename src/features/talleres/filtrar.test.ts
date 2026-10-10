@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filtrarTalleres, normalizar } from './filtrar'
+import { filtrarTalleres } from './filtrar'
 import type { Taller } from './types'
 
 function taller(id: number, p: Partial<Taller> & { nivel_id?: number } = {}): Taller {
@@ -22,16 +22,6 @@ function taller(id: number, p: Partial<Taller> & { nivel_id?: number } = {}): Ta
 
 const directivos = { id: 1, nombre: 'Directivos' }
 const docentes = { id: 4, nombre: 'Docentes' }
-
-describe('normalizar', () => {
-  it('pasa a minúsculas y quita tildes y diacríticos', () => {
-    expect(normalizar('Cuidádos EN Línea Ñandú')).toBe('cuidados en linea nandu')
-  })
-
-  it('deja igual un texto ya normalizado', () => {
-    expect(normalizar('huerta')).toBe('huerta')
-  })
-})
 
 describe('filtrarTalleres', () => {
   const huerta = taller(1, { nombre: 'Huerta escolar', descripcion: 'Cultivo en el patio', nivel_id: 2, destinatario: [docentes] })

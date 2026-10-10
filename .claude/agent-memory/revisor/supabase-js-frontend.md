@@ -47,6 +47,14 @@ aviso mientras corre un lote y errores del lote anterior que siguen visibles.
 - Para no reportar falsos positivos: con `onSuccess: () => invalidateQueries(...)`, React Query mantiene `isPending` hasta que termina
   el refetch, así que no hay ventana de datos viejos entre el éxito y la recarga.
 
+En normativas (fase B, 2026-10-10, sexta vez) la verificación en el navegador quedó anotada como **pendiente** (mejor que antes, pero sin
+hacer). De nuevo, la rama `isError` del formulario de edición está implementada pero sin test. Aparecieron dos huecos nuevos, que
+probablemente se repitan en padrón y logo:
+- Las pantallas que pasan de mocks a red real conservan `isLoading`. Sin red, la primera carga queda `paused` y la sección no muestra nada.
+  Buscá `isLoading` en las páginas del dominio migrado y pedí `isPending`.
+- La baja borra la ruta de Storage **de la caché** (`normativa.ruta_archivo`) y no la que devuelve el DELETE. Pedí
+  `.delete().select('ruta_archivo').single()`. `recursos` tiene el mismo patrón.
+
 Datos de la librería, para no reportar falsos positivos:
 - En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF
   y `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema de una edición por shell:

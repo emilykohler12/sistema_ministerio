@@ -99,6 +99,46 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"normativa": {
+                  Row: {
+                    "anio": number,"created_at": string,"descargas": number,"descripcion": string | null,"id": number,"numero": string,"ruta_archivo": string,"titulo": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "anio": number,"created_at"?: string,"descargas"?: number,"descripcion"?: string | null,"id"?: never,"numero": string,"ruta_archivo": string,"titulo": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "anio"?: number,"created_at"?: string,"descargas"?: number,"descripcion"?: string | null,"id"?: never,"numero"?: string,"ruta_archivo"?: string,"titulo"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"normativa_etiqueta": {
+                  Row: {
+                    "etiqueta_id": number,"normativa_id": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "etiqueta_id": number,"normativa_id": number
+                  }
+                  Update: {
+                    "etiqueta_id"?: number,"normativa_id"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "normativa_etiqueta_etiqueta_id_fkey"
+      columns: ["etiqueta_id"]
+isOneToOne: false
+      referencedRelation: "etiqueta"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "normativa_etiqueta_normativa_id_fkey"
+      columns: ["normativa_id"]
+isOneToOne: false
+      referencedRelation: "normativa"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"recurso": {
                   Row: {
                     "created_at": string,"id": number,"nombre": string,"orden": number,"ruta_archivo": string | null,"taller_id": number,"tamanio_bytes": number | null,"tipo": Database["public"]['Enums']["tipo_recurso"],"updated_at": string,"url": string | null
@@ -211,8 +251,16 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "es_admin":
+            "contar_descarga_normativa":
+{ Args: { "p_id": number }; Returns: undefined
+                           },
+"es_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"guardar_normativa":
+{ Args: { "p_anio": number,"p_descripcion": string,"p_etiquetas": (string)[],"p_id"?: number,"p_numero": string,"p_ruta_archivo"?: string,"p_titulo": string }; Returns: {
+              "id": number,"ruta_anterior": string
+            }[]
                            },
 "guardar_taller":
 { Args: { "p_categoria_id": number,"p_descripcion": string,"p_destinatarios": (number)[],"p_estado": Database["public"]['Enums']["estado_taller"],"p_etiquetas": (string)[],"p_id"?: number,"p_nombre": string }; Returns: number
@@ -222,6 +270,9 @@ isOneToOne: false
                            },
 "ordenar_recursos":
 { Args: { "p_ids": (number)[],"p_taller_id": number }; Returns: undefined
+                           },
+"resolver_etiquetas":
+{ Args: { "p_etiquetas": (string)[] }; Returns: (number)[]
                            }
           }
           Enums: {
