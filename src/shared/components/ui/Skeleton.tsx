@@ -19,6 +19,16 @@ export function CardSkeleton() {
   )
 }
 
+export function ListSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div role="status" aria-label="Cargando" className="space-y-4">
+      {Array.from({ length: rows }).map((_, i) => (
+        <Skeleton key={i} className="h-16 w-full rounded-xl" />
+      ))}
+    </div>
+  )
+}
+
 export function TableSkeleton({ rows = 4 }: { rows?: number }) {
   return (
     <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">

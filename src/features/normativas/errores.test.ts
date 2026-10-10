@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MOTIVO_FORMATO, MOTIVO_TAMANIO } from './archivos'
-import { mensajeDeErrorNormativa } from './errores'
+import { esNormativaDuplicada, mensajeDeErrorNormativa } from './errores'
 
 /*
  * Contrato de src/features/normativas/errores.ts (puro, sin imports de supabase; criterios 1 y 2):
@@ -51,6 +51,27 @@ describe('mensajeDeErrorNormativa', () => {
       const mensaje = mensajeDeErrorNormativa(error)
       expect(mensaje.length).toBeGreaterThan(0)
       expect(mensaje).not.toMatch(/número|año|tamaño|formato/i)
+    }
+  })
+})
+
+describe('esNormativaDuplicada', () => {
+  it('es verdadero solo para el código 23505', () => {
+    expect(esNormativaDuplicada({ code: '23505', message: 'duplicate key' })).toBe(true)
+  })
+
+  it('es falso para cualquier otro error o valor', () => {
+    for (const error of [
+      { code: '42501', message: 'rls' },
+      { status: 413 },
+      { statusCode: '415' },
+      new Error('sin red'),
+      null,
+      undefined,
+      'texto',
+      23505,
+    ]) {
+      expect(esNormativaDuplicada(error)).toBe(false)
     }
   })
 })

@@ -1,0 +1,21 @@
+---
+name: formularios-rhf-a11y
+description: Huecos de accesibilidad y de limpieza de errores en formularios RHF + zod del DAM (setError en varios campos, aria-describedby faltante); cómo probar RHF en el scratchpad
+metadata:
+  type: project
+---
+
+En pendientes-app (2026-10-10), `NormativaFormPage` marcó el 23505 en número y año con `setError`, pero:
+- Los `Input` no tenían `aria-describedby` (el `Input` compartido solo pone `aria-invalid`). El año quedó `aria-invalid` con
+  `message: ''` y sin descripción accesible; el `role="alert"` de `FieldError` se anuncia una vez y nada más. `EstablecimientoFormPage`
+  sí lo hace bien (`aria-describedby={errors.x ? 'x-error' : undefined}`): es el molde.
+- Un error de par puesto con `setError` en dos campos se limpia por separado. Tras el submit (reValidateMode `onChange`), editar
+  un campo limpia solo ese; el otro queda inválido hasta reintentar. El reintento sí limpia todo (handleSubmit vuelve a correr el resolver),
+  así que no bloquea el envío. Pedí `clearErrors([a, b])` al cambiar cualquiera y un test de "corregir y reintentar".
+- Pantallas públicas que leen `useConfiguracion()` (`ContactoPage`) mostraban el estado vacío ("Todavía no hay datos") ante un
+  error de carga: es la misma familia que [[supabase-js-frontend]] (rama `isError` faltante).
+
+**Why:** el foco de a11y del proyecto pide que todo `aria-invalid` tenga explicación, y los estados vacíos no deben mentir ante un error.
+**How to apply:** en cada `setError` revisá que el input tenga `aria-describedby` hacia un mensaje existente; si el error abarca varios
+campos, mirá cómo se limpia. Para probar el comportamiento de RHF sin tocar `src/`: test en el scratchpad con `ln -s` a `node_modules`,
+`tsconfig.json` con `jsx: react-jsx` y `vitest run --root <scratch> --environment jsdom` (sin jest-dom; `--dir` falla por `fs.allow`).
