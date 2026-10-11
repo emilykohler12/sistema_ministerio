@@ -1,4 +1,4 @@
-import type { TipoRecurso } from './types'
+import type { Recurso, TipoRecurso } from './types'
 
 /** 50 MiB. Lo hace cumplir el bucket `talleres` (`file_size_limit`); el cliente lo valida antes de subir. */
 export const TAMANIO_MAXIMO = 52_428_800
@@ -60,6 +60,21 @@ export function rutaNueva(tallerId: number, ext: string): string {
 
 export function nombreSinExtension(nombre: string): string {
   return extensionDe(nombre) === null ? nombre : nombre.slice(0, nombre.lastIndexOf('.'))
+}
+
+/**
+ * Nombre con el que se descarga un archivo: el nombre del recurso sin diacríticos y con todo lo que no sea `[\w .-]`
+ * cambiado por `-`, más la extensión de `ruta_archivo` en minúsculas. Así el resultado no depende de cómo codifiquen
+ * la librería y el servidor la cabecera de descarga ("Guía / 1°" → `Guia - 1-.pdf`). Conserva mayúsculas, a diferencia
+ * de `normalizar`, que pasa a minúsculas.
+ */
+export function nombreDeDescarga(recurso: Pick<Recurso, 'nombre' | 'ruta_archivo'>): string {
+  const base = recurso.nombre
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\w .-]/g, '-')
+  const ext = recurso.ruta_archivo === null ? null : extensionDe(recurso.ruta_archivo)
+  return ext === null ? base : `${base}.${ext}`
 }
 
 const ID_YOUTUBE = /^[A-Za-z0-9_-]{11}$/

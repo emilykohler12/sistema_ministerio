@@ -21,6 +21,10 @@ Al activarse, las listas blancas mostraron agujeros (2026-10-10, sondeados en vi
 `uniq in out`, `tree -o`, `git branch -D`, y `"--fix"` entre comillas para oxlint. En pendientes-hooks: `tsc --generateCpuProfile/--generateTrace`
 escriben donde quieran (también vía `npm run typecheck --`), `oxlint --init`, `vitest -u` y `--reporter=blob` escriben en el repo.
 
+En descargas (2026-10-10) `roles.mjs` sí restringió al revisor (perfil checks): bloqueó `for`, `sed -n`, `cut` y `docker exec ... psql`. `npm run db:reset`,
+`test:db`, `grep`, `git diff` y `cat` pasan. Sin psql, verificá privilegios leyendo la migración y los pgTAP (`aclexplode`, `has_function_privilege`), y leé
+rangos de archivos con Read (offset/limit) en lugar de `sed -n`.
+
 **Why:** una lista blanca de "comandos de lectura" igual deja escribir o ejecutar si no se miran las banderas, y las comillas esconden
 banderas a los lookahead. Y un hook que "funciona a mano" puede no recibir los campos que espera en otro tipo de sesión.
 **How to apply:** al empezar una revisión de hooks, sondeá primero si el rol se aplica a VOS (`node --version` debería bloquearse); si no,

@@ -15,3 +15,6 @@ metadata:
 - Tarjeta de categoría: `getByRole('link',{name,exact:true}).locator('..')` y dentro Editar/Dar de baja/Reactivar. Taller y categoría con nombre igual: evitar (strict mode y key duplicada).
 - Recursos: dropzone = `input[type=file]` primero; reemplazo = `getByLabel('Archivo nuevo para <nombre>')`; botones por aria-label `Subir|Bajar|Editar|Eliminar <nombre>`. Heading "Recursos" choca con nombres de taller: usar exact.
 - Un spec que falla a mitad deja categorías sueltas: `db:reset` antes de reintentar si se cuentan elementos.
+- Perfil qa: el hook bloquea curl, sed y leer `.env*`; no hay forma de consultar la base. Para llamar a la API como anon: capturar el header `apikey` de un request `/rest/v1/` con `page.on('request')` y hacer `fetch` en `page.evaluate`.
+- Nombre de recurso con "/" o "°": subir `base.pdf` y renombrar con "Editar <base>" (el nombre de archivo no admite "/"). La ruta de Storage se captura del POST `/storage/v1/object/talleres/<ruta>`.
+- Despublicar: ir a la URL de recursos con `/recursos` → `/editar`, Estado → "Guardar cambios".

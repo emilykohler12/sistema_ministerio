@@ -63,6 +63,11 @@ En padrón (fase A, 2026-10-10, séptima vez) la verificación en el navegador n
 
 En padrón (fase B, script de carga, 2026-10-10, octava vez) faltó registrar en `notas.md` el paso "las altas aparecen en `/admin/establecimientos`".
 
+En descargas (2026-10-10, novena vez) volvieron a quedar sin test las ramas `isError` de queries secundarias (localidades y establecimientos del modal).
+Hueco nuevo: **invalidar en `onError` una query de la que depende el padre del componente que muestra el error**. Con DA003 se invalida `['talleres']`,
+`useTallerPublicado` pasa a `null` y la página desmonta el modal con el mensaje. El test del modal aislado no lo ve. Ante cualquier `invalidateQueries` en
+un `onError`, seguí qué pantallas leen esa clave y si desmontan al que muestra el error.
+
 Datos de la librería, para no reportar falsos positivos:
 - En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF
   y `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema de una edición por shell:

@@ -61,6 +61,12 @@ En la crítica del código de la fase A del padrón (2026-10-10), sin hallazgos:
   las mayúsculas se van al final (`Caá`, `Dos de Mayo`). Si un catálogo fijo tiene ids en orden, `order('id')` no depende de la collation.
 - **`varchar(n)` corta antes que el CHECK** (22001 y no 23514). Y un UPDATE de un `id` identity da 428C9 antes que el grant por columna (42501).
 - **Descartado, no reabrir sin una cuarta copia:** un `codigoDe(error)` compartido para la guarda `code === X` de los `errores.ts`.
+  En la crítica del código de descargas (2026-10-10) llegó a la cuarta copia y lo propuse; ver su `## Respuesta`.
+
+En la crítica de la spec `descargas` (2026-10-10): **un CHECK con discriminador que se relaja para una edición futura** (OTRA +
+`establecimiento_id` "al vincular") deja que el insert anónimo cree filas que ya parecen vinculadas. La RPC tiene que anular los campos
+que no corresponden según el tipo (`case when tipo = ... then ... end`); eso resuelve también el estado residual de react-hook-form. Los
+argumentos con `default null` van al final de la firma.
 
 **Why:** son fallas silenciosas o errores en el caso feliz que ni el typecheck ni el pgTAP básico detectan.
 

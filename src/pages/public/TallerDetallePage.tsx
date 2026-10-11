@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ChevronLeft, Share2 } from 'lucide-react'
+import { ChevronLeft, Download, Share2 } from 'lucide-react'
+import { DescargaModal } from '@/features/descargas/components/DescargaModal'
 import { useCatalogo, useTallerPublicado } from '@/features/talleres/hooks/useTalleres'
 import { nombreNivel } from '@/features/talleres/types'
 import { ListaRecursos } from '@/features/recursos/components/ListaRecursos'
@@ -15,6 +17,7 @@ export function TallerDetallePage() {
   const { id } = useParams<{ id: string }>()
   const { data: taller, isPending, isError, refetch } = useTallerPublicado(idDeRuta(id))
   const publicados = useCatalogo({})
+  const [descargaAbierta, setDescargaAbierta] = useState(false)
 
   if (isPending) {
     return (
@@ -90,13 +93,20 @@ export function TallerDetallePage() {
 
           <ListaRecursos recursos={taller.recurso} />
 
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap gap-3">
+            {taller.recurso.length > 0 && (
+              <Button onClick={() => setDescargaAbierta(true)}>
+                <Download className="h-4 w-4" aria-hidden="true" /> Descargar
+              </Button>
+            )}
             <Button variant="outline">
               <Share2 className="h-4 w-4" /> Compartir
             </Button>
           </div>
         </div>
       </div>
+
+      <DescargaModal taller={taller} open={descargaAbierta} onClose={() => setDescargaAbierta(false)} />
 
       {similares.length > 0 && (
         <div className="border-t border-gray-100 bg-gray-50 px-4 py-10 sm:px-6">

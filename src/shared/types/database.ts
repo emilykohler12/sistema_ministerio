@@ -193,6 +193,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"registro_descarga": {
+                  Row: {
+                    "cargo": string,"cargo_otro": string | null,"establecimiento_id": number | null,"fecha_hora": string,"id": number,"institucion_otra": string | null,"institucion_tipo": Database["public"]['Enums']["tipo_institucion"],"localidad_id": number,"taller_id": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cargo": string,"cargo_otro"?: string | null,"establecimiento_id"?: number | null,"fecha_hora"?: string,"id"?: never,"institucion_otra"?: string | null,"institucion_tipo": Database["public"]['Enums']["tipo_institucion"],"localidad_id": number,"taller_id": number
+                  }
+                  Update: {
+                    "cargo"?: string,"cargo_otro"?: string | null,"establecimiento_id"?: number | null,"fecha_hora"?: string,"id"?: never,"institucion_otra"?: string | null,"institucion_tipo"?: Database["public"]['Enums']["tipo_institucion"],"localidad_id"?: number,"taller_id"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "registro_descarga_establecimiento_id_fkey"
+      columns: ["establecimiento_id"]
+isOneToOne: false
+      referencedRelation: "establecimiento"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "registro_descarga_localidad_id_fkey"
+      columns: ["localidad_id"]
+isOneToOne: false
+      referencedRelation: "localidad"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "registro_descarga_taller_id_fkey"
+      columns: ["taller_id"]
+isOneToOne: false
+      referencedRelation: "taller"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"registro_operacion": {
                   Row: {
                     "datos_anteriores": Json | null,"datos_nuevos": Json | null,"fecha_hora": string,"id": number,"operacion": string,"registro_id": string | null,"tabla": string,"usuario_id": string | null
@@ -305,12 +337,15 @@ isOneToOne: false
 "ordenar_recursos":
 { Args: { "p_ids": (number)[],"p_taller_id": number }; Returns: undefined
                            },
+"registrar_descarga":
+{ Args: { "p_cargo": string,"p_cargo_otro"?: string,"p_establecimiento_id"?: number,"p_institucion_otra"?: string,"p_institucion_tipo": Database["public"]['Enums']["tipo_institucion"],"p_localidad_id": number,"p_taller_id": number }; Returns: undefined
+                           },
 "resolver_etiquetas":
 { Args: { "p_etiquetas": (string)[] }; Returns: (number)[]
                            }
           }
           Enums: {
-            "estado_taller": "BORRADOR"|"PUBLICADO"|"INACTIVO","tipo_recurso": "PDF"|"PPTX"|"DOCX"|"IMAGEN"|"VIDEO"|"ENLACE"
+            "estado_taller": "BORRADOR"|"PUBLICADO"|"INACTIVO","tipo_institucion": "PADRON"|"OTRA"|"SIN_INSTITUCION","tipo_recurso": "PDF"|"PPTX"|"DOCX"|"IMAGEN"|"VIDEO"|"ENLACE"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -430,7 +465,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "estado_taller": ["BORRADOR", "PUBLICADO", "INACTIVO"],"tipo_recurso": ["PDF", "PPTX", "DOCX", "IMAGEN", "VIDEO", "ENLACE"]
+            "estado_taller": ["BORRADOR", "PUBLICADO", "INACTIVO"],"tipo_institucion": ["PADRON", "OTRA", "SIN_INSTITUCION"],"tipo_recurso": ["PDF", "PPTX", "DOCX", "IMAGEN", "VIDEO", "ENLACE"]
           }
         }
 } as const

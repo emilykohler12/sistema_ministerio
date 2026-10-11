@@ -15,6 +15,9 @@ En pendientes-app (2026-10-10), `NormativaFormPage` marcó el 23505 en número y
 - Pantallas públicas que leen `useConfiguracion()` (`ContactoPage`) mostraban el estado vacío ("Todavía no hay datos") ante un
   error de carga: es la misma familia que [[supabase-js-frontend]] (rama `isError` faltante).
 
+Se repitió en descargas (2026-10-10, `DescargaModal`): cinco `Select`/`Input` con `FieldError` con id y sin `aria-describedby`. Es el hueco más
+recurrente de UI del proyecto: buscalo siempre (`grep -n "aria-describedby"` en el formulario nuevo).
+
 **Why:** el foco de a11y del proyecto pide que todo `aria-invalid` tenga explicación, y los estados vacíos no deben mentir ante un error.
 **How to apply:** en cada `setError` revisá que el input tenga `aria-describedby` hacia un mensaje existente; si el error abarca varios
 campos, mirá cómo se limpia. Para probar el comportamiento de RHF sin tocar `src/`: test en el scratchpad con `ln -s` a `node_modules`,

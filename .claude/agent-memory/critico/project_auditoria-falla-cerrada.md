@@ -25,4 +25,8 @@ igual que el error tragado.
   (por ejemplo `tocar_updated_at`, Fase B de auth-configuracion) pide su guardia `*_global.test.sql`, igual que esas.
 - En la crítica de código el crítico puede correr `npm run test:db` (talleres fase A, 2026-10-10). Si el perfil no lo permite, decirlo.
 
+- `auditoria_global` solo mira que exista un trigger con `tgfoid = auditar`, no sus eventos. En descargas (2026-10-10), un `after update
+  or delete` pasaba por ese tecnicismo. Propuse exigir `bit_or(tgtype) & 28 = 28`, con una lista de excepciones por evento. Ver la
+  Respuesta en `docs/specs/descargas/critica.md`.
+
 Relacionado: [[permisos-agentes-vs-spec]].

@@ -2,6 +2,8 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { registrarDescarga } from '@/features/descargas/consultas'
+import { obtenerEstablecimientos, obtenerLocalidades } from '@/features/establecimientos/consultas'
 import { obtenerTalleres } from '@/features/talleres/consultas'
 import { ETIQUETA_TIPO_RECURSO, type Recurso } from '@/features/recursos/types'
 import type { Taller } from '@/features/talleres/types'
@@ -15,6 +17,18 @@ vi.mock('@/features/talleres/consultas', () => ({
   obtenerTalleres: vi.fn(),
   guardarTaller: vi.fn(),
   cambiarEstadoTaller: vi.fn(),
+}))
+
+vi.mock('@/features/descargas/consultas', () => ({
+  registrarDescarga: vi.fn(),
+  firmarEnlaces: vi.fn(),
+}))
+vi.mock('@/features/establecimientos/consultas', () => ({
+  obtenerLocalidades: vi.fn(),
+  obtenerEstablecimientos: vi.fn(),
+  obtenerEstablecimiento: vi.fn(),
+  crearEstablecimiento: vi.fn(),
+  actualizarEstablecimiento: vi.fn(),
 }))
 
 function taller(id: number, nombre: string, p: Partial<Taller> = {}): Taller {
@@ -88,6 +102,8 @@ function renderPagina(id: string) {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(obtenerTalleres).mockResolvedValue(datos)
+  vi.mocked(obtenerLocalidades).mockResolvedValue([{ id: 1, nombre: 'Posadas' }])
+  vi.mocked(obtenerEstablecimientos).mockResolvedValue([])
 })
 
 describe('TallerDetallePage', () => {
@@ -100,11 +116,47 @@ describe('TallerDetallePage', () => {
     expect(screen.getByText('Ciberseguridad')).toBeInTheDocument()
   })
 
-  it('no ofrece descarga ni vista previa (la descarga llega con el corte descargas)', async () => {
+  it('un taller sin recursos no muestra el botón "Descargar" ni vista previa', async () => {
     renderPagina('1')
     await screen.findByRole('heading', { name: 'Cuidados en redes' })
     expect(screen.queryByRole('button', { name: /descargar/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/vista previa/i)).not.toBeInTheDocument()
+  })
+
+  it('un taller con recursos muestra el botón "Descargar" (criterio 1 de descargas)', async () => {
+    renderPagina('7')
+    expect(await screen.findByRole('button', { name: 'Descargar' })).toBeInTheDocument()
+  })
+
+  it('el botón "Descargar" abre el modal con el formulario', async () => {
+    renderPagina('7')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Descargar' }))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByLabelText('Cargo')).toBeInTheDocument()
+  })
+
+  it('si el taller deja de estar publicado al descargar, el mensaje se ve y la página pasa a "no encontrado" al cerrar el modal', async () => {
+    vi.mocked(registrarDescarga).mockRejectedValue({ code: 'DA003', message: 'no disponible' })
+    const user = userEvent.setup()
+    renderPagina('7')
+    await user.click(await screen.findByRole('button', { name: 'Descargar' }))
+    await user.selectOptions(screen.getByLabelText('Cargo'), 'Docente')
+    await within(screen.getByLabelText('Localidad')).findByRole('option', { name: 'Posadas' })
+    await user.selectOptions(screen.getByLabelText('Localidad'), 'Posadas')
+    await screen.findByRole('option', { name: 'Sin institución' })
+    await user.selectOptions(screen.getByLabelText('Institución'), 'Sin institución')
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Descargar' }))
+
+    // El mensaje queda a la vista: la página sigue mostrando el taller hasta que se cierre el modal.
+    expect(await screen.findByText('Este taller ya no está disponible')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Taller completo' })).toBeInTheDocument()
+
+    // Al cerrar se invalidan los talleres; el taller ya no está publicado y el modal no se vuelve a abrir.
+    vi.mocked(obtenerTalleres).mockResolvedValue(datos.filter((t) => t.id !== 7))
+    await user.click(screen.getByRole('button', { name: 'Cerrar' }))
+    expect(await screen.findByText('Taller no encontrado')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('un taller sin recursos no muestra la sección "Recursos"', async () => {
@@ -159,7 +211,7 @@ describe('TallerDetallePage', () => {
  * Criterio 9: sección "Recursos" (heading) dentro del detalle. Cada recurso es un <li> con su nombre.
  * Los archivos muestran la etiqueta del tipo (ETIQUETA_TIPO_RECURSO) y el tamaño (formatearTamanio);
  * hay un texto con "total" y la suma de los tamaños. Un enlace de YouTube va en un <iframe> con título hacia
- * https://www.youtube-nocookie.com/embed/<id>; otro enlace es un <a> externo. Sin botón ni enlace "Descargar".
+ * https://www.youtube-nocookie.com/embed/<id>; otro enlace es un <a> externo. Con recursos hay un botón "Descargar" (modal), no un enlace.
  */
 describe('TallerDetallePage: recursos', () => {
   const item = (nombre: string) => {
@@ -203,11 +255,19 @@ describe('TallerDetallePage: recursos', () => {
     expect(enlaceExterno).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
-  it('no ofrece descarga: ni botón ni enlace "Descargar"', async () => {
+  it('la sección de recursos no enlaza los archivos: la descarga pasa por el botón y el formulario', async () => {
     renderPagina('7')
     await screen.findByRole('heading', { name: /recursos/i })
-    expect(screen.queryByRole('button', { name: /descargar/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Descargar' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /descargar/i })).not.toBeInTheDocument()
+  })
+
+  it('un taller solo con enlaces también ofrece "Descargar" (tiene al menos un recurso)', async () => {
+    vi.mocked(obtenerTalleres).mockResolvedValue([
+      taller(8, 'Solo enlaces', { recurso: [enlace(9, 1, 'Sitio', 'https://example.com')] }),
+    ])
+    renderPagina('8')
+    expect(await screen.findByRole('button', { name: 'Descargar' })).toBeInTheDocument()
   })
 
   it('un taller solo con enlaces muestra la sección, sin tamaño total', async () => {

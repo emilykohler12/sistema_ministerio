@@ -44,6 +44,14 @@ En la crítica de la spec `normativas` (2026-10-10, primer bucket público):
 - Una guardia global de Storage que solo mire `to anon/public` no ve una política `to authenticated` sin `es_admin()` ni una `for all`:
   pedir que toda política de escritura tenga `roles = {authenticated}` y `es_admin`.
 
+En la crítica de la spec `descargas` (2026-10-10; propone ADR 0022: RPC + política SELECT de anon en lugar de la Edge Function):
+- **storage-js `createSignedUrl` con `download`** arma el parámetro con `URLSearchParams` y después aplica `encodeURI` a toda la URL
+  (`dist/index.mjs:1047-1051`). Los nombres con tildes se codifican dos veces. Hay que sanear el nombre o verificarlo con Playwright
+  `suggestedFilename()`.
+- **Si anon firma, el `expiresIn` lo elige el cliente** y despublicar no revoca los enlaces emitidos. Una política SELECT de anon atada a
+  `exists (recurso visible)` no expone nada nuevo al listar (es lo mismo que `GET /recurso`) y oculta los huérfanos. Calificar `objects.name`.
+- El perfil `critico` **no** deja usar `docker`, `psql` ni `sed`/`for` en Bash: verificar en `node_modules` con grep/Read o marcar "a verificar".
+
 **Why:** Storage es un sistema aparte, sin transacción común con Postgres. Sus detalles (qué MIME llega, cuándo se ve la fila) no salen
 en los tipos ni en el pgTAP y deciden si un diseño se sostiene.
 

@@ -114,13 +114,15 @@ select results_eq(
       'image/jpeg', 'image/png', 'image/webp', 'video/mp4']) as m order by 1$$,
   'bucket talleres: allowed_mime_types son exactamente los 7 formatos');
 
--- Politicas de storage.objects para el bucket: sin update, nada para anon ni public
+-- Politicas de storage.objects para el bucket: sin update, nada para anon ni public salvo la lectura de talleres_select_anon
+-- (corte descargas, 0022; su comportamiento lo prueba descargas.test.sql)
 select is_empty(
   $$select policyname from pg_policies
      where schemaname = 'storage' and tablename = 'objects'
        and (coalesce(qual, '') like '%talleres%' or coalesce(with_check, '') like '%talleres%')
-       and (roles::text[] && array['anon', 'public'] or cmd in ('UPDATE', 'ALL'))$$,
-  'storage.objects: ninguna politica del bucket talleres para anon/public ni de update');
+       and (roles::text[] && array['anon', 'public'] or cmd in ('UPDATE', 'ALL'))
+       and not (policyname = 'talleres_select_anon' and cmd = 'SELECT' and roles::text[] = array['anon'])$$,
+  'storage.objects: ninguna politica del bucket talleres para anon/public ni de update, salvo el SELECT de talleres_select_anon');
 
 -- anon -------------------------------------------------------------------------
 set local role anon;
