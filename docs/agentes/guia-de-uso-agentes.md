@@ -17,7 +17,8 @@ Todo corre dentro del Dev Container (decisión 0003). En tu máquina solo hacen 
 5. Aceptar el diálogo de confianza del proyecto (habilita hooks y skills del repo).
 6. Crear tus archivos personales (no se commitean):
    - `CLAUDE.local.md`: tus URLs locales, datos de prueba.
-   - `.claude/settings.local.json`: claves y variables de Supabase (cuando se integre).
+   - `.env.local`: `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` del Supabase local (los muestra `npm run db:start`).
+   - `.claude/settings.local.json`: preferencias personales de Claude Code.
 7. Una vez: `/run-skill-generator` para que `/run` y `/verify` sepan levantar el DAM.
 8. Verificar que todo cargó:
    - `/context` → aparece `CLAUDE.md`.

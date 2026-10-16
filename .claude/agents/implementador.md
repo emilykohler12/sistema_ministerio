@@ -7,7 +7,8 @@ effort: high
 color: green
 skills:
   - tdd
-# Cuando se integre Supabase, habilitar el MCP solo para este agente:
+  - supabase-rls
+# MCP de Supabase no habilitado (alcanza con la base local y npm run db:*). Si se decide habilitarlo, solo para este agente:
 # mcpServers:
 #   - supabase:
 #       type: http

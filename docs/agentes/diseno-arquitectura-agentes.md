@@ -24,7 +24,7 @@ Herramienta: Claude Code · Todo vive dentro del repositorio y se comparte por g
 | **Ingeniero en Sistemas** | Sesión principal (output style) | Opus | Discute, planifica, enseña, orquesta, decide el carril | Todas |
 | **Explore** | Subagente (reemplaza al incluido) | Sonnet | Busca contexto en el repo: código, specs, decisiones | Solo lectura (hook `roles.mjs`, perfil `lectura`) |
 | **test-writer** | Subagente | Sonnet | Escribe tests que fallan a partir de la spec (fase RED) | Solo `*.test.ts(x)`; shell solo para checks (hooks) |
-| **implementador** | Subagente | Sonnet | Implementa la spec o el plan con TDD. Si duda, se detiene y devuelve `BLOQUEADO` | Edición + MCP Supabase |
+| **implementador** | Subagente | Sonnet | Implementa la spec o el plan con TDD. Si duda, se detiene y devuelve `BLOQUEADO` | Edición; Supabase local con `npm run db:*` |
 | **crítico** | Subagente | Opus | ¿Hay una forma más simple o mejor? Revisa la propuesta y la estructura del código | Lectura; escribe solo `critica.md` y su memoria (hooks) |
 | **revisor** | Subagente | Opus | ¿Está bien hecho? Revisa requisitos, tests, seguridad y RLS | Lectura + checks; escribe solo `revision.md` y su memoria (hooks) |
 | **qa** | Subagente | Sonnet | ¿Funciona en la app real? Escribe pocos e2e (Playwright), los corre contra el Supabase local y reporta | Lectura + checks + `test:e2e`; escribe solo `e2e/`, `qa.md` y su memoria (hooks). No toca `src/` |
@@ -45,7 +45,9 @@ Herramienta: Claude Code · Todo vive dentro del repositorio y se comparte por g
 ### Reglas del crítico
 
 - Simplicidad como norte. No suma dependencias salvo que eliminen más código del que agregan.
-- Máximo 3 puntos, priorizados, cada uno con una alternativa concreta.
+- Sin tope de puntos: reporta todo lo que ve, cada punto con severidad (alta, media o baja) y una alternativa concreta.
+  El filtro de qué entra en el corte lo aplica el ingeniero en la `## Respuesta`, no el crítico.
+- Sobre una spec o un plan también anticipa los bugs que induce; sobre código, los bugs son del revisor.
 - Puede (y debe) decir "está bien así" cuando no hay algo claramente mejor.
 - Lee el índice `docs/decisiones/README.md`, abre solo los ADR relevantes y no reabre decisiones sin un argumento nuevo.
 - Una sola ronda por fase. Los desacuerdos los decide una persona.
@@ -67,7 +69,7 @@ VOS ◄──► INGENIERO
            ├──► revisor          ┘
            └──► qa (navegador) ...... después, solo si hay pantalla: e2e en e2e/ → qa.md; db:reset al terminar
                     │
-             Stop hook + CI ──── checks deterministas
+             Stop hook ──── checks deterministas (CI pendiente)
                     │
                     PR → revisión humana del compañero
 ```
@@ -139,9 +141,9 @@ Scripts en Node para que funcionen igual en Linux y Windows.
 
 - `deny`: lectura y edición de `.env*`, `git push --force`, reset de la base remota.
 - `allow`: lint, typecheck, tests, `git status/diff/log`.
-- El MCP de Supabase se declara **solo dentro del implementador**, apuntando a desarrollo, con `read_only` y `project_ref`.
-- Desarrollo y tests corren contra **Supabase local**. Nunca contra producción.
-- **Hoy Supabase no está integrado:** la skill `supabase-rls`, la regla `migraciones.md` y el MCP quedan listos para cuando se integre.
+- Desarrollo y tests corren contra **Supabase local** (`npm run db:*`, 0011). Nunca contra producción.
+- El MCP de Supabase no está habilitado: con la base local y los scripts `db:*` no hace falta. Si se habilita, va **solo dentro
+  del implementador**, apuntando a desarrollo, con `read_only` y `project_ref` (bloque comentado en `implementador.md`).
 
 ---
 
@@ -152,7 +154,7 @@ CLAUDE.md                     compartido
 CLAUDE.local.md               personal (gitignored)
 .claude/
 ├── settings.json             compartido: output style, permisos, hooks
-├── settings.local.json       personal (gitignored): claves, preferencias
+├── settings.local.json       personal (gitignored): preferencias
 ├── output-styles/ingeniero-sistemas.md
 ├── agents/                   Explore · test-writer · implementador · critico · revisor · qa
 ├── skills/                   spec · tdd · supabase-rls · criticar · decision · pr · verify

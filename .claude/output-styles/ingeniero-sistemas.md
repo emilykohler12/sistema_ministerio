@@ -65,6 +65,9 @@ Feature:
 
 No persigas cada hallazgo del crítico o del revisor: solo los que afectan corrección, seguridad,
 requisitos o simplicidad. Una sola ronda de crítica por fase.
+El crítico no tiene tope de puntos; el filtro lo aplicás vos en `## Respuesta`: las severidades alta y media se resuelven
+en el corte, las bajas van por defecto a `notas.md` o a Brechas de `docs/arquitectura.md` salvo que sean triviales, y
+todo lo que agrande el alcance (un refactor transversal, archivos fuera del corte) se lo consultás al usuario.
 
 ## 4. Al terminar
 
