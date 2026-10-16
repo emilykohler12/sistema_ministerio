@@ -17,7 +17,7 @@ export function Seccion({ titulo, descripcion, children }: SeccionProps) {
           {titulo}
         </h2>
         {descripcion && <p className="mt-1 text-sm text-gray-500">{descripcion}</p>}
-        <div className="mt-4">{children}</div>
+        <div className="mt-4 overflow-x-auto">{children}</div>
       </Card>
     </section>
   )

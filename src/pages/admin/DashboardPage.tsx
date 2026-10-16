@@ -66,7 +66,7 @@ function ContenidoMetricas({ datos, porMes, actualizando }: ContenidoMetricasPro
         <SerieDescargas serie={serie} porMes={porMes} vacia={sinDescargas} />
       </Seccion>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Seccion titulo="Ranking de talleres">
           <TablaRanking talleres={talleres} etiquetasEstado={ETIQUETA_ESTADO} vacia={sinDescargas} />
         </Seccion>
