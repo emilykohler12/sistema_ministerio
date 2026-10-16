@@ -42,6 +42,12 @@ describe('mensajeDeErrorRecurso', () => {
     expect(mensajeDeErrorRecurso({ status: 413, statusCode: '413' })).toBe(validarArchivo(grande))
   })
 
+  it('PGRST116 (la fila cambió o ya no existe) avisa que se actualiza la lista', () => {
+    expect(mensajeDeErrorRecurso({ code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned' })).toBe(
+      'El recurso cambió o ya no existe. Actualizamos la lista.',
+    )
+  })
+
   it('cualquier otro error devuelve un mensaje genérico, sin hablar de tamaño ni de formato', () => {
     for (const error of [
       new Error('sin red'),

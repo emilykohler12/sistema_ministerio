@@ -14,17 +14,18 @@ import type { Recurso } from './types'
  *   subirArchivo(ruta: string, file: File, mime: string): Promise<void>
  *   borrarArchivo(ruta: string): Promise<void>            // trata `data: []` de storage.remove() como falla
  *   insertarRecurso(nuevo: TablesInsert<'recurso'>): Promise<Recurso>
- *   actualizarRecurso(id: number, cambios: { nombre?, url?, ruta_archivo?, tipo?, tamanio_bytes?, orden? }): Promise<Recurso>
- *   eliminarFilaRecurso(id: number): Promise<void>
+ *   actualizarRecurso(id: number, cambios: { nombre?, url?, ruta_archivo?, tipo?, tamanio_bytes?, orden? }, rutaAnterior?: string): Promise<Recurso>
+ *     con rutaAnterior filtra también por `ruta_archivo`: si la fila cambió o ya no existe falla con PGRST116
+ *   eliminarFilaRecurso(id: number): Promise<string | null>   // la ruta que la fila tenía en la base (null si era un enlace)
  * Contrato de secuencias.ts (criterio 7; el orden de las llamadas es parte del contrato):
  *   altaArchivo(tallerId: number, file: File, orden: number): Promise<Recurso>
  *     subirArchivo(ruta, file, mimeCanónico) -> insertarRecurso({ taller_id, nombre, tipo, ruta_archivo, tamanio_bytes: file.size, orden })
  *     si el insert falla: borrarArchivo(ruta) y se propaga el error original
  *   reemplazarArchivo(recurso: Recurso, file: File): Promise<Recurso>
- *     subirArchivo(rutaNueva, file, mime) -> actualizarRecurso(id, { ruta_archivo, tipo, tamanio_bytes }) -> borrarArchivo(rutaVieja)
+ *     subirArchivo(rutaNueva, file, mime) -> actualizarRecurso(id, { ruta_archivo, tipo, tamanio_bytes }, rutaVieja) -> borrarArchivo(rutaVieja)
  *     si el update falla: borrarArchivo(rutaNueva) y se propaga; si borrar la vieja falla: éxito + console.warn
  *   eliminarRecurso(recurso: Recurso): Promise<void>
- *     eliminarFilaRecurso(id) -> borrarArchivo(ruta) (solo archivos); si borrar el archivo falla: éxito + console.warn
+ *     eliminarFilaRecurso(id) -> borrarArchivo(ruta que devolvió la base) (solo si no es null); si borrar el archivo falla: éxito + console.warn
  */
 vi.mock('./consultas', () => ({
   subirArchivo: vi.fn(),
@@ -85,8 +86,10 @@ beforeEach(() => {
     llamadas.push(`actualizar:${id}`)
     return recurso({ id, ...cambios } as Partial<Recurso>)
   })
+  // Devuelve la ruta que la fila tenía en la base (por defecto la del recurso de prueba); `null` si era un enlace.
   vi.mocked(eliminarFilaRecurso).mockImplementation(async (id) => {
     llamadas.push(`eliminarFila:${id}`)
+    return RUTA_VIEJA
   })
 })
 
@@ -232,12 +235,13 @@ describe('reemplazarArchivo', () => {
     expect(vi.mocked(actualizarRecurso).mock.calls[0]).toEqual([
       20,
       { ruta_archivo: rutaSubida(), tipo: 'DOCX', tamanio_bytes: 10 },
+      RUTA_VIEJA,
     ])
     expect(resultado.id).toBe(20)
   })
 
-  it('si el update falla, borra el archivo nuevo (no el viejo) y propaga el error original', async () => {
-    const original = { code: '42501', message: 'rls' }
+  it('si la fila cambió o ya no existe (PGRST116), borra el archivo nuevo (no el viejo) y propaga el error original', async () => {
+    const original = { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned' }
     vi.mocked(actualizarRecurso).mockImplementation(async (id) => {
       llamadas.push(`actualizar:${id}`)
       throw original
@@ -294,7 +298,25 @@ describe('eliminarRecurso', () => {
     expect(borrarArchivo).not.toHaveBeenCalled()
   })
 
+  it('borra la ruta que la fila tenía en la base, no la de la caché', async () => {
+    const rutaDeLaBase = '5/vigente-uuid.pdf'
+    vi.mocked(eliminarFilaRecurso).mockImplementation(async (id) => {
+      llamadas.push(`eliminarFila:${id}`)
+      return rutaDeLaBase
+    })
+
+    await eliminarRecurso(recurso({ ruta_archivo: RUTA_VIEJA }))
+
+    expect(llamadas).toEqual(['eliminarFila:20', `borrar:${rutaDeLaBase}`])
+    expect(borrarArchivo).not.toHaveBeenCalledWith(RUTA_VIEJA)
+  })
+
   it('un enlace solo borra la fila: no toca Storage', async () => {
+    vi.mocked(eliminarFilaRecurso).mockImplementation(async (id) => {
+      llamadas.push(`eliminarFila:${id}`)
+      return null
+    })
+
     await eliminarRecurso(enlace)
 
     expect(llamadas).toEqual(['eliminarFila:21'])

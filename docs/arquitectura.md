@@ -112,8 +112,7 @@ Pruebas en el navegador (0020): Playwright con Chromium headless (se instala al 
   (dashboard e índice por `fecha_hora`), el captcha (Turnstile; obligaría a volver a una Edge Function), el límite de frecuencia y el tope de `expiresIn` (hoy lo elige
   el cliente y despublicar no revoca los enlaces ya emitidos, 0022), "Descargar todo (.zip)" y no contar las descargas del admin.
 - Recursos: limpieza de archivos huérfanos en Storage
-  (hoy solo un `console.warn`; vale también para normativas), subida reanudable (TUS) y barra de progreso. La baja y el reemplazo de un recurso
-  borran la ruta de la caché y no la de la base; normativas ya usa la de la base (`delete ... select`).
+  (hoy solo un `console.warn`; vale también para normativas), subida reanudable (TUS) y barra de progreso.
 - Normativas: `taller_normativa` (C-02), KPI y contador en el dashboard, y borrado de etiquetas sin uso.
 - Nuevas pantallas: establecimientos, instituciones sin vincular, historial; luego usuarios.
 - Mejoras del dashboard (definición §5.4).

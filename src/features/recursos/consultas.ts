@@ -20,17 +20,27 @@ export async function insertarRecurso(nuevo: TablesInsert<'recurso'>): Promise<R
   return data
 }
 
-/** Solo columnas editables (el grant de UPDATE por columna rechaza `taller_id`). Sin fila afectada, `.single()` falla. */
-export async function actualizarRecurso(id: number, cambios: CambiosRecurso): Promise<Recurso> {
-  const { data, error } = await supabase.from('recurso').update(cambios).eq('id', id).select().single()
+/**
+ * Solo columnas editables (el grant de UPDATE por columna rechaza `taller_id`). Sin fila afectada, `.single()` falla
+ * (`PGRST116`). Con `rutaAnterior` el UPDATE solo aplica si la fila sigue apuntando a ese archivo: si otra pestaña ya
+ * lo reemplazó o borró la fila, no afecta nada y no pisa el cambio ajeno.
+ */
+export async function actualizarRecurso(id: number, cambios: CambiosRecurso, rutaAnterior?: string): Promise<Recurso> {
+  let consulta = supabase.from('recurso').update(cambios).eq('id', id)
+  if (rutaAnterior !== undefined) consulta = consulta.eq('ruta_archivo', rutaAnterior)
+  const { data, error } = await consulta.select().single()
   if (error) throw error
   return data
 }
 
-/** Si la RLS bloquea el DELETE no queda ninguna fila y `.single()` lo devuelve como error. */
-export async function eliminarFilaRecurso(id: number): Promise<void> {
-  const { error } = await supabase.from('recurso').delete().eq('id', id).select('id').single()
+/**
+ * Borra la fila y devuelve la ruta del archivo que tenía en la base (`null` si era un enlace). Si la RLS bloquea el
+ * DELETE o la fila ya no existe no queda ninguna fila y `.single()` lo devuelve como error.
+ */
+export async function eliminarFilaRecurso(id: number): Promise<string | null> {
+  const { data, error } = await supabase.from('recurso').delete().eq('id', id).select('ruta_archivo').single()
   if (error) throw error
+  return data.ruta_archivo
 }
 
 /** `ids` es la lista completa de los recursos del taller, en el orden nuevo (lo valida la RPC). */

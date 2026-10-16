@@ -21,7 +21,8 @@ import {
  * Contrato (consultas.ts y secuencias.ts: ver secuencias.test.ts; ambos lanzan ante cualquier error):
  *   ordenarRecursos(tallerId: number, ids: number[]): Promise<void>      // rpc ordenar_recursos
  *   CLAVE_TALLERES = ['talleres']  (exportada desde talleres/hooks/useTalleres.ts)
- * Hooks de mutación (React Query); todos invalidan CLAVE_TALLERES al terminar bien y NO al fallar:
+ * Hooks de mutación (React Query); todos invalidan CLAVE_TALLERES al terminar bien. Actualizar, reemplazar y eliminar
+ * también al fallar (onSettled: la caché pudo estar vieja); crear enlace y ordenar, solo al terminar bien:
  *   useCrearEnlace().mutateAsync({ tallerId, nombre, url, recursos })
  *       -> insertarRecurso({ taller_id, nombre, tipo: 'ENLACE', url, orden: max(recursos.orden) + 1 })
  *   useActualizarRecurso().mutateAsync({ id, cambios })      -> actualizarRecurso(id, cambios)   // cambios: { nombre?, url? }
@@ -160,8 +161,8 @@ describe('useActualizarRecurso', () => {
     expect(invalidar).toHaveBeenCalledWith(invalidaTalleres)
   })
 
-  it('si falla, no invalida', async () => {
-    vi.mocked(actualizarRecurso).mockRejectedValue(new Error('sin red'))
+  it('si falla, expone el error e invalida igual (la caché pudo estar vieja)', async () => {
+    vi.mocked(actualizarRecurso).mockRejectedValue({ code: 'PGRST116' })
     const { wrapper, invalidar } = crearContexto()
     const { result } = renderHook(() => useActualizarRecurso(), { wrapper })
 
@@ -170,7 +171,7 @@ describe('useActualizarRecurso', () => {
     })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(invalidar).not.toHaveBeenCalled()
+    expect(invalidar).toHaveBeenCalledWith(invalidaTalleres)
   })
 })
 
@@ -190,7 +191,7 @@ describe('useReemplazarArchivo', () => {
     expect(invalidar).toHaveBeenCalledWith(invalidaTalleres)
   })
 
-  it('si falla, expone el error y no invalida', async () => {
+  it('si falla, expone el error e invalida igual (la caché pudo estar vieja)', async () => {
     vi.mocked(reemplazarArchivo).mockRejectedValue({ status: 413 })
     const { wrapper, invalidar } = crearContexto()
     const { result } = renderHook(() => useReemplazarArchivo(), { wrapper })
@@ -201,7 +202,7 @@ describe('useReemplazarArchivo', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.error).toEqual({ status: 413 })
-    expect(invalidar).not.toHaveBeenCalled()
+    expect(invalidar).toHaveBeenCalledWith(invalidaTalleres)
   })
 })
 
@@ -220,8 +221,8 @@ describe('useEliminarRecurso', () => {
     expect(invalidar).toHaveBeenCalledWith(invalidaTalleres)
   })
 
-  it('si falla, no invalida', async () => {
-    vi.mocked(eliminarRecurso).mockRejectedValue(new Error('rls'))
+  it('si falla, expone el error e invalida igual (la caché pudo estar vieja)', async () => {
+    vi.mocked(eliminarRecurso).mockRejectedValue({ code: 'PGRST116' })
     const { wrapper, invalidar } = crearContexto()
     const { result } = renderHook(() => useEliminarRecurso(), { wrapper })
 
@@ -230,7 +231,7 @@ describe('useEliminarRecurso', () => {
     })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(invalidar).not.toHaveBeenCalled()
+    expect(invalidar).toHaveBeenCalledWith(invalidaTalleres)
   })
 })
 

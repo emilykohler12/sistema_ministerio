@@ -144,7 +144,10 @@ beforeEach(() => {
   vi.mocked(obtenerTalleres).mockResolvedValue([taller()])
   vi.mocked(subirArchivo).mockResolvedValue(undefined)
   vi.mocked(borrarArchivo).mockResolvedValue(undefined)
-  vi.mocked(eliminarFilaRecurso).mockResolvedValue(undefined)
+  // La baja devuelve la ruta que la fila tenía en la base (null si es un enlace).
+  vi.mocked(eliminarFilaRecurso).mockImplementation(
+    async (id) => [guia, video, planilla].find((r) => r.id === id)?.ruta_archivo ?? null,
+  )
   vi.mocked(ordenarRecursos).mockResolvedValue(undefined)
   vi.mocked(insertarRecurso).mockImplementation(async (n) => recurso(50, n.orden, n as Partial<Recurso>))
   vi.mocked(actualizarRecurso).mockImplementation(async (id, c) => recurso(id, 1, c as Partial<Recurso>))
@@ -505,11 +508,11 @@ describe('RecursosPage: reemplazo (criterio 4)', () => {
     expect(orden).toEqual(['subir', 'actualizar', 'borrar'])
     const rutaNueva = vi.mocked(subirArchivo).mock.calls[0][0]
     expect(rutaNueva).toMatch(/^5\/[0-9a-f-]{36}\.docx$/)
-    expect(actualizarRecurso).toHaveBeenCalledWith(1, {
-      ruta_archivo: rutaNueva,
-      tipo: 'DOCX',
-      tamanio_bytes: file.size,
-    })
+    expect(actualizarRecurso).toHaveBeenCalledWith(
+      1,
+      { ruta_archivo: rutaNueva, tipo: 'DOCX', tamanio_bytes: file.size },
+      '5/viejo-1.pdf',
+    )
     expect(borrarArchivo).toHaveBeenCalledWith('5/viejo-1.pdf')
   })
 
@@ -538,7 +541,10 @@ describe('RecursosPage: reemplazo (criterio 4)', () => {
 describe('RecursosPage: eliminación (criterio 5)', () => {
   it('pide confirmación y recién al confirmar borra la fila y después el archivo', async () => {
     const orden: string[] = []
-    vi.mocked(eliminarFilaRecurso).mockImplementation(async () => void orden.push('fila'))
+    vi.mocked(eliminarFilaRecurso).mockImplementation(async () => {
+      orden.push('fila')
+      return guia.ruta_archivo
+    })
     vi.mocked(borrarArchivo).mockImplementation(async () => void orden.push('archivo'))
     renderPagina()
     await screen.findByText('Guía de huerta')
