@@ -68,6 +68,12 @@ Hueco nuevo: **invalidar en `onError` una query de la que depende el padre del c
 `useTallerPublicado` pasa a `null` y la página desmonta el modal con el mensaje. El test del modal aislado no lo ve. Ante cualquier `invalidateQueries` en
 un `onError`, seguí qué pantallas leen esa clave y si desmontan al que muestra el error.
 
+En fix-ruta-recursos (2026-10-16, carril chico) la lógica salió bien, pero el filtro que es el núcleo del fix (`.eq('ruta_archivo', anterior)`
+en `consultas.ts`, `.select('ruta_archivo')` en la baja) no tenía test: todos los tests mockean `consultas` y el e2e usa una pestaña. Patrón:
+**cuando un fix vive en el query builder, pedí un `consultas.test.ts` con `supabase.from` mockeado como cadena** (molde: `descargas/consultas.test.ts`);
+si no, revertir la línea deja todo verde. `codigosDeError` ya incluye `code`; `StorageApiError` también trae `code` (cadenas tipo `EntityTooLarge`),
+no choca con `'413'`/`'415'`. Con `onSettled: invalidar` en `RecursosPage` el aviso no se desmonta (vive en `Pantalla`, el taller sigue).
+
 Datos de la librería, para no reportar falsos positivos:
 - En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF
   y `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema de una edición por shell:

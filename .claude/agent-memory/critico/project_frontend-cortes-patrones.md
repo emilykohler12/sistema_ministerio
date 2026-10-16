@@ -34,6 +34,16 @@ con `throw`, y un render que lee `sessionStorage`. Propuse mutación (escritura)
 copia, así que propuse llevarlo a `shared/lib`. Formularios con campos que se vacían (`setValue(..., undefined)`) terminan en
 `as unknown as Resolver` + un segundo `parse`; el molde es `useForm<In, unknown, Out>` (`EstablecimientoFormPage`).
 
+En el plan de `fix-ruta-recursos` (2026-10-16) se usó concurrencia optimista: `.eq('ruta_archivo', anterior)` + `.single()` →
+PGRST116, que cuenta como rechazo y dispara `compensar`. Es correcta y no hace falta separarla de "RLS filtró" o "fila borrada", porque
+en ningún caso hubo UPDATE. Lo que sí hay que mirar: **el `mensajeDeError*` del dominio lo comparten todas las mutaciones de la página**.
+Un mensaje atado a un código ("…recargamos la lista") aparece también en flujos que no invalidan en error. El molde: `onSettled: invalidar`
+en todo hook que pueda recibir ese código. `codigoDe` a mano iba por la quinta copia; propuse sumar `code` a `codigosDeError` (shared).
+Además, los planes del carril chico a veces citan la 0023 con un criterio de más ("Storage de anon"): contrastarlos con el texto del ADR.
+En la crítica de código (2026-10-16) se aceptó todo. `onSettled` del hook no desmonta `Pantalla` (data sigue definida) ni cierra
+`DialogoRecurso`. Solo atrasa el `onError` de la llamada hasta que termina la recarga. `codigosDeError` ya lee `code`, pero sigue en
+`erroresStorage.ts`: propuse renombrarlo a `shared/lib/errores.ts` y migrar las 4 copias de `.code` cuando se toque cada dominio.
+
 **Why:** la fase B de cada corte copia el molde de la anterior, y estas tres cosas no las detecta el typecheck ni los tests.
 
 **How to apply:** en la crítica de código de cada corte con pantallas del portal o enums nuevos, buscar `isLoading` seguido de
