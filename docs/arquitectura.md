@@ -94,7 +94,8 @@ Pruebas en el navegador (0020): Playwright con Chromium headless (se instala al 
   CHECK de cargo y de coherencia cargo/institución; select solo `es_admin()` y sin grants de escritura para `anon` ni `authenticated`). Trigger `auditar()` solo
   `after update or delete`: el INSERT anónimo no se audita (0022; `auditoria_global` exige los tres eventos con excepciones por evento). RPC `registrar_descarga`
   (security definer, `anon` y `authenticated`): anula los campos que no corresponden al discriminador, exige el taller `PUBLICADO` (`DA003`) y, con `PADRON`, un
-  establecimiento activo de la localidad (`DA004`). Política `talleres_select_anon` de `storage.objects`: anon lee los objetos del bucket `talleres` que tienen fila en `recurso`
+  establecimiento activo de la localidad (`DA004`). Con sesión de admin (`es_admin()`) valida igual y vuelve antes del `insert`: no cuenta y no evalúa los CHECK (el zod del
+  formulario aplica las mismas reglas); `contar_descarga_normativa` tampoco suma para el admin (`<ts>_no_contar_admin.sql`, #25). Política `talleres_select_anon` de `storage.objects`: anon lee los objetos del bucket `talleres` que tienen fila en `recurso`
   de un taller publicado (para firmar los enlaces).
 - `migrations/<ts>_metricas.sql`: índice `registro_descarga_fecha_hora_idx` por `fecha_hora`, la auxiliar `metricas_registros(desde, hasta)` como única fuente del período
   (filtro sargable en hora de Argentina; devuelve `dia` local y no expone `cargo_otro`) y seis RPC de agregación que la reutilizan (`metricas_resumen`, `_por_periodo`, `_por_taller`,
@@ -114,10 +115,10 @@ Pruebas en el navegador (0020): Playwright con Chromium headless (se instala al 
   Recuperación de contraseña y cierre por inactividad (§5.2) pendientes.
 - Descargas: faltan la vinculación de las instituciones "Otra" (pantalla de instituciones sin vincular, que debe agrupar con la misma clave que el aviso del dashboard:
   `(localidad_id, nombre normalizado)`, y el grant de UPDATE), el captcha (Turnstile; obligaría a volver a una Edge Function), el límite de frecuencia y el tope de `expiresIn` (hoy lo elige
-  el cliente y despublicar no revoca los enlaces ya emitidos, 0022), "Descargar todo (.zip)" y no contar las descargas del admin.
+  el cliente y despublicar no revoca los enlaces ya emitidos, 0022), "Descargar todo (.zip)".
 - Recursos: limpieza de archivos huérfanos en Storage
   (hoy solo un `console.warn`; vale también para normativas), subida reanudable (TUS) y barra de progreso.
 - Normativas: `taller_normativa` (C-02) y borrado de etiquetas sin uso. Las descargas de normativas por período exigen una tabla de eventos (hoy el dashboard muestra el contador acumulado).
 - Nuevas pantallas: establecimientos, instituciones sin vincular, historial; luego usuarios.
-- Dashboard: validar los indicadores con el Ministerio (C-11), no contar las descargas del administrador, las descargas de normativas por período (hoy solo el contador
+- Dashboard: validar los indicadores con el Ministerio (C-11), las descargas de normativas por período (hoy solo el contador
   acumulado) y el enlace del aviso "sin vincular" cuando exista la pantalla de instituciones sin vincular.

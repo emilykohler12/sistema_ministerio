@@ -68,6 +68,14 @@ En la crítica de la spec `descargas` (2026-10-10): **un CHECK con discriminador
 que no corresponden según el tipo (`case when tipo = ... then ... end`); eso resuelve también el estado residual de react-hook-form. Los
 argumentos con `default null` van al final de la firma.
 
+En la crítica del plan `no-contar-descargas-admin` (2026-10-16, `if es_admin() then return` en las RPC definer de anon):
+- **`es_admin()` dentro de un definer funciona:** `auth.jwt()` lee el GUC `request.jwt.claims`, que no depende de `current_user`. No reabrir.
+- **Un plan que cambia el comportamiento de una RPC existente** suele olvidar que hay asserts que fijan el comportamiento viejo
+  (`normativas.test.sql` esperaba el contador "sumó 2 (anon y admin)") y `lives_ok` que no distinguen la regla nueva
+  ("sin marca registra" sin contar la fila). Hacer grep de la RPC en `supabase/tests/` y pedir que el rojo salga de editarlos.
+- **Un `return` temprano antes del `insert` saltea los CHECK** (23514): "las validaciones se mantienen" vale solo para los `raise`
+  explícitos. Si se pide paridad, la única salida es insertar y después borrar, lo que ensucia la auditoría.
+
 **Why:** son fallas silenciosas o errores en el caso feliz que ni el typecheck ni el pgTAP básico detectan.
 
 **How to apply:** en cada spec con RPC, trigger de regla o tabla puente, pedir que el algoritmo esté escrito paso a paso y que

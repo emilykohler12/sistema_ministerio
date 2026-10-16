@@ -25,7 +25,8 @@
 --
 --   public.contar_descarga_normativa(p_id int) returns void
 --   - security definer, search_path = '', sin EXECUTE para public, con EXECUTE para anon y authenticated.
---   - Suma 1 a normativa.descargas sin auditar ni cambiar updated_at. Con un id inexistente no hace nada ni falla.
+--   - Suma 1 a normativa.descargas sin auditar ni cambiar updated_at, salvo con sesion de admin (es_admin()): ahi no suma y
+--     tampoco falla (#25). Con un id inexistente no hace nada ni falla.
 --
 -- Notas de diseno del test:
 -- - UPDATE y DELETE sin permiso pueden dar 42501 o afectar 0 filas segun el grant: se ejecutan dentro de un bloque
@@ -39,7 +40,7 @@
 -- - storage.objects no se borra por SQL salvo que storage.allow_delete_query = 'true' (ver recursos.test.sql).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(111);
+select plan(112);
 
 -- Soporte del test (como postgres) ---------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email)
@@ -365,6 +366,9 @@ select throws_ok(
   $$insert into storage.objects (bucket_id, name, metadata)
     values ('normativas', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb3.pdf', '{"size": 10}')$$,
   '42501', null, 'sin marca: INSERT en storage.objects del bucket normativas da 42501');
+select lives_ok(
+  $$select public.contar_descarga_normativa(current_setting('test.contador')::int)$$,
+  'sin marca: contar_descarga_normativa funciona (authenticated sin la marca de admin si cuenta)');
 reset role;
 select results_eq(
   $$select count(*)::int from public.normativa where titulo = 'hack'$$,
@@ -396,7 +400,7 @@ select lives_ok(
   'admin: UPDATE sin cambios funciona');
 select lives_ok(
   $$select public.contar_descarga_normativa(current_setting('test.contador')::int)$$,
-  'admin: contar_descarga_normativa funciona');
+  'admin: contar_descarga_normativa no falla, pero no cuenta');
 
 -- admin: guardar_normativa, alta ----------------------------------------------------------------
 -- Comparte la etiqueta con un taller: guardar_taller y guardar_normativa resuelven con resolver_etiquetas.
@@ -631,11 +635,11 @@ select results_eq(
 select results_eq(
   $$select count(*)::int from public.registro_operacion
      where tabla = 'normativa' and operacion = 'UPDATE' and registro_id = current_setting('test.contador')$$,
-  array[0], 'el contador (anon y admin) no deja ninguna fila UPDATE en registro_operacion');
+  array[0], 'el contador no deja ninguna fila UPDATE en registro_operacion');
 select results_eq(
   $$select descargas, updated_at = '2020-01-01'::timestamptz from public.normativa
      where id = current_setting('test.contador')::int$$,
-  $$values (2, true)$$, 'el contador sumo 2 (anon y admin) sin cambiar updated_at');
+  $$values (2, true)$$, 'el contador sumo 2 (anon y authenticated sin marca; el admin no cuenta) sin cambiar updated_at');
 select results_eq(
   $$select count(*)::int from public.registro_operacion
      where tabla = 'normativa' and operacion = 'UPDATE'

@@ -25,7 +25,8 @@
 --        PADRON; recorta (btrim) y convierte lo vacio en null. Despues deja que los CHECK validen (un 'Otro' en blanco da 23514).
 --     2. El taller debe existir y estar PUBLICADO (comprobacion explicita, la funcion saltea la RLS): si no, DA003.
 --     3. Con PADRON, el establecimiento debe existir, estar activo y ser de p_localidad_id: si no, DA004.
---     4. Inserta.
+--     4. Con sesion de admin (es_admin()) vuelve sin insertar, despues de DA003 y DA004 (#25: los CHECK no se evaluan para el
+--        admin). En cualquier otro caso inserta.
 --
 --   Politica de storage.objects: talleres_select_anon, for select to anon,
 --     using (bucket_id = 'talleres' and exists (select 1 from public.recurso r where r.ruta_archivo = objects.name)).
@@ -37,7 +38,7 @@
 -- - Las filas se identifican por marcas propias (localidad o cargo) para no depender del orden.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(93);
+select plan(98);
 
 -- Soporte del test (como postgres) ---------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email)
@@ -525,6 +526,30 @@ select throws_ok(
 select results_eq(
   $$select count(*)::int from storage.objects where bucket_id = 'talleres'$$,
   array[4], 'admin: ve los cuatro objetos del bucket talleres (publicado, borrador, inactivo y huerfano)');
+
+-- admin: registrar_descarga no cuenta (#25) ------------------------------------------------------------
+-- Con sesion de admin vuelve antes del insert: valida DA003 y DA004, pero no evalua los CHECK de la tabla (el zod del
+-- formulario aplica las mismas reglas). Se distingue por la localidad: 7 la registro 'sin marca' (authenticated normal) y
+-- 8 la usa solo el admin.
+select results_eq(
+  $$select count(*)::int from public.registro_descarga where localidad_id = 7$$,
+  array[1], 'admin: authenticated sin marca si registro su descarga (localidad 7)');
+select lives_ok(
+  format($$select public.registrar_descarga(p_taller_id => %s, p_cargo => 'Docente', p_localidad_id => 8::smallint,
+             p_institucion_tipo => 'SIN_INSTITUCION')$$, current_setting('test.t_pub')),
+  'admin: registrar_descarga con datos validos no falla');
+select results_eq(
+  $$select count(*)::int from public.registro_descarga where localidad_id = 8$$,
+  array[0], 'admin: registrar_descarga no inserta ninguna fila');
+select throws_ok(
+  format($$select public.registrar_descarga(p_taller_id => %s, p_cargo => 'Docente', p_localidad_id => 8::smallint,
+             p_institucion_tipo => 'SIN_INSTITUCION')$$, current_setting('test.t_bor')),
+  'DA003', null, 'admin: un taller en borrador sigue dando DA003');
+select throws_ok(
+  format($$select public.registrar_descarga(p_taller_id => %s, p_cargo => 'Docente', p_localidad_id => 8::smallint,
+             p_institucion_tipo => 'PADRON', p_establecimiento_id => %s)$$,
+         current_setting('test.t_pub'), current_setting('test.est_c')),
+  'DA004', null, 'admin: un establecimiento de otra localidad sigue dando DA004');
 reset role;
 
 select * from finish();
