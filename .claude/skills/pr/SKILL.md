@@ -14,10 +14,13 @@ allowed-tools: Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git add 
 1. Si la rama es `main`, detenete y pedí crear una rama `feat/`, `fix/` o `chore/`.
 2. Corré `npm run lint`, `npm run typecheck` y `npm test`. Si algo falla, no sigas.
 3. Commit con Conventional Commits en español (`feat: ...`, `fix: ...`, `chore: ...`).
-4. Antes de pushear, mostrale al usuario el resumen y pedí confirmación.
-5. Push y PR con `gh pr create`. Cuerpo del PR:
+4. Buscá el issue de la tarea (`gh issue list --assignee @me`). Si no hay uno claro, preguntá cuál es o si no tiene.
+5. Antes de pushear, mostrale al usuario el resumen y pedí confirmación.
+6. Push y PR con `gh pr create --body-file <archivo>`. Cuerpo del PR:
 
 ```markdown
+Closes #<n>
+
 ## Qué cambia
 ## Spec
 docs/specs/<feature>/spec.md (si aplica)

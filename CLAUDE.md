@@ -54,3 +54,13 @@ Vite · React 19 · TypeScript · Tailwind 4 · React Router 7 · React Query ·
 Carriles consulta / directo / chico / feature (definidos en el output style). Arquitectura de agentes: `docs/agentes/`.
 Autorizamos al agente principal a delegar en los subagentes del proyecto (`.claude/agents/`) según el carril,
 sin pedir permiso cada vez: el flujo de carriles es nuestro pedido explícito de usarlos.
+
+## Trabajo en paralelo (decisión 0026)
+- Somos dos personas con sesiones separadas: lo que una le dice a su agente, el de la otra no lo sabe.
+  El backlog y quién hace qué viven en los **issues de GitHub**, no en la conversación.
+- Antes de proponer qué hacer o de empezar una tarea, usá `/siguiente`. No sugieras un issue asignado a otra persona.
+- Una tarea empieza asignándose el issue; la rama es `feat/<slug>` sin el número (el hook de contexto busca
+  `docs/specs/<slug>/`) y el PR lleva `Closes #<n>`.
+- Trabajo nuevo que surja (brechas, bugs, hallazgos bajos del crítico) se propone como issue, no queda solo en el chat.
+- Puntos de choque entre ramas: número de ADR (se fija al mergear, ver `/decision`), migraciones (tras mergear la otra
+  rama: rebase y `npm run db:reset`), `database.ts` (se regenera con `npm run db:types`, nunca se resuelve a mano).
