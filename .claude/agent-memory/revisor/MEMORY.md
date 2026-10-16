@@ -2,7 +2,7 @@
 
 Errores que se repiten en el proyecto. La mantiene el subagente; se revisa en los PRs.
 
-- [Privilegios y tests en migraciones Supabase](supabase-privilegios-y-tests.md) — default privileges, service_role con EXECUTE (x3), firma con returns table, WHEN que salta auditoría, asserts vacuos; no ensuciar la base
+- [Privilegios y tests en migraciones Supabase](supabase-privilegios-y-tests.md) — default privileges, service_role con EXECUTE (x3), firma con returns table, WHEN que salta auditoría, asserts vacuos, admin vs mismo sub sin marca, CONTRATO viejo; no ensuciar la base
 - [supabase-js en el frontend](supabase-js-frontend.md) — trampas repetidas ya en rules/react.md y rules/datos.md (verificar y citar); técnicas de revisión, idDeRuta fuera de int4, fix en el query builder sin consultas.test, datos de la librería contra falsos positivos
 - [Formularios RHF y a11y](formularios-rhf-a11y.md) — setError sin aria-describedby, error de par que se limpia a medias, probar RHF en scratchpad
 - [Scripts de carga por CSV](scripts-carga-csv.md) — comilla sin cerrar, cp1252 como UTF-8, `obj[clave]` con prototipo, resumen planificado

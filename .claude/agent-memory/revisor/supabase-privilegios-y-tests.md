@@ -65,6 +65,12 @@ que se decida la redacción. Novedades:
 - Si el período se valida contra "hoy" en el cliente y también en la base, quedan dos relojes. Un cliente adelantado manda `hasta` = mañana → 22023.
 - Una SRF plpgsql llamada con `perform ... limit 1` se materializa entera, así que sí propaga los errores de la auxiliar. No es un falso positivo.
 
+En no-contar-descargas-admin (#25, 2026-10-16, `create or replace` de dos RPC definer con `if es_admin() then return`) la migración salió bien. Se repiten:
+- Cuando una RPC distingue al admin, el test tiene que comparar el **mismo `sub` y rol con y sin `app_metadata.admin`**. Si solo compara anon con admin,
+  un filtro por `auth.uid()` o por rol da verde. En descargas se hizo bien; en normativas faltó el caso "sin marca", que llama y suma.
+- Los bloques CONTRATO de la cabecera de los pgTAP no se actualizan cuando una migración posterior cambia la RPC.
+- Un `create or replace` con la misma firma conserva los grants, pero hay que repetir `security definer` y `set search_path`. Compará el cuerpo con el original.
+
 **Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
 creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
 REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay
