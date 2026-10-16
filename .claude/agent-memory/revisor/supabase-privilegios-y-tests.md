@@ -57,6 +57,14 @@ catálogos sembrados por migración donde el pgTAP solo fija la cantidad y algun
 pedí un `results_eq` con la lista completa. Postgres corta antes que la barrera que el test esperaba: `varchar(n)` da `22001` antes que el CHECK y
 `generated always` da `428C9` antes que el grant por columna.
 
+En dashboard (fase A, 2026-10-16, RPC `metricas_*` invoker) la base salió bien. Se repitió por tercera vez `service_role` con EXECUTE (solo
+`revoke ... from public, anon`), con una spec que decía "solo authenticated". No es explotable porque es_admin da 42501: marcalo como menor y pedí
+que se decida la redacción. Novedades:
+- Con `returns table`, `proargnames` incluye las columnas de salida. Pasar el test de firma a `pg_get_function_identity_arguments` deja de fijar la
+  salida, y una columna **extra** pasa verde. Pedí `pg_get_function_result(oid)`.
+- Si el período se valida contra "hoy" en el cliente y también en la base, quedan dos relojes. Un cliente adelantado manda `hasta` = mañana → 22023.
+- Una SRF plpgsql llamada con `perform ... limit 1` se materializa entera, así que sí propaga los errores de la auxiliar. No es un falso positivo.
+
 **Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
 creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
 REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay

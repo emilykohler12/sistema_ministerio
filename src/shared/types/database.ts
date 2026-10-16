@@ -334,6 +334,41 @@ isOneToOne: false
 "inmutable_unaccent":
 { Args: { "": string }; Returns: string
                            },
+"metricas_por_cargo":
+{ Args: { "p_desde": string,"p_hasta": string }; Returns: {
+              "cargo": string,"descargas": number
+            }[]
+                           },
+"metricas_por_localidad":
+{ Args: { "p_desde": string,"p_hasta": string }; Returns: {
+              "alcanzados": number,"descargas": number,"localidad_id": number,"nombre": string,"padron": number
+            }[]
+                           },
+"metricas_por_nivel":
+{ Args: { "p_desde": string,"p_hasta": string }; Returns: {
+              "descargas": number,"nivel_id": number,"nombre": string
+            }[]
+                           },
+"metricas_por_periodo":
+{ Args: { "p_desde": string,"p_hasta": string,"p_por_mes": boolean }; Returns: {
+              "descargas": number,"inicio": string
+            }[]
+                           },
+"metricas_por_taller":
+{ Args: { "p_desde": string,"p_hasta": string }; Returns: {
+              "descargas": number,"estado": Database["public"]['Enums']["estado_taller"],"taller_id": number,"titulo": string
+            }[]
+                           },
+"metricas_registros":
+{ Args: { "p_desde": string,"p_hasta": string }; Returns: {
+              "cargo": string,"dia": string,"establecimiento_id": number,"fecha_hora": string,"id": number,"institucion_otra": string,"institucion_tipo": Database["public"]['Enums']["tipo_institucion"],"localidad_id": number,"taller_id": number
+            }[]
+                           },
+"metricas_resumen":
+{ Args: { "p_desde": string,"p_hasta": string }; Returns: {
+              "descargas": number,"establecimientos_alcanzados": number,"sin_vincular": number,"talleres_publicados": number
+            }[]
+                           },
 "ordenar_recursos":
 { Args: { "p_ids": (number)[],"p_taller_id": number }; Returns: undefined
                            },
