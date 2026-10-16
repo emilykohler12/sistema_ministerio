@@ -62,7 +62,8 @@ Si no estás de acuerdo con el carril, decíselo.
 
 **Chico** (un componente, un bug acotado)
 → Plan breve → lo aprobás → implementa → revisa → te muestra el resultado.
-Si el cambio toca una pantalla, después del revisor pasa el `qa`, que lo prueba en el navegador.
+Después del revisor, si el cambio toca Storage, permisos de visitantes o rutas, pasa el `qa`, que lo prueba en el navegador.
+Si solo toca una pantalla, el ingeniero corre los e2e existentes (`npm run test:e2e`) como regresión.
 
 **Feature** (algo nuevo e importante)
 1. `/spec <nombre>`: el ingeniero te entrevista y escribe `docs/specs/<nombre>/spec.md`.

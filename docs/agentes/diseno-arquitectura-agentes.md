@@ -39,6 +39,8 @@ Herramienta: Claude Code · Todo vive dentro del repositorio y se comparte por g
 - Solo contra el Supabase local; `npm run db:reset` si necesita base limpia y siempre al terminar (pgTAP asume tablas vacías). Nunca la nube.
 - Corre después del crítico y el revisor, nunca en paralelo: comparten la base local con el `test:db` del revisor.
 - No modifica el código de la app: reporta bugs con pasos para reproducir en `docs/specs/<feature>/qa.md`.
+- Todo lo que está mal en lo que ve un usuario es bug (al menos menor), aunque la spec no lo pida; las observaciones son huecos de cobertura, sugerencias y dudas (0023).
+- En el carril chico corre solo si el cambio toca Storage, permisos de anon (RLS o RPC) o rutas; si solo toca una pantalla, el ingeniero corre `npm run test:e2e` como regresión (0023).
 
 ### Reglas del crítico
 
@@ -76,7 +78,7 @@ VOS ◄──► INGENIERO
 |---|---|---|
 | **Directo** | Typo, texto, estilo, una línea | El ingeniero lo hace y corre los checks |
 | **Consulta** | Preguntas, análisis, revisar configuración | El ingeniero responde sin modificar archivos |
-| **Chico** | Un endpoint, un componente, un bug acotado | Plan breve en `docs/specs/<tarea>/plan.md` → implementador (test primero) → revisor → `qa` si toca una pantalla |
+| **Chico** | Un endpoint, un componente, un bug acotado | Plan breve en `docs/specs/<tarea>/plan.md` → implementador (test primero) → revisor → `qa` si toca Storage, permisos de anon o rutas; si solo toca una pantalla, `test:e2e` como regresión |
 | **Feature** | Panel de talleres, sistema de descargas | Flujo completo con spec y crítico |
 
 ---

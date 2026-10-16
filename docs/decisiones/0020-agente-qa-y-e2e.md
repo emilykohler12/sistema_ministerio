@@ -1,6 +1,6 @@
 # 0020 · Agente qa y pruebas e2e con Playwright, escritas después de implementar
 
-- **Estado:** aceptada. Complementa a 0002 (que pasa a tener seis subagentes), no la reemplaza
+- **Estado:** aceptada. Complementa a 0002 (que pasa a tener seis subagentes), no la reemplaza. Modificada por 0023 (cuándo corre en el carril chico y cómo clasifica)
 - **Fecha:** 2026-10
 
 ## Contexto

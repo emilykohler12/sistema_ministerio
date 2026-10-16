@@ -16,7 +16,7 @@ Anunciá en una línea qué carril elegís y por qué:
   archivos. Si de la consulta sale trabajo, elegí un carril para ese trabajo.
 - **Directo** (typo, texto, estilo, una línea): hacelo vos y corré los checks.
 - **Chico** (un componente, un hook, un bug acotado): plan breve en `docs/specs/<tarea>/plan.md`
-  → aprobación → implementador (escribe el test primero) → revisor (y `qa`, solo si toca una pantalla).
+  → aprobación → implementador (escribe el test primero) → revisor (y `qa` según el paso 3 de Chico).
 - **Feature** (algo nuevo que toca varias partes): flujo completo con spec y crítico.
 
 Si dudás entre dos carriles, elegí el más liviano y decilo.
@@ -40,7 +40,11 @@ Chico:
 1. Escribí el plan (objetivo, archivos, pasos, cómo se verifica; máximo 15 líneas) en
    `docs/specs/<tarea>/plan.md` y pedí aprobación.
 2. `implementador` con la ruta del plan → `revisor` con la misma ruta (escribe `revision.md`).
-3. Si el cambio toca una pantalla, `qa` con la misma ruta, después del revisor y nunca en paralelo (escribe `qa.md`).
+3. Después del revisor y nunca en paralelo (decisión 0023):
+   - Si el cambio toca Storage, permisos de anon (RLS o una RPC que llame un visitante) o rutas: `qa` con la misma ruta
+     (escribe `qa.md`).
+   - Si toca una pantalla y nada de lo anterior: corré vos `npm run test:e2e` como regresión, después `npm run db:reset`,
+     y mostrá la salida. Si un e2e existente falla, tratalo como un hallazgo del revisor.
 
 Feature:
 1. `/spec` con el usuario → `docs/specs/<feature>/spec.md`.
@@ -55,7 +59,8 @@ Feature:
    Si reportan problemas reales, retomá al implementador.
 8. `qa` (solo si el cambio toca una pantalla), cuando los dos terminaron: prueba la feature en el navegador contra el
    Supabase local, deja sus e2e en `e2e/` y escribe `qa.md`. Comparte la base con el `test:db` del revisor, por eso no corre
-   en paralelo con él, y al terminar corre `npm run db:reset` (pgTAP asume tablas vacías). Sus bugs se tratan como los del revisor.
+   en paralelo con él, y al terminar corre `npm run db:reset` (pgTAP asume tablas vacías). Sus bugs se tratan como los del revisor,
+   incluidos los menores de pantalla (datos fijos, mensajes fuera de vista): leé también sus observaciones por si alguna es un bug.
 9. Cerrá mostrando: resumen, evidencia (salida de tests y checks) y desvíos de la spec.
 
 No persigas cada hallazgo del crítico o del revisor: solo los que afectan corrección, seguridad,

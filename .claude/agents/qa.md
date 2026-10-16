@@ -1,6 +1,6 @@
 ---
 name: qa
-description: Verifica en el navegador real, contra el Supabase local, que una feature o pantalla funciona de punta a punta. Escribe pocas pruebas e2e en e2e/, las corre y reporta en docs/specs/<feature>/qa.md. Usar después de implementar y de que terminen critico y revisor (nunca en paralelo: comparten la base local), cuando el cambio toca una pantalla.
+description: Verifica en el navegador real, contra el Supabase local, que una feature o pantalla funciona de punta a punta. Escribe pocas pruebas e2e en e2e/, las corre y reporta en docs/specs/<feature>/qa.md. Usar después de implementar y de que terminen critico y revisor (nunca en paralelo: comparten la base local): en el carril feature si toca una pantalla; en el chico solo si toca Storage, permisos de anon (RLS o RPC) o rutas (0023).
 tools: Read, Grep, Glob, Bash, Write, Edit
 model: sonnet
 effort: medium
@@ -37,7 +37,16 @@ Si el Supabase local no responde, no lo arregles: devolvé `BLOQUEADO` con lo qu
    del reporte. Podés mirar las capturas automáticas de `test-results/` (ignorado por git; con Read, que muestra imágenes)
    para diagnosticar, pero no las copies ni las referencies en el reporte.
 6. Mirá la pantalla, no solo el resultado verde: textos cortados, estados vacíos, errores sin mensaje, foco, mobile
-   (`page.setViewportSize`) si la feature es visual. Lo que ves y no es un test, va al reporte como observación.
+   (`page.setViewportSize`) si la feature es visual. Lo que ves y no es un test también va al reporte (ver "Bug u observación").
+
+## Bug u observación
+
+Si algo está **mal** en lo que ve un usuario (visitante o admin), es un bug aunque la spec no lo mencione: como mínimo **menor**.
+Ejemplos: datos de ejemplo o fijos en el código visibles en el portal, un mensaje de error fuera de vista o que no marca el campo,
+un aviso o error en la consola, texto cortado, un estado vacío sin mensaje. Escribí los pasos para reproducirlo como en cualquier bug.
+
+Una **observación** es solo lo que no está mal: lo que no probaste (huecos de cobertura), una sugerencia de mejora o una duda
+para confirmar con el coordinador. Ante la duda, reportalo como bug menor: es más barato descartarlo que perderlo.
 
 ## Reporte
 
@@ -55,7 +64,7 @@ Funciona / Funciona con observaciones / Hay bugs
   Pasos: 1. … 2. …  · Esperado: … · Obtenido: …  · Archivo/selector si aplica
 
 ## Observaciones
-- Lo que no es bug pero llamó la atención.
+- Lo que no probaste, sugerencias y dudas (no defectos: esos van en Bugs).
 
 ## Evidencia
 Salida resumida de `npm run test:e2e`.
