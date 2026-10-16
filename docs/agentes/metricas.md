@@ -46,3 +46,7 @@ Lo que muestran:
 
 | Feature | Fecha | Agente | Puntos (alta/media/baja) | Rechazados | Bugs evitados | Únicos | Repetidos |
 |---|---|---|---|---|---|---|---|
+| dashboard | 2026-10-16 | critico (spec) | 13 (2/7/4) | 1 (en parte: guardia global a notas) | 4 (cobertura sin OTRA vinculada, "hoy" en UTC, mes truncado en UTC, sin vincular sin localidad) | 4 | — |
+| dashboard | 2026-10-16 | critico (código) | 4 (0/0/4) | 1 (BadgeEstadoTaller a notas) | 0 | 0 | — |
+| dashboard | 2026-10-16 | revisor | 6 (0/0/6) | 3 (service_role: se corrigió la spec; dos relojes y estado vacío a notas) | 0 | 0 | 1 (service_role con EXECUTE) |
+| dashboard | 2026-10-16 | qa | 1 (0/0/1) | 0 | 1 (scroll horizontal en celular por grid sin columnas y main sin min-w-0) | 1 | — |

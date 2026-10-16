@@ -11,4 +11,5 @@ Patrones recurrentes del proyecto. La mantiene el subagente; se revisa en los PR
 - [Patrones del frontend en cortes](project_frontend-cortes-patrones.md): la mayoría ya en rules/react.md y rules/datos.md (citar, no repetir); escaleras de ruta, mensaje por código sin onSettled, PGRST116 optimista, codigosDeError mal ubicado
 - [Trampas de Supabase Storage](project_supabase-storage-trampas.md): subida, contentType ignorado, trigger BEFORE vs RLS, remove() mudo, download=attachment, guardia de escritura por es_admin
 - [Scripts de carga (Node + service_role)](project_scripts-de-carga.md): tsconfig, imports .ts, trim vs btrim, --confirmar, 23505, UTF-8 fatal, paginación por max_rows, guardia local copiada
+- [Métricas y período (dashboard)](project_metricas-periodo-trampas.md): filtro en una auxiliar, TZ en date_trunc y en "hoy", cobertura vs vinculación, sin vincular por localidad; perform+limit en SRF, test anon/42501, placeholder
 - [Archivo de crítica fijo](feedback_archivo-de-critica.md): solo puedo escribir critica.md; si piden otro nombre, agrego una sección ahí y aviso

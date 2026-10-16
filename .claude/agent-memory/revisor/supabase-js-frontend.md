@@ -26,7 +26,11 @@ y, si una regla se incumple, citala ("incumple rules/datos.md: …"). Si aparece
   2026-10-16; ya está en `rules/datos.md`). `codigosDeError` incluye `code`; `StorageApiError` trae `code` tipo `EntityTooLarge`, que no
   choca con `'413'`/`'415'`. Con `onSettled: invalidar` en `RecursosPage` el aviso no se desmonta (vive en `Pantalla`).
 - Un criterio de la spec reescrito durante la implementación que no figura en los desvíos de `notas.md`: `git diff main -- spec.md`.
-- Con entregas en fases, `docs/arquitectura.md` y el "Estado actual" de `CLAUDE.md` quedan desactualizados en `main`.
+- Con entregas en fases, `docs/arquitectura.md` y el "Estado actual" de `CLAUDE.md` quedan desactualizados en `main`. Se repitió en dashboard
+  (2026-10-16): faltó la migración en "Base de datos" de arquitectura y no existía `notas.md`, aunque la spec mandaba cosas ahí. Revisá siempre las
+  dos cosas.
+- Un desvío de la spec que es un debounce o un `replace` de URL: el debounce puede quedar cubierto de forma indirecta (un test que falla con la
+  consulta intermedia), pero el `replace`/`push` casi nunca tiene test. Pedí `useNavigationType()` en el componente sonda de la URL.
 - El script de la API en el scratchpad (24 comprobaciones de RLS por REST) sirve de molde: `.single()` para PATCH bloqueados
   (406/PGRST116) y 23505/23514/22001/23503 por REST.
 
