@@ -20,7 +20,9 @@ Todo corre dentro del Dev Container (decisión 0003). En tu máquina solo hacen 
    - `.env.local`: `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` del Supabase local (los muestra `npm run db:start`).
    - `.claude/settings.local.json`: preferencias personales de Claude Code.
 7. Una vez: `/run-skill-generator` para que `/run` y `/verify` sepan levantar el DAM.
-8. Verificar que todo cargó:
+8. Una vez: `gh auth login` en la terminal del contenedor (GitHub.com, HTTPS, navegador). Sin esto, `/siguiente` y `/pr`
+   no ven los issues. Las dos tienen que ser colaboradoras del repo para asignarse issues.
+9. Verificar que todo cargó:
    - `/context` → aparece `CLAUDE.md`.
    - `/output-style` → está activo **Ingeniero en Sistemas**.
    - `@` en el prompt → aparecen los 6 agentes del proyecto.
@@ -29,7 +31,7 @@ Todo corre dentro del Dev Container (decisión 0003). En tu máquina solo hacen 
    - `npm test` en la terminal → pasan los tests.
    - `npm run test:e2e` (con el Supabase local levantado, `npm run db:start`) → pasan las pruebas de navegador.
      Chromium se instala solo al crear el contenedor; si falta: `npx playwright install --with-deps chromium`.
-9. Opcional: agregar en tu `~/.claude/settings.json` un hook de notificación para que te avise cuando Claude necesita respuesta.
+10. Opcional: agregar en tu `~/.claude/settings.json` un hook de notificación para que te avise cuando Claude necesita respuesta.
 
 Si cambia `.devcontainer/` o `package.json`: *Dev Containers: Rebuild Container*.
 
@@ -86,6 +88,7 @@ Si solo toca una pantalla, el ingeniero corre los e2e existentes (`npm run test:
 
 | Comando | Para qué |
 |---|---|
+| `/siguiente` | Ver el backlog, qué tiene tomado cada una y qué conviene hacer ahora |
 | `/spec <feature>` | Empezar una feature con entrevista y spec |
 | `/criticar <ruta>` | Pedir opinión crítica sobre una spec, un archivo o una idea |
 | `/decision <tema>` | Registrar una decisión en `docs/decisiones/` |
@@ -112,8 +115,27 @@ Si solo toca una pantalla, el ingeniero corre los e2e existentes (`npm run test:
 
 ## 5. Coordinación entre los dos
 
-- Cada uno trabaja en su rama: `feat/<feature>` o `fix/<bug>`.
-- No trabajen la misma feature a la vez sin avisarse.
+Cada una tiene su propio agente y no comparten memoria: el backlog vive en los **issues de GitHub** (0026).
+
+1. **Elegir:** `/siguiente`. Muestra lo libre y lo tomado, y recomienda algo que no choque con lo de la otra.
+2. **Tomar:** asignarse el issue antes de crear la rama. Un issue asignado no se toca sin hablarlo.
+3. **Trabajar:** rama `feat/<slug>` o `fix/<slug>` sin el número de issue (el slug es la carpeta de `docs/specs/`).
+4. **Cerrar:** `/pr` agrega `Closes #<n>`; al mergear, el issue se cierra solo.
+5. **Trabajo nuevo** (bugs, brechas, hallazgos bajos del crítico): pedile al agente que lo cargue como issue.
+
+Etiquetas: `carril:chico|feature`, `area:<dominio>` (dos issues con la misma área suelen chocar),
+`esperando-ministerio` (bloqueado por una consulta C-xx), `necesita-decision` (empieza con `/decision`) y `posterior`.
+
+Puntos de choque aunque trabajen en dominios distintos:
+
+| Archivo | Qué hacer |
+|---|---|
+| `docs/decisiones/00XX` | `/decision` toma el número mirando `origin/main`; si choca al mergear, renumera el segundo |
+| `supabase/migrations/` | Tras mergear la rama de la otra: `git rebase main` y `npm run db:reset` antes de seguir |
+| `src/shared/types/database.ts` | No se resuelve a mano: tras el rebase, `npm run db:types` |
+| `docs/arquitectura.md`, `docs/agentes/metricas.md` | Conflictos triviales: `git pull` antes de cerrar y conservar las dos partes |
+
+Además:
 - Toda decisión de diseño importante va a `docs/decisiones/` con `/decision`.
 - Si cambian un agente, skill, regla o hook: **PR aparte** y que lo revise el otro.
 

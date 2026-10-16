@@ -109,6 +109,8 @@ Pruebas en el navegador (0020): Playwright con Chromium headless (se instala al 
 
 ## Brechas entre el código y la definición v2
 
+Describen el sistema; el trabajo pendiente y quién lo tiene se siguen en los issues de GitHub (0026, `/siguiente`).
+
 - Integrar Supabase: la base transversal, el cliente (`src/shared/lib/supabase.ts`, variables `VITE_SUPABASE_URL` y
   `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env.local`) y el login real están listos; falta la carga real del padrón con la muestra (C-08: el script ya existe, ver Entorno; faltan sus columnas, las equivalencias de localidad y correrlo contra la nube), el bucket del logo.
   Recuperación de contraseña y cierre por inactividad (§5.2) pendientes.
