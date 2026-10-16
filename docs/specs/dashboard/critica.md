@@ -169,3 +169,85 @@ auxiliar que usen las 6 RPC, y no copiado seis veces.
 | 11 | **Acepto** | La página resuelve primero si el período es inválido, y el hook usa `placeholderData: keepPreviousData`. |
 | 12 | **Acepto** | El total de normativas sale de `lista.length`. Cargo: `group by` en SQL y se muestran solo los cargos con descargas, sin mudar `CARGOS` (no se agranda el alcance). Nivel con `left join` a `nivel_educativo`. |
 | 13 | **Acepto** | `desde >= 2020-01-01` y `hasta <= hoy`, en `periodo.ts` y en la auxiliar (`22023`). |
+
+## Crítica del código
+
+### Veredicto
+Hay mejoras, todas menores (no hay altas ni medias). El diseño sigue la spec y la crítica respondida: el período está en un
+solo lugar, las RPC devuelven solo conteos y los cálculos son puros y están testeados.
+
+Si solo se cambia una cosa: que los datos del período anterior se vean como "actualizando" mientras llegan los nuevos
+(`isPlaceholderData`).
+
+### Puntos
+
+1. **Datos del período anterior sin ninguna señal** (baja). Con `keepPreviousData`, al pasar de "Últimos 30 días" a "Año en
+   curso" el toggle ya marca el período nuevo, pero los KPIs y las tablas siguen mostrando los números de los 30 días hasta que
+   terminan las 7 consultas. El test de `DashboardPage` (línea 204) lo confirma: `Descargas = 12` queda a la vista con "Año en
+   curso" marcado. Con la red lenta, el admin puede leer o capturar números que corresponden a otro período.
+   - **Propuesta:** `useMetricas` ya devuelve `isPlaceholderData`. Usarlo en el contenedor de `ContenidoMetricas`, con
+     `aria-busy={isPlaceholderData}` y una clase `opacity-60` (o un texto "Actualizando…"). Sumar esa aserción al test existente.
+   - **Qué se gana:** se mantiene el "sin parpadeo" del punto 11 y además ningún número se ve atribuido al período equivocado.
+     Son una línea y una aserción.
+
+2. **`etiquetaDe` duplica `formatFechaCorta` de `shared/lib/date.ts`** (baja). En `SerieDescargas`, la rama por día es
+   exactamente `formatFechaCorta`: separa la fecha, arma `new Date(a, m-1, d)` y llama a `toLocaleDateString('es-AR')`. La rama
+   por mes repite el mismo armado.
+   - **Propuesta:** usar `formatFechaCorta(p.inicio)` para el día y sumar `formatMes(fechaIso)` (mes largo y año) en
+     `shared/lib/date.ts`, junto a las otras.
+   - **Qué se gana:** un solo lugar donde se interpreta `AAAA-MM-DD` como fecha local. Si algún día cambia el criterio (por
+     ejemplo, a `timeZone` explícita), se toca una función y no dos.
+
+3. **El mapa estado → variante del `Badge` está copiado de `TalleresListPage`** (baja). `VARIANTE_ESTADO` está idéntico en
+   `TablaRanking` y en `pages/admin/talleres/TalleresListPage.tsx`. La etiqueta, en cambio, llega por la prop `etiquetasEstado`
+   para no importar de `talleres`. El resultado es que la mitad del badge viaja por prop y la otra mitad se copia.
+   - **Propuesta:** un `BadgeEstadoTaller({ estado })` en `features/talleres/components/` (etiqueta + variante), que use
+     `TalleresListPage`. `TablaRanking` recibe `renderEstado: (estado) => ReactNode` en lugar de `etiquetasEstado`, y la página
+     le pasa `(e) => <BadgeEstadoTaller estado={e} />`. La regla de `datos.md` se sigue cumpliendo, porque quien compone es la
+     página.
+   - **Qué se gana:** un cambio de color o de texto de un estado se hace en un solo lugar, y el dashboard no puede quedar
+     desalineado con el listado de talleres.
+
+4. **Bloques pgTAP redundantes y fallas difíciles de leer** (baja).
+   - El bucle "anon: las siete funciones dan 42501 (sin EXECUTE)" (líneas 388-413) no prueba lo que dice su título. Si anon
+     tuviera EXECUTE, igual recibiría `42501` por el `es_admin()` de la auxiliar. Lo que sí prueba la falta de EXECUTE es el
+     `has_function_privilege('anon', …)` de la línea 137.
+   - Los dos bucles que quedan (`42501` sin marca y `22023` propagado) comparan un contador con `'7'`. Si una RPC deja de
+     propagar el error, el mensaje es "got 6, expected 7" y no dice cuál falló.
+   - **Propuesta:** borrar el bucle de anon. En los otros dos, acumular las llamadas que **no** dieron el código
+     (`fallidas := fallidas || c`) y verificar `is(fallidas, '')`.
+   - **Qué se gana:** unas 25 líneas menos, sin perder cobertura, y una falla que nombra la RPC culpable.
+
+### Sobre las preguntas del pedido (sin hallazgo)
+
+- **`perform 1 from metricas_registros(...) limit 1` al inicio de cada RPC:** está bien así para este volumen.
+  - Hace un recorrido doble completo. Una función plpgsql con `return query` materializa todo su resultado antes de devolverlo,
+    así que el `limit 1` no corta nada: el período se lee dos veces. Con decenas de miles de registros por año, eso son
+    milisegundos.
+  - El motivo que da el comentario es correcto. Si el `join` con `taller` está vacío, o si el `generate_series` queda vacío, el
+    plan puede no evaluar nunca el CTE, y el `42501` y el `22023` no se propagarían.
+  - La alternativa limpia sería una `metricas_validar(p_desde, p_hasta) returns void` con los dos `raise`, llamada con `perform`
+    desde las 6 RPC y desde la auxiliar: un solo recorrido y la intención explícita, sin depender de un efecto lateral. Pero la
+    migración ya está commiteada, y cambiarla exige otra que redefina 7 funciones y sus grants: es más código del que ahorra.
+    Conviene hacerlo solo si C-11 obliga a una migración nueva de métricas.
+- **Cantidad de componentes:** están en su medida.
+  - `Seccion` tiene 6 usos y `TablaPorcentajes` 2 (nivel y cargo). `Barra` y `VerTodos` tienen 2 cada uno.
+  - `TablaNormativas` tiene un solo uso, pero deja la página como pura composición.
+  - Fusionar `SerieDescargas` con `TablaPorcentajes` pediría flags (columna de porcentaje, máximo relativo o 100), y una
+    `<Tabla columnas>` genérica en `shared/` sería prematura: las otras tablas del panel tienen otra forma.
+- **Retraso con estado local vs. URL:** está bien así.
+  - La URL es la única fuente de la consulta y el `borrador` vive solo en los campos.
+  - La alternativa (URL inmediata con `replace` y un `useDebouncedValue` del período consultado) traslada el problema sin
+    resolverlo. Haría falta un hook nuevo, el error "anterior a 2020" parpadearía con cada año a medio tipear (0002, 0020, 0202),
+    y la URL dejaría de coincidir con lo que se ve.
+  - Remontar el selector con `key` cuando cambia la URL perdería el foco del campo cuando entra el propio commit.
+  - El par `vistos`/`borrador` es el patrón documentado de React para ajustar el estado cuando cambia una prop.
+
+## Respuesta (código)
+
+| # | Respuesta | Motivo / cómo queda |
+|---|---|---|
+| 1 | **Acepto** | Es casi gratis y evita que se lean números del período anterior como si fueran del nuevo: `aria-busy` y `opacity-60` con `isPlaceholderData`, más la aserción en el test. |
+| 2 | **Acepto** | Es trivial: usar `formatFechaCorta` y sumar `formatMes` en `shared/lib/date.ts`. |
+| 3 | **Rechazo en este corte** | Toca el dominio `talleres` y `TalleresListPage`, fuera del corte. Va a `notas.md`. |
+| 4 | **Acepto** | Es trivial: se borra el bucle anon (lo cubre `has_function_privilege`) y los otros dos bucles acumulan las RPC que fallan. |

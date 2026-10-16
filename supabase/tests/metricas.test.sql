@@ -56,7 +56,7 @@
 --   pg_proc ("exactamente 7"), una octava funcion obliga a tocar el test.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(53);
+select plan(52);
 
 -- Soporte del test (como postgres) ---------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email)
@@ -147,12 +147,20 @@ select is_empty(
   'toda metricas_* da EXECUTE a authenticated');
 
 select results_eq(
-  $$select proname::text collate "default", pg_get_function_identity_arguments(oid)::text collate "default" from pg_proc
+  $$select proname::text collate "default", pg_get_function_identity_arguments(oid)::text collate "default",
+           pg_get_function_result(oid)::text collate "default" from pg_proc
      where pronamespace = 'public'::regnamespace and proname like 'metricas\_%' and proname <> 'metricas_registros' order by proname$$,
-  $$values ('metricas_por_cargo'::text, 'p_desde date, p_hasta date'::text), ('metricas_por_localidad', 'p_desde date, p_hasta date'),
-           ('metricas_por_nivel', 'p_desde date, p_hasta date'), ('metricas_por_periodo', 'p_desde date, p_hasta date, p_por_mes boolean'),
-           ('metricas_por_taller', 'p_desde date, p_hasta date'), ('metricas_resumen', 'p_desde date, p_hasta date')$$,
-  'las RPC tienen los parametros del contrato (por_periodo suma p_por_mes)');
+  $$values
+    ('metricas_por_cargo'::text, 'p_desde date, p_hasta date'::text, 'TABLE(cargo character varying, descargas bigint)'::text),
+    ('metricas_por_localidad', 'p_desde date, p_hasta date',
+       'TABLE(localidad_id smallint, nombre character varying, descargas bigint, alcanzados bigint, padron bigint)'),
+    ('metricas_por_nivel', 'p_desde date, p_hasta date', 'TABLE(nivel_id smallint, nombre character varying, descargas bigint)'),
+    ('metricas_por_periodo', 'p_desde date, p_hasta date, p_por_mes boolean', 'TABLE(inicio date, descargas bigint)'),
+    ('metricas_por_taller', 'p_desde date, p_hasta date',
+       'TABLE(taller_id integer, titulo character varying, estado estado_taller, descargas bigint)'),
+    ('metricas_resumen', 'p_desde date, p_hasta date',
+       'TABLE(descargas bigint, establecimientos_alcanzados bigint, talleres_publicados bigint, sin_vincular bigint)')$$,
+  'las RPC tienen los parametros y las columnas de salida del contrato (solo conteos; por_periodo suma p_por_mes)');
 
 select results_eq(
   $$select array_to_string(proargnames, ',')::text collate "default" from pg_proc
@@ -329,18 +337,19 @@ declare
     $c$select count(*) from public.metricas_por_nivel('2026-03-10', '2026-03-12')$c$,
     $c$select count(*) from public.metricas_por_cargo('2026-03-10', '2026-03-12')$c$,
     $c$select count(*) from public.metricas_por_localidad('2026-03-10', '2026-03-12')$c$];
-  n int := 0;
+  fallidas text[] := '{}';
 begin
   foreach c in array calls loop
     begin
       execute c;
+      fallidas := fallidas || substring(c from 'public\.(metricas_\w+)');
     exception when others then
-      if sqlstate = '42501' then n := n + 1; end if;
+      if sqlstate <> '42501' then fallidas := fallidas || substring(c from 'public\.(metricas_\w+)'); end if;
     end;
   end loop;
-  perform set_config('test.n_42501_sinmarca', n::text, true);
+  perform set_config('test.fallidas_42501_sinmarca', fallidas::text, true);
 end $$;
-select is(current_setting('test.n_42501_sinmarca'), '7', 'sin marca: las siete funciones dan 42501');
+select is(current_setting('test.fallidas_42501_sinmarca'), '{}', 'sin marca: las siete funciones dan 42501 (la lista de las que no queda vacia)');
 
 -- Seguridad: admin con periodo invalido -> 22023 (cada RPC lo propaga) ---------------------------------
 set local request.jwt.claims =
@@ -372,45 +381,20 @@ declare
     $c$select count(*) from public.metricas_por_nivel('2026-03-10', (now() at time zone 'America/Argentina/Buenos_Aires')::date + 1)$c$,
     $c$select count(*) from public.metricas_por_cargo(null::date, null::date)$c$,
     $c$select count(*) from public.metricas_por_localidad('2026-03-12', '2026-03-10')$c$];
-  n int := 0;
+  fallidas text[] := '{}';
 begin
   foreach c in array calls loop
     begin
       execute c;
+      fallidas := fallidas || substring(c from 'public\.(metricas_\w+)');
     exception when others then
-      if sqlstate = '22023' then n := n + 1; end if;
+      if sqlstate <> '22023' then fallidas := fallidas || substring(c from 'public\.(metricas_\w+)'); end if;
     end;
   end loop;
-  perform set_config('test.n_22023', n::text, true);
+  perform set_config('test.fallidas_22023', fallidas::text, true);
 end $$;
-select is(current_setting('test.n_22023'), '7', 'admin: las seis RPC propagan el 22023 (por_periodo con dos casos)');
+select is(current_setting('test.fallidas_22023'), '{}', 'admin: las seis RPC propagan el 22023 (por_periodo con dos casos; la lista de las que no queda vacia)');
 
--- Seguridad: anon sin EXECUTE -------------------------------------------------------------------------------
-set local role anon;
-set local request.jwt.claims = '{"role":"anon"}';
-do $$
-declare
-  c text;
-  calls text[] := array[
-    $c$select count(*) from public.metricas_registros('2026-03-10', '2026-03-12')$c$,
-    $c$select count(*) from public.metricas_resumen('2026-03-10', '2026-03-12')$c$,
-    $c$select count(*) from public.metricas_por_periodo('2026-03-10', '2026-03-12', false)$c$,
-    $c$select count(*) from public.metricas_por_taller('2026-03-10', '2026-03-12')$c$,
-    $c$select count(*) from public.metricas_por_nivel('2026-03-10', '2026-03-12')$c$,
-    $c$select count(*) from public.metricas_por_cargo('2026-03-10', '2026-03-12')$c$,
-    $c$select count(*) from public.metricas_por_localidad('2026-03-10', '2026-03-12')$c$];
-  n int := 0;
-begin
-  foreach c in array calls loop
-    begin
-      execute c;
-    exception when others then
-      if sqlstate = '42501' then n := n + 1; end if;
-    end;
-  end loop;
-  perform set_config('test.n_anon', n::text, true);
-end $$;
-select is(current_setting('test.n_anon'), '7', 'anon: las siete funciones dan 42501 (sin EXECUTE)');
 reset role;
 
 select * from finish();

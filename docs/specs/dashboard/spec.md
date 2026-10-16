@@ -15,6 +15,7 @@ Con esto se migra el último dominio que quedaba con mocks (0012). Los indicador
    - El período vive en la URL: `?periodo=30d|anio|rango&desde=AAAA-MM-DD&hasta=AAAA-MM-DD`. Si el valor es inválido, se usan los 30 días.
    - El rango se valida: `2020-01-01 <= desde <= hasta <= hoy`. Si no cumple, se muestra un error junto a los campos y no se consulta: no hay skeletons ni datos viejos.
    - Al cambiar un período válido se mantienen los datos anteriores hasta que llegan los nuevos (`keepPreviousData`).
+   - Los campos del rango pasan a la URL (`replace`) 300 ms después de la última edición, para no consultar fechas a medio tipear. Este desvío se acordó en la implementación.
 2. **Resumen.**
    - Con período: descargas y establecimientos alcanzados (`establecimiento_id` distintos y no nulos).
    - Estado actual, sin período: talleres publicados, normativas (`lista.length` de la sección 7) e instituciones "Otra" sin vincular.
@@ -41,7 +42,7 @@ Con esto se migra el último dominio que quedaba con mocks (0012). Los indicador
    - Error: `ErrorFallback` con reintento. Una sola query falla o funciona entera.
    - Sin descargas en el período: los KPIs en 0 y `EmptyState` en las secciones de descargas.
 9. **Seguridad (pgTAP).**
-   - Un recorrido de `pg_proc` sobre `metricas_%` verifica que cada función sea invoker, tenga `search_path=''` y EXECUTE solo para `authenticated` (ni `public` ni `anon`).
+   - Un recorrido de `pg_proc` sobre `metricas_%` verifica que cada función sea invoker, tenga `search_path=''` y EXECUTE para `authenticated` y no para `public` ni `anon`. `service_role` conserva los privilegios por defecto (ver `notas.md`).
    - `metricas_registros` lanza `42501` si `not es_admin()` (un error explícito y no ceros silenciosos de la RLS), y `22023` con un período nulo, invertido o fuera de tope.
    - Cada RPC propaga esos errores.
 10. **Corrección (pgTAP).**

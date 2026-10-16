@@ -603,7 +603,7 @@ Supabase
 | Frontend | TanStack Query | Consultas, caché y estados de carga. | Implementado |
 | Frontend | Tailwind CSS 4 + componentes propios (`src/shared/components/ui`) | Estilos y componentes accesibles. | Implementado |
 | Frontend | React Hook Form + Zod | Formularios y validaciones. | Implementado |
-| Frontend | Recharts | Gráficos del tablero de métricas. | Implementado |
+| Frontend | Tablas HTML con barras CSS | Tablero de métricas (serie, ranking, nivel, cargo y localidad). Sin librería de gráficos: Recharts se quitó. | Implementado |
 | Frontend | supabase-js | Datos, autenticación y Storage. | Definido |
 | Pruebas | Vitest + Testing Library | Tests unitarios y de componentes. | Implementado |
 | Base de datos | PostgreSQL de Supabase | Datos, reglas y RLS. | Definido |
