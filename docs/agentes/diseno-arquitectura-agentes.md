@@ -91,7 +91,7 @@ VOS ◄──► INGENIERO
 |---|---|---|
 | **CLAUDE.md** (<200 líneas) | Siempre | Dominio resumido, stack, comandos, estructura, reglas clave |
 | **Output style** | Siempre, solo en la sesión principal | Personalidad y forma de trabajar del ingeniero |
-| **Reglas** (`.claude/rules/`) | Al tocar archivos que coinciden | `react.md` (`src/**/*.tsx`), `migraciones.md` (`supabase/**`) |
+| **Reglas** (`.claude/rules/`) | Al leer archivos que coinciden (también en los subagentes; verificado 2026-10-16) | `react.md` (`src/**/*.tsx`), `datos.md` (`consultas`, `secuencias`, `errores` y hooks de `src/features/`), `migraciones.md` (`supabase/**`) |
 | **Skills** (`.claude/skills/`) | Al invocarlas o cuando aplican | Procedimientos y flujos |
 | **Subagentes** (`.claude/agents/`) | Al delegar | Los 6 roles de arriba |
 | **Hooks** | En eventos, siempre | Lo que no puede fallar |
@@ -158,7 +158,7 @@ CLAUDE.local.md               personal (gitignored)
 ├── output-styles/ingeniero-sistemas.md
 ├── agents/                   Explore · test-writer · implementador · critico · revisor · qa
 ├── skills/                   spec · tdd · supabase-rls · criticar · decision · pr · verify
-├── rules/                    react.md · migraciones.md
+├── rules/                    react.md · datos.md · migraciones.md
 ├── hooks/                    formatear · proteger · proteger-bash · checks-stop · contexto · roles · perfiles · limitar-*
 └── agent-memory/             critico/ · revisor/ · qa/  (memoria compartida por git)
 docs/
@@ -175,6 +175,10 @@ e2e/                          pruebas de Playwright (las escribe y mantiene qa)
 - La memoria automática de Claude es **local de cada máquina**: no se comparte.
 - Lo compartido vive en: `CLAUDE.md`, `docs/decisiones/`, `docs/specs/` y `.claude/agent-memory/`.
 - Regla del error repetido: si un agente se equivoca dos veces en lo mismo, se corrige su prompt, skill o regla en un PR.
+- Una trampa que aparece dos veces en la memoria del crítico o del revisor pasa a una regla por ruta (`.claude/rules/`), que le llega
+  al implementador y al test-writer al leer esos archivos, y en la memoria queda solo "promovido a regla". Así la prevención llega a
+  quien escribe el código y no solo a quien lo revisa.
+- Qué aporta cada agente se mide en `docs/agentes/metricas.md` (una fila por agente al cerrar cada feature).
 
 ---
 

@@ -61,7 +61,8 @@ Feature:
    Supabase local, deja sus e2e en `e2e/` y escribe `qa.md`. Comparte la base con el `test:db` del revisor, por eso no corre
    en paralelo con él, y al terminar corre `npm run db:reset` (pgTAP asume tablas vacías). Sus bugs se tratan como los del revisor,
    incluidos los menores de pantalla (datos fijos, mensajes fuera de vista): leé también sus observaciones por si alguna es un bug.
-9. Cerrá mostrando: resumen, evidencia (salida de tests y checks) y desvíos de la spec.
+9. Cerrá mostrando: resumen, evidencia (salida de tests y checks) y desvíos de la spec. Agregá las filas de la feature
+   en `docs/agentes/metricas.md` (una por agente que reportó).
 
 No persigas cada hallazgo del crítico o del revisor: solo los que afectan corrección, seguridad,
 requisitos o simplicidad. Una sola ronda de crítica por fase.

@@ -1,93 +1,47 @@
 ---
 name: supabase-js-frontend
-description: Huecos que se repiten al integrar supabase-js en el frontend del DAM; errores lanzados vs {error}, handlers async sin catch, verificación manual sin registrar, docs de estado sin actualizar por fase
+description: Cómo revisar la integración de supabase-js en el frontend del DAM; las trampas repetidas ya son reglas (rules/react.md, rules/datos.md); quedan técnicas de revisión, huecos de proceso y datos de la librería para no dar falsos positivos
 metadata:
   type: project
 ---
 
-En la Fase A de auth-configuracion (2026-10-10) aparecieron estos huecos, y es probable que se repitan en cada dominio
-que pase de mocks a `consultas.ts`:
+**Promovido a reglas (2026-10-16).** Las trampas que encontré entre 6 y 9 veces (de auth-configuracion a descargas) ahora están en
+`.claude/rules/react.md` y `.claude/rules/datos.md`, que se cargan al implementador cuando toca esos archivos: `isPending`, rama
+`isError` con test (incluidas las queries secundarias), formulario de edición sin carga, error lanzado vs `{ error }`, ruta de Storage
+de la base y no de la caché, `Number(null)`, `invalidateQueries` en `onError`. Ya no las describas de nuevo: verificá que se cumplan
+y, si una regla se incumple, citala ("incumple rules/datos.md: …"). Si aparece una trampa nueva por segunda vez, proponé sumarla a la regla.
 
-- Los envoltorios solo manejan el `{ error }` devuelto. supabase-js (auth-js 2.117) **relanza** todo error que no sea
-  `AuthError` (storage, lock) y `handleSubmit` de RHF lo vuelve a lanzar: queda un rechazo sin capturar y no se ve el
-  mensaje genérico que piden los criterios. Pedí `try/catch` y un test con `mockRejectedValue`.
-- Hay handlers `async` en `onClick` sin `try/finally`, y queda `void promesa()` dentro de un `setTimeout`.
-- La verificación manual de punta a punta (recargar, cerrar el navegador, el botón de cerrar sesión) se da por hecha y
-  no queda anotada en `notas.md`, y el componente que la dispara (`AdminSidebar`) no tiene test.
-- Cuando la spec se entrega en fases con PR separados, `docs/arquitectura.md` y "Estado actual" en `CLAUDE.md` quedan
-  desactualizados en `main`.
+**Obsoleto:** "la verificación en el navegador no quedó anotada en `notas.md`" (9 veces). Desde 0020 la hace el `qa` y queda en
+`qa.md`; en el carril chico sin qa, el coordinador corre `test:e2e` (0023). No lo reportes salvo que el flujo no haya corrido el qa.
 
-En la Fase B (configuración, 2026-10-10) se repitió con otra forma:
-- Se manejó el error de *guardar*, pero no el de *cargar*. Si `useX()` falla, el formulario de edición del admin se
-  muestra vacío sin aviso, y guardar manda todos los campos, así que puede pisar datos reales con `''`. En cada pantalla
-  de edición, revisá el `isError` de la query además del de la mutation.
-- La verificación en el navegador (el paso de punta a punta) vuelve a quedar como "no se verificó" en `notas.md`.
-- Hay un criterio de la spec reescrito durante la implementación que no figura en los desvíos de `notas.md`. Hacé
-  `git diff main -- spec.md`.
+## Técnicas de revisión que siguen valiendo
+- En cada `useX(id)` que devuelve `null` si no existe, buscá con grep **todos** los consumidores y revisá las tres ramas:
+  `undefined` por error, `null` y un id que es de otro padre (p. ej. `:categoriaId` que no es del `:nivelId`).
+- `idDeRuta` acepta cualquier entero seguro: un id fuera de `int4`/`smallint` da `400 22003` y `ErrorFallback` en lugar de
+  "no encontrado". Se prueba con un GET anon de solo lectura `?id=eq.99999999999`.
+- Handlers `async` en `onClick` sin `try/finally`, o `void promesa()` dentro de un `setTimeout`: rechazo sin capturar.
+- UI de lotes (subidas): archivos descartados sin aviso durante un lote en curso y errores del lote anterior que siguen visibles.
+- Cuando un fix vive en el query builder (`.eq('ruta_archivo', anterior)`, `.select('ruta_archivo')`), revertir la línea deja todo
+  verde si solo hay tests de hooks (mockean `consultas`) y un e2e de una pestaña: pedí `consultas.test.ts` (fix-ruta-recursos,
+  2026-10-16; ya está en `rules/datos.md`). `codigosDeError` incluye `code`; `StorageApiError` trae `code` tipo `EntityTooLarge`, que no
+  choca con `'413'`/`'415'`. Con `onSettled: invalidar` en `RecursosPage` el aviso no se desmonta (vive en `Pantalla`).
+- Un criterio de la spec reescrito durante la implementación que no figura en los desvíos de `notas.md`: `git diff main -- spec.md`.
+- Con entregas en fases, `docs/arquitectura.md` y el "Estado actual" de `CLAUDE.md` quedan desactualizados en `main`.
+- El script de la API en el scratchpad (24 comprobaciones de RLS por REST) sirve de molde: `.single()` para PATCH bloqueados
+  (406/PGRST116) y 23505/23514/22001/23503 por REST.
 
-En niveles-categorias (2026-10-10, tercera vez) la pantalla principal (`CategoriaFormPage`) quedó bien, pero el hueco
-pasó a las **pantallas vecinas** que leen el mismo hook: `TalleresListPage` y `TallerFormPage` solo distinguen
-`data === null` ("no encontrado"). Con un error, `data` queda `undefined` y la pantalla muestra "Cargando..." para siempre.
-Tampoco comprueban que el `:categoriaId` sea del `:nivelId` de la URL. Volvió a faltar el registro de la verificación en
-el navegador en `notas.md` (por tercera vez).
-- Para revisar: en cada `useX(id)` que devuelve `null` si no existe, buscá **todos** los consumidores con grep y revisá
-  las tres ramas (`undefined` por error, `null` y un id de otro padre).
-- El script de la API en el scratchpad (24 comprobaciones de RLS por REST) sirve de molde. Cubre `.single()` para
-  PATCH bloqueados (406/PGRST116) y 23505/23514/22001/23503 por REST.
+## Datos de la librería, para no reportar falsos positivos
+- Con `onSuccess: () => invalidateQueries(...)`, React Query mantiene `isPending` hasta que termina el refetch: no hay ventana de
+  datos viejos entre el éxito y la recarga.
+- En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF y
+  `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema: compará con `git ls-files --eol`.
+- En auth-js 2.117.3, `signOut()` borra la sesión local aunque `/logout` falle por red y devuelve `{ error }` sin lanzar.
+  El `SIGNED_OUT` llega igual.
+- El bundle contiene el string `sb_secret_` porque supabase-js detecta el prefijo de la clave: no es una fuga. Para buscar una
+  clave real, usá `sb_secret_[A-Za-z0-9_-]{6,}` y JWT `eyJ…\.…`.
+- Para verificar la clave publishable sin leer `.env*`, pasá `npx supabase status -o json` por stdin a un script de Node en el
+  scratchpad que haga `/auth/v1/token` y `rpc/es_admin` sin imprimir la clave. Los hooks bloquean cualquier comando que mencione `.env`.
 
-En talleres (2026-10-10, cuarta vez) la verificación en el navegador volvió a quedar pendiente en `notas.md`. Las ramas de
-error de carga quedaron implementadas (`TallerFormPage` en edición), pero sin test. `CategoriasPage` muestra "0 talleres" si
-falla la carga. Para sacar cantidades de `details`, cuidado con `Number(null) === 0`: PostgREST manda `details: null`.
-
-En recursos (2026-10-10, quinta vez) la verificación en el navegador ni siquiera quedó anotada como pendiente en `notas.md` (solo
-las comprobaciones por script). Las ramas de error de las mutaciones que pasan por diálogos (`DialogoRecurso`: alta de enlace,
-edición) y el `onError` del reemplazo quedaron sin test. Lo demás salió bien: secuencias con compensaciones, `remove()` con
-`data: []` tratado como falla, 413/415 en `status` o `statusCode`. Hubo huecos nuevos de UI de subida por lotes: archivos descartados sin
-aviso mientras corre un lote y errores del lote anterior que siguen visibles.
-- Para no reportar falsos positivos: con `onSuccess: () => invalidateQueries(...)`, React Query mantiene `isPending` hasta que termina
-  el refetch, así que no hay ventana de datos viejos entre el éxito y la recarga.
-
-En normativas (fase B, 2026-10-10, sexta vez) la verificación en el navegador quedó anotada como **pendiente** (mejor que antes, pero sin
-hacer). De nuevo, la rama `isError` del formulario de edición está implementada pero sin test. Aparecieron dos huecos nuevos, que
-probablemente se repitan en padrón y logo:
-- Las pantallas que pasan de mocks a red real conservan `isLoading`. Sin red, la primera carga queda `paused` y la sección no muestra nada.
-  Buscá `isLoading` en las páginas del dominio migrado y pedí `isPending`.
-- La baja borra la ruta de Storage **de la caché** (`normativa.ruta_archivo`) y no la que devuelve el DELETE. Pedí
-  `.delete().select('ruta_archivo').single()`. `recursos` tiene el mismo patrón.
-
-En padrón (fase A, 2026-10-10, séptima vez) la verificación en el navegador ni siquiera figura en `notas.md`. El resto salió bien. Huecos nuevos:
-- `idDeRuta` acepta cualquier entero seguro: un id fuera del rango de `int4` o `smallint` hace que PostgREST responda `400 22003`, y la pantalla muestra
-  `ErrorFallback` en lugar de "no encontrado" (criterio de "id inválido o inexistente"). Es transversal a todas las pantallas con `:id`. Se prueba con un GET anon
-  de solo lectura `?id=eq.99999999999`.
-- Otra vez, la rama `isError` de una query **secundaria** (`useLocalidades`) está implementada pero no tiene test. Solo se prueba la query principal.
-
-En padrón (fase B, script de carga, 2026-10-10, octava vez) faltó registrar en `notas.md` el paso "las altas aparecen en `/admin/establecimientos`".
-
-En descargas (2026-10-10, novena vez) volvieron a quedar sin test las ramas `isError` de queries secundarias (localidades y establecimientos del modal).
-Hueco nuevo: **invalidar en `onError` una query de la que depende el padre del componente que muestra el error**. Con DA003 se invalida `['talleres']`,
-`useTallerPublicado` pasa a `null` y la página desmonta el modal con el mensaje. El test del modal aislado no lo ve. Ante cualquier `invalidateQueries` en
-un `onError`, seguí qué pantallas leen esa clave y si desmontan al que muestra el error.
-
-En fix-ruta-recursos (2026-10-16, carril chico) la lógica salió bien, pero el filtro que es el núcleo del fix (`.eq('ruta_archivo', anterior)`
-en `consultas.ts`, `.select('ruta_archivo')` en la baja) no tenía test: todos los tests mockean `consultas` y el e2e usa una pestaña. Patrón:
-**cuando un fix vive en el query builder, pedí un `consultas.test.ts` con `supabase.from` mockeado como cadena** (molde: `descargas/consultas.test.ts`);
-si no, revertir la línea deja todo verde. `codigosDeError` ya incluye `code`; `StorageApiError` también trae `code` (cadenas tipo `EntityTooLarge`),
-no choca con `'413'`/`'415'`. Con `onSettled: invalidar` en `RecursosPage` el aviso no se desmonta (vive en `Pantalla`, el taller sigue).
-
-Datos de la librería, para no reportar falsos positivos:
-- En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF
-  y `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema de una edición por shell:
-  compará con `git ls-files --eol` y mirá si el diff quedó limpio.
-- En auth-js 2.117.3, `signOut()` borra la sesión local aunque `/logout` falle por red y devuelve `{ error }` sin
-  lanzar. El `SIGNED_OUT` llega igual.
-- El bundle contiene el string `sb_secret_` porque supabase-js detecta el prefijo de la clave: no es una fuga. Para
-  buscar una clave real, usá `sb_secret_[A-Za-z0-9_-]{6,}` y JWT `eyJ…\.…`.
-- Para verificar la clave publishable sin leer `.env*`, pasá `npx supabase status -o json` por stdin a un script de Node
-  en el scratchpad, que haga `/auth/v1/token` y `rpc/es_admin` sin imprimir la clave. Los hooks bloquean cualquier
-  comando que mencione `.env`, incluso un grep.
-
-**Why:** los criterios del DAM dicen "cualquier otro error muestra un mensaje genérico", y la evidencia tiene que ser
-un test o una verificación manual anotada.
-**How to apply:** en cada `consultas.ts` y en cada formulario o botón que lo use, buscá los caminos de rechazo, no solo
-el `{ error }`. Pedí que la verificación manual quede anotada en `notas.md` y fijate si la fase deja desactualizadas
-las docs de estado. Ver también [[supabase-privilegios-y-tests]].
+**Why:** los criterios del DAM dicen "cualquier otro error muestra un mensaje genérico", y la evidencia tiene que ser un test.
+**How to apply:** primero verificá las reglas de `rules/react.md` y `rules/datos.md`; después aplicá las técnicas de arriba.
+Ver también [[supabase-privilegios-y-tests]] y [[formularios-rhf-a11y]].

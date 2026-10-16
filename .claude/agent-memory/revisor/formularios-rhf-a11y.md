@@ -18,6 +18,9 @@ En pendientes-app (2026-10-10), `NormativaFormPage` marcó el 23505 en número y
 Se repitió en descargas (2026-10-10, `DescargaModal`): cinco `Select`/`Input` con `FieldError` con id y sin `aria-describedby`. Es el hueco más
 recurrente de UI del proyecto: buscalo siempre (`grep -n "aria-describedby"` en el formulario nuevo).
 
+**Promovido a regla (2026-10-16):** `aria-describedby` hacia el `FieldError` y `clearErrors([a, b])` para errores de par están en
+`.claude/rules/react.md`. Verificá que se cumplan y citá la regla; queda acá el detalle y cómo probar RHF.
+
 **Why:** el foco de a11y del proyecto pide que todo `aria-invalid` tenga explicación, y los estados vacíos no deben mentir ante un error.
 **How to apply:** en cada `setError` revisá que el input tenga `aria-describedby` hacia un mensaje existente; si el error abarca varios
 campos, mirá cómo se limpia. Para probar el comportamiento de RHF sin tocar `src/`: test en el scratchpad con `ln -s` a `node_modules`,

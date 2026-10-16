@@ -44,6 +44,10 @@ En la crítica de código (2026-10-16) se aceptó todo. `onSettled` del hook no 
 `DialogoRecurso`. Solo atrasa el `onError` de la llamada hasta que termina la recarga. `codigosDeError` ya lee `code`, pero sigue en
 `erroresStorage.ts`: propuse renombrarlo a `shared/lib/errores.ts` y migrar las 4 copias de `.code` cuando se toque cada dominio.
 
+**Promovido a reglas (2026-10-16):** `isPending`, enums vía `Constants`, mensajes DA00x en `errores.ts`, ruta de la base en las
+bajas, mutación que no mezcla escritura y lectura, hooks que no son hooks e imports entre dominios (a `shared/`) están en
+`.claude/rules/react.md` y `.claude/rules/datos.md`. No los repitas como hallazgo nuevo: si se incumplen, citá la regla.
+
 **Why:** la fase B de cada corte copia el molde de la anterior, y estas tres cosas no las detecta el typecheck ni los tests.
 
 **How to apply:** en la crítica de código de cada corte con pantallas del portal o enums nuevos, buscar `isLoading` seguido de
