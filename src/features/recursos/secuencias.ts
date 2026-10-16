@@ -49,11 +49,12 @@ export async function reemplazarArchivo(recurso: Recurso, file: File): Promise<R
   await subirArchivo(ruta, file, formato.mime)
   let actualizado: Recurso
   try {
-    actualizado = await actualizarRecurso(recurso.id, {
-      ruta_archivo: ruta,
-      tipo: formato.tipo,
-      tamanio_bytes: file.size,
-    })
+    // Con `anterior` el UPDATE solo aplica si la fila sigue apuntando a ese archivo (caché vieja: PGRST116).
+    actualizado = await actualizarRecurso(
+      recurso.id,
+      { ruta_archivo: ruta, tipo: formato.tipo, tamanio_bytes: file.size },
+      anterior,
+    )
   } catch (error) {
     await compensar(ruta, error, 'el reemplazo falló')
     throw error
@@ -62,8 +63,11 @@ export async function reemplazarArchivo(recurso: Recurso, file: File): Promise<R
   return actualizado
 }
 
-/** Borra la fila y después el archivo: si falla el borrado del archivo el recurso ya no existe, así que es éxito. */
+/**
+ * Borra la fila y después el archivo que la fila tenía en la base (no el de la caché, que puede estar vieja): si falla
+ * el borrado del archivo el recurso ya no existe, así que es éxito.
+ */
 export async function eliminarRecurso(recurso: Recurso): Promise<void> {
-  await eliminarFilaRecurso(recurso.id)
-  if (recurso.ruta_archivo !== null) await borrarOAvisar(recurso.ruta_archivo, 'eliminación')
+  const ruta = await eliminarFilaRecurso(recurso.id)
+  if (ruta !== null) await borrarOAvisar(ruta, 'eliminación')
 }

@@ -7,8 +7,13 @@ describe('codigosDeError', () => {
     expect(codigosDeError({ statusCode: 415 })).toEqual(['415'])
   })
 
+  it('suma el code de PostgREST/Postgres', () => {
+    expect(codigosDeError({ code: 'PGRST116' })).toEqual(['PGRST116'])
+    expect(codigosDeError({ status: 406, code: 'PGRST116' })).toEqual(['406', 'PGRST116'])
+  })
+
   it('ignora lo que no es número ni texto y los valores que no son objetos', () => {
-    expect(codigosDeError({ status: null, statusCode: undefined })).toEqual([])
+    expect(codigosDeError({ status: null, statusCode: undefined, code: null })).toEqual([])
     for (const v of [null, undefined, 'texto', 42]) expect(codigosDeError(v)).toEqual([])
   })
 })

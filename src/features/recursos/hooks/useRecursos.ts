@@ -36,7 +36,8 @@ export function useActualizarRecurso() {
   const invalidar = useInvalidarTalleres()
   return useMutation({
     mutationFn: ({ id, cambios }: { id: number; cambios: CambiosRecurso }) => actualizarRecurso(id, cambios),
-    onSuccess: invalidar,
+    // También al fallar: con la caché vieja (otra pestaña) el error es PGRST116 y la lista debe recargarse.
+    onSettled: invalidar,
   })
 }
 
@@ -44,7 +45,7 @@ export function useReemplazarArchivo() {
   const invalidar = useInvalidarTalleres()
   return useMutation({
     mutationFn: ({ recurso, file }: { recurso: Recurso; file: File }) => reemplazarArchivo(recurso, file),
-    onSuccess: invalidar,
+    onSettled: invalidar,
   })
 }
 
@@ -52,7 +53,7 @@ export function useEliminarRecurso() {
   const invalidar = useInvalidarTalleres()
   return useMutation({
     mutationFn: (recurso: Recurso) => eliminarRecurso(recurso),
-    onSuccess: invalidar,
+    onSettled: invalidar,
   })
 }
 
