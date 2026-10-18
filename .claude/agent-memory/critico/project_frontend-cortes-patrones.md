@@ -44,6 +44,19 @@ En la crítica de código (2026-10-16) se aceptó todo. `onSettled` del hook no 
 `DialogoRecurso`. Solo atrasa el `onError` de la llamada hasta que termina la recarga. `codigosDeError` ya lee `code`, pero sigue en
 `erroresStorage.ts`: propuse renombrarlo a `shared/lib/errores.ts` y migrar las 4 copias de `.code` cuando se toque cada dominio.
 
+En la spec `instituciones-sin-vincular` (2026-10-18), primer `Dialog` con un input controlado cuyo estado puede vivir en la página:
+**`useFocusTrap` tiene `onClose` en las deps**, y las páginas pasan un `onClose` inline. Cada render de la página (tecla, `isPending`, refetch
+al volver el foco) re-corre el efecto y manda el foco a la "X". Hoy no se nota porque `DialogoRecurso` y `DescargaModal` guardan el estado en un
+hijo. Propuse guardar `onClose` en un ref dentro del hook. Además, el foco vuelve a un botón de fila que desaparece al completar la acción.
+Se aceptó todo. En la crítica del código (2026-10-18) aparecieron patrones de **diálogos con mutación** que se van a repetir:
+- **Cerrable mientras guarda** (Cancelar, X, Escape y fondo activos con `isPending`) + `mutateAsync`: la promesa sobrevive al desmontaje y
+  llama al `onX` del padre (cierra otro diálogo, mueve el foco) o falla sin que nadie vea el error. Molde: `onClose` no-op y Cancelar
+  deshabilitado mientras está ocupado. Los callbacks de `mutate(vars, {onSuccess})` no corren sin observers (verificado en `mutationObserver.js`).
+- **`useState` que copia el estado de una mutación** (`creado` = `crear.data`, `fallo` = `isError`): el diálogo se monta al abrirse, así que
+  derivarlo alcanza.
+- **`role="status"` montado con su texto** (`{msg && <p role="status">}`): dejarlo montado y cambiar solo el texto.
+- `codigosDeError(e).includes(...)`: el acuerdo es migrar `.code` a mano al tocar cada dominio (iba por la sexta copia).
+
 **Promovido a reglas (2026-10-16):** `isPending`, enums vía `Constants`, mensajes DA00x en `errores.ts`, ruta de la base en las
 bajas, mutación que no mezcla escritura y lectura, hooks que no son hooks e imports entre dominios (a `shared/`) están en
 `.claude/rules/react.md` y `.claude/rules/datos.md`. No los repitas como hallazgo nuevo: si se incumplen, citá la regla.

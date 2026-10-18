@@ -19,7 +19,7 @@ Con esto se migra el último dominio que quedaba con mocks (0012). Los indicador
 2. **Resumen.**
    - Con período: descargas y establecimientos alcanzados (`establecimiento_id` distintos y no nulos).
    - Estado actual, sin período: talleres publicados, normativas (`lista.length` de la sección 7) e instituciones "Otra" sin vincular.
-   - "Sin vincular" cuenta los pares distintos `(localidad_id, nombre normalizado)` con `establecimiento_id` nulo. El nombre se normaliza sin mayúsculas, tildes ni espacios de los extremos. Se muestra como aviso solo si es mayor que 0, sin enlace.
+   - "Sin vincular" cuenta los pares distintos `(localidad_id, nombre normalizado)` con `establecimiento_id` nulo. El nombre se normaliza sin mayúsculas, tildes ni espacios de los extremos. Se muestra como aviso solo si es mayor que 0, con enlace a `/admin/establecimientos/sin-vincular` (#19).
 3. **Descargas en el tiempo.**
    - Se muestran por día si el período tiene 92 días o menos, y por mes si tiene más. Decide `periodo.ts` y lo pasa como `p_por_mes`.
    - Los días o meses sin descargas aparecen en 0.

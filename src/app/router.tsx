@@ -40,6 +40,9 @@ const NormativaFormPage = lazy(() =>
 const EstablecimientosPage = lazy(() =>
   import('@/pages/admin/establecimientos/EstablecimientosPage').then((m) => ({ default: m.EstablecimientosPage })),
 )
+const SinVincularPage = lazy(() =>
+  import('@/pages/admin/establecimientos/SinVincularPage').then((m) => ({ default: m.SinVincularPage })),
+)
 const EstablecimientoFormPage = lazy(() =>
   import('@/pages/admin/establecimientos/EstablecimientoFormPage').then((m) => ({
     default: m.EstablecimientoFormPage,
@@ -108,6 +111,11 @@ const router = createBrowserRouter([
       { path: 'normativas', element: <NormativasAdminPage />, handle: { title: 'Normativas' } },
       { path: 'normativas/nueva', element: <NormativaFormPage />, handle: { title: 'Nueva normativa' } },
       { path: 'establecimientos', element: <EstablecimientosPage />, handle: { title: 'Establecimientos' } },
+      {
+        path: 'establecimientos/sin-vincular',
+        element: <SinVincularPage />,
+        handle: { title: 'Instituciones sin vincular' },
+      },
       {
         path: 'establecimientos/nuevo',
         element: <EstablecimientoFormPage />,

@@ -519,7 +519,7 @@ select throws_ok(
   '42501', null, 'admin: INSERT directo en registro_descarga da 42501 (solo la RPC inserta)');
 select throws_ok(
   $$update public.registro_descarga set cargo = 'Docente'$$,
-  '42501', null, 'admin: UPDATE en registro_descarga da 42501 (hasta la vinculacion)');
+  '42501', null, 'admin: UPDATE directo en registro_descarga da 42501 (la vinculacion pasa por la RPC vincular_institucion)');
 select throws_ok(
   $$delete from public.registro_descarga$$,
   '42501', null, 'admin: DELETE en registro_descarga da 42501');

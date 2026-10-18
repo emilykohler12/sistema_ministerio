@@ -50,3 +50,7 @@ Lo que muestran:
 | dashboard | 2026-10-16 | critico (código) | 4 (0/0/4) | 1 (BadgeEstadoTaller a notas) | 0 | 0 | — |
 | dashboard | 2026-10-16 | revisor | 6 (0/0/6) | 3 (service_role: se corrigió la spec; dos relojes y estado vacío a notas) | 0 | 0 | 1 (service_role con EXECUTE) |
 | dashboard | 2026-10-16 | qa | 1 (0/0/1) | 0 | 1 (scroll horizontal en celular por grid sin columnas y main sin min-w-0) | 1 | — |
+| instituciones-sin-vincular | 2026-10-18 | critico (spec) | 12 (1/4/7) | 0 | 4 (foco del Dialog en cada render, grant que saltea DA005, variantes NULL, crear sin salida ante duplicado inactivo) | 4 | — |
+| instituciones-sin-vincular | 2026-10-18 | critico (código) | 7 (0/2/5) | 0 | 2 (diálogo cerrable mientras guarda, elección oculta por la búsqueda) | 2 | 1 (role="status" montado con el texto, también del revisor) |
+| instituciones-sin-vincular | 2026-10-18 | revisor | 7 (0/2/5) | 2 (test de skeleton y de foco de la página a notas) | 1 (orden sin test que lo distinga) | 1 | 2 (role="status", service_role con EXECUTE) |
+| instituciones-sin-vincular | 2026-10-18 | qa | 0 | 0 | 0 | 0 | — |

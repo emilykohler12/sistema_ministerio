@@ -1,5 +1,11 @@
 import { supabase } from '@/shared/lib/supabase'
-import type { CambiosEstablecimiento, DatosEstablecimiento, Establecimiento, Localidad } from './types'
+import type {
+  CambiosEstablecimiento,
+  DatosEstablecimiento,
+  Establecimiento,
+  GrupoSinVincular,
+  Localidad,
+} from './types'
 
 /** Los 79 municipios, ordenados por nombre. Los puede leer cualquier rol. */
 export async function obtenerLocalidades(): Promise<Localidad[]> {
@@ -47,6 +53,31 @@ export async function actualizarEstablecimiento(
     .eq('id', id)
     .select()
     .single()
+  if (error) throw error
+  return data
+}
+
+/** Grupos de descargas "Otra" sin vincular, ya ordenados por la base. Solo el admin; sin la marca da `42501`. */
+export async function obtenerSinVincular(): Promise<GrupoSinVincular[]> {
+  const { data, error } = await supabase.rpc('instituciones_sin_vincular')
+  if (error) throw error
+  return data
+}
+
+/**
+ * Vincula los registros del grupo `(localidad, nombre)` al establecimiento y devuelve cuántos tocó: 0 si otro admin ya lo
+ * había hecho. `DA005` si el establecimiento está inactivo o es de otra localidad.
+ */
+export async function vincularInstitucion(
+  localidadId: number,
+  nombre: string,
+  establecimientoId: number,
+): Promise<number> {
+  const { data, error } = await supabase.rpc('vincular_institucion', {
+    p_localidad_id: localidadId,
+    p_nombre: nombre,
+    p_establecimiento_id: establecimientoId,
+  })
   if (error) throw error
   return data
 }

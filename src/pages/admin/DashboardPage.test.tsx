@@ -18,7 +18,8 @@ import { DashboardPage } from './DashboardPage'
  *    sin botón "Reintentar", sin skeletons (role="status" name "Cargando") y sin llamar a obtenerMetricas.
  *  - Carga: skeletons con role="status" y nombre "Cargando". Error de la query: ErrorFallback (role="alert") con "Reintentar".
  *  - KPIs dentro de un region "Resumen": "Descargas", "Establecimientos alcanzados", "Talleres publicados", "Normativas"
- *    (cantidad = normativas.length). Aviso "N institución(es) sin vincular" solo si sin_vincular > 0, sin enlace.
+ *    (cantidad = normativas.length). Aviso "N institución(es) sin vincular" solo si sin_vincular > 0, como enlace a
+ *    /admin/establecimientos/sin-vincular (instituciones sin vincular, issue #19, criterio 8).
  *  - Secciones (role="region" con estos nombres): "Descargas en el tiempo", "Ranking de talleres", "Descargas por nivel",
  *    "Descargas por cargo", "Descargas por localidad", "Normativas". Cada una con una <table>; la primera fila es el encabezado.
  *  - Ver todos: botón "Ver todos" (ranking) y "Ver todas" (localidades) que despliega el resto.
@@ -307,12 +308,18 @@ describe('DashboardPage: resumen', () => {
     expect(screen.queryByText(/sin vincular/i)).not.toBeInTheDocument()
   })
 
-  it('con una institución sin vincular muestra el aviso en singular, sin enlace', async () => {
+  it('con una institución sin vincular muestra el aviso en singular como enlace a la pantalla de vinculación', async () => {
     await renderPagina(base({ resumen: { ...base().resumen, sin_vincular: 1 } }))
-    const aviso = screen.getByText(/1 institución sin vincular/i)
-    expect(aviso).toBeInTheDocument()
-    expect(aviso.closest('a')).toBeNull()
-    expect(within(aviso.parentElement as HTMLElement).queryByRole('link')).not.toBeInTheDocument()
+    const aviso = screen.getByRole('link', { name: /1 institución sin vincular/i })
+    expect(aviso).toHaveAttribute('href', '/admin/establecimientos/sin-vincular')
+  })
+
+  it('el aviso en plural también es un enlace a la pantalla de vinculación', async () => {
+    await renderPagina(base({ resumen: { ...base().resumen, sin_vincular: 3 } }))
+    expect(screen.getByRole('link', { name: /3 instituciones sin vincular/i })).toHaveAttribute(
+      'href',
+      '/admin/establecimientos/sin-vincular',
+    )
   })
 
   it('con varias muestra el aviso en plural', async () => {

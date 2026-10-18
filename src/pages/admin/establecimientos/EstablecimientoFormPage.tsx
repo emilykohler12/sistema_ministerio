@@ -1,9 +1,15 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import type { z } from 'zod'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { esCueDuplicado, esNombreDuplicado } from '@/features/establecimientos/errores'
+import {
+  esCueDuplicado,
+  esNombreDuplicado,
+  MENSAJE_CUE_DUPLICADO,
+  MENSAJE_NOMBRE_DUPLICADO,
+} from '@/features/establecimientos/errores'
+import { esquemaEstablecimiento } from '@/features/establecimientos/esquema'
 import {
   useActualizarEstablecimiento,
   useCrearEstablecimiento,
@@ -22,29 +28,9 @@ import { Select } from '@/shared/components/ui/Select'
 import { CardSkeleton } from '@/shared/components/ui/Skeleton'
 import { idDeRuta } from '@/shared/lib/rutas'
 
-// Espejo de la base: nombre no vacío (sin espacios en los bordes) de hasta varchar(200); CUE vacío -> null,
-// solo dígitos y hasta varchar(20); localidad obligatoria.
-const schema = z.object({
-  nombre: z
-    .string()
-    .trim()
-    .min(1, 'Ingresá el nombre del establecimiento')
-    .max(200, 'El nombre no puede superar los 200 caracteres'),
-  cue: z
-    .string()
-    .trim()
-    .max(20, 'El CUE no puede superar los 20 dígitos')
-    .regex(/^[0-9]*$/, 'El CUE solo puede tener dígitos')
-    .transform((valor) => (valor === '' ? null : valor)),
-  localidad_id: z.string().min(1, 'Elegí una localidad').transform(Number),
-})
+type FormInput = z.input<typeof esquemaEstablecimiento>
+type FormOutput = z.output<typeof esquemaEstablecimiento>
 
-type FormInput = z.input<typeof schema>
-type FormOutput = z.output<typeof schema>
-
-const MENSAJE_NOMBRE_DUPLICADO =
-  'Ya existe un establecimiento con ese nombre en esta localidad (puede estar dado de baja)'
-const MENSAJE_CUE_DUPLICADO = 'Ya existe un establecimiento con ese CUE'
 const MENSAJE_GENERICO = 'No pudimos guardar el establecimiento. Probá de nuevo.'
 
 const LISTADO = '/admin/establecimientos'
@@ -105,7 +91,7 @@ function Formulario({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<FormInput, unknown, FormOutput>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(esquemaEstablecimiento),
     defaultValues: {
       nombre: establecimiento?.nombre ?? '',
       cue: establecimiento?.cue ?? '',

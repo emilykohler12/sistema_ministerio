@@ -80,6 +80,17 @@ beforeEach(() => {
 
 const fila = async (texto: string) => within(await screen.findByRole('row', { name: new RegExp(texto) }))
 
+describe('EstablecimientosPage: instituciones sin vincular (issue #19)', () => {
+  it('ofrece un enlace "Instituciones sin vincular" a la pantalla de vinculación', async () => {
+    renderPagina()
+    await fila('Escuela Normal')
+    expect(screen.getByRole('link', { name: 'Instituciones sin vincular' })).toHaveAttribute(
+      'href',
+      '/admin/establecimientos/sin-vincular',
+    )
+  })
+})
+
 describe('EstablecimientosPage: sin localidad (criterio 8)', () => {
   it('pide elegir una localidad y no consulta establecimientos', async () => {
     renderPagina('/admin/establecimientos')
