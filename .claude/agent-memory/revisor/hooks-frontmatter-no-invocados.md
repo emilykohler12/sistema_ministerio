@@ -28,6 +28,9 @@ rangos de archivos con Read (offset/limit) en lugar de `sed -n`.
 En dashboard (2026-10-16) el perfil checks del revisor también bloqueó `npm run build`, los loops `for` y `gen types --local > archivo`
 (redirección, aunque sea al scratchpad). `test:db`, `npm test`, `typecheck` y `lint` pasan. Si el pedido incluye build, avisá que lo corra el coordinador.
 
+En instituciones-sin-vincular (2026-10-18) también bloqueó `git stash list` y la sustitución de procesos `diff <(...) <(...)`. Para comparar
+diffs con y sin espacios, corré `git diff main --numstat` y `git diff main -w --numstat` uno detrás del otro y mirá la diferencia a ojo.
+
 **Why:** una lista blanca de "comandos de lectura" igual deja escribir o ejecutar si no se miran las banderas, y las comillas esconden
 banderas a los lookahead. Y un hook que "funciona a mano" puede no recibir los campos que espera en otro tipo de sesión.
 **How to apply:** al empezar una revisión de hooks, sondeá primero si el rol se aplica a VOS (`node --version` debería bloquearse); si no,

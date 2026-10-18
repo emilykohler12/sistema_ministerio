@@ -334,6 +334,11 @@ isOneToOne: false
 "inmutable_unaccent":
 { Args: { "": string }; Returns: string
                            },
+"instituciones_sin_vincular":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "descargas": number,"localidad": string,"localidad_id": number,"nombre": string,"ultima": string,"variantes": (string)[]
+            }[]
+                           },
 "metricas_por_cargo":
 { Args: { "p_desde": string,"p_hasta": string }; Returns: {
               "cargo": string,"descargas": number
@@ -377,6 +382,9 @@ isOneToOne: false
                            },
 "resolver_etiquetas":
 { Args: { "p_etiquetas": (string)[] }; Returns: (number)[]
+                           },
+"vincular_institucion":
+{ Args: { "p_establecimiento_id": number,"p_localidad_id": number,"p_nombre": string }; Returns: number
                            }
           }
           Enums: {

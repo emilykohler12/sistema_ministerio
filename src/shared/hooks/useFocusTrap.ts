@@ -1,8 +1,15 @@
-import { type RefObject, useEffect } from 'react'
+import { type RefObject, useEffect, useRef } from 'react'
 
 const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
 
 export function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean, onClose: () => void) {
+  // `onClose` va en un ref: si fuera una dependencia, una función nueva en cada render reiniciaría el efecto y el foco
+  // volvería al primer elemento mientras se escribe.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
+
   useEffect(() => {
     if (!active) return
     const container = ref.current
@@ -14,7 +21,7 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key !== 'Tab' || !container) return
@@ -38,5 +45,5 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean
       document.removeEventListener('keydown', handleKeyDown)
       previouslyFocused?.focus()
     }
-  }, [active, ref, onClose])
+  }, [active, ref])
 }

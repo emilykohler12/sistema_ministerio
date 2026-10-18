@@ -1,4 +1,4 @@
-import type { Tables, TablesInsert } from '@/shared/types/database'
+import type { Database, Tables, TablesInsert } from '@/shared/types/database'
 
 export type Localidad = Tables<'localidad'>
 export type Establecimiento = Tables<'establecimiento'>
@@ -10,3 +10,6 @@ export type DatosEstablecimiento = Pick<TablesInsert<'establecimiento'>, 'nombre
 
 /** Cambios de una edición: los datos del formulario y la baja o reactivación (`activo`). */
 export type CambiosEstablecimiento = Partial<DatosEstablecimiento & Pick<Establecimiento, 'activo'>>
+
+/** Un grupo de descargas "Otra" sin establecimiento: una fila de `instituciones_sin_vincular()`. */
+export type GrupoSinVincular = Database['public']['Functions']['instituciones_sin_vincular']['Returns'][number]

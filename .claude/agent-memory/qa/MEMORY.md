@@ -1,3 +1,4 @@
 - [Trampas e2e del DAM](trampas-e2e.md) — selectores y datos que costaron en los specs de Playwright
 - [Trampas no-contar-admin](trampas-no-contar-admin.md) — esperar la RPC antes de comparar contadores; sessionStorage de normativas
+- [Trampas sin vincular](trampas-sin-vincular.md) — h1 duplicado en móvil, combobox de localidad, RPC frenada
 - [Trampas del tablero](trampas-dashboard.md) — deltas, regiones, regex y token sin-permiso en e2e/dashboard

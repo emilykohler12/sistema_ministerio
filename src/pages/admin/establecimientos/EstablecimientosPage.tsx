@@ -46,9 +46,14 @@ export function EstablecimientosPage() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-primary-800">Establecimientos</h1>
-        <Link to={rutaNuevo}>
-          <Button>Nuevo establecimiento</Button>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link to="/admin/establecimientos/sin-vincular" className="text-sm font-medium text-primary-600 hover:underline">
+            Instituciones sin vincular
+          </Link>
+          <Link to={rutaNuevo}>
+            <Button>Nuevo establecimiento</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">

@@ -71,6 +71,13 @@ En no-contar-descargas-admin (#25, 2026-10-16, `create or replace` de dos RPC de
 - Los bloques CONTRATO de la cabecera de los pgTAP no se actualizan cuando una migración posterior cambia la RPC.
 - Un `create or replace` con la misma firma conserva los grants, pero hay que repetir `security definer` y `set search_path`. Compará el cuerpo con el original.
 
+En instituciones-sin-vincular (#19, 2026-10-18; RPC definer + invoker) la base salió bien. Se repitió por **cuarta** vez `service_role` con EXECUTE
+(`revoke ... from public, anon`) con un diseño que dice "solo authenticated" (menor). Novedades:
+- El test "sin marca da 42501" usó un establecimiento **válido**: no prueba que `es_admin()` vaya antes que la validación (`DA005`). Pedí el caso
+  sin marca con una entrada que también fallaría la validación.
+- Un desempate (`ultima desc`) agregado en la migración que no figura en el criterio, y un `results_eq` de orden cuyos empates comparten el
+  valor del desempate: el assert no distingue las variantes. Mirá si cada clave del `order by` tiene datos que la ejerzan.
+
 **Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
 creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
 REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay

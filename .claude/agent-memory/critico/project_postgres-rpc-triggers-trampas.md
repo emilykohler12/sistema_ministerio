@@ -24,8 +24,9 @@ En la crítica del código de la fase A (2026-10-10) aparecieron más cosas:
 - **pgTAP que no distingue:** el primer valor de la entrada ya venía normalizado (el test del `btrim` pasaba igual sin `btrim`).
   La "lectura pública" se probaba con una etiqueta que también era visible con la política vieja. La rama de borrado de la
   sincronización nunca borraba nada. `has_function_privilege('anon')` ya incluye a PUBLIC (el chequeo con `aclexplode` sobra).
-- El crítico **sí** puede correr `npm run test:db` y `docker exec -i supabase_db_sistema_ministerio psql -U postgres` con
-  `begin ... rollback`. Después, volver a correr `test:db`, porque los tests suponen que no hay categorías.
+- **Desde 2026-10-18 el crítico NO puede correr `docker exec ... psql`** (perfil lectura de `roles.mjs`, 0021) ni `sed`/`cat` en Bash
+  sobre algunos archivos: usar Read/Grep. Para semántica de Postgres, citar la documentación y decir que no se verificó en la base.
+  Además, el coordinador puede pedir que no se corra `test:db` (el revisor usa la base en paralelo).
 
 En la crítica del código de la fase A de recursos (2026-10-10), con `ordenar_recursos`:
 - Un `update ... where col is distinct from nuevo` en READ COMMITTED no es "gana el último": descarta, sin esperar el lock, las filas
@@ -75,6 +76,12 @@ En la crítica del plan `no-contar-descargas-admin` (2026-10-16, `if es_admin() 
   ("sin marca registra" sin contar la fila). Hacer grep de la RPC en `supabase/tests/` y pedir que el rojo salga de editarlos.
 - **Un `return` temprano antes del `insert` saltea los CHECK** (23514): "las validaciones se mantienen" vale solo para los `raise`
   explícitos. Si se pide paridad, la única salida es insertar y después borrar, lo que ensucia la auditoría.
+
+En la crítica de la spec `instituciones-sin-vincular` (2026-10-18):
+- **Una RPC invoker con un grant por columna nuevo** deja que el admin saltee desde PostgREST las validaciones que viven solo en la RPC
+  (`DA005`). En este proyecto, si hay un grant, el invariante va en la tabla (trigger/CHECK). Si no, la RPC es definer, sin grant, y
+  chequea `es_admin()` (molde 0017/0022).
+- `array_agg(...) filter (...)` sin filas da NULL, pero `db:types` lo tipa `string[]`. Pedir `coalesce(..., '{}')`.
 
 **Why:** son fallas silenciosas o errores en el caso feliz que ni el typecheck ni el pgTAP básico detectan.
 

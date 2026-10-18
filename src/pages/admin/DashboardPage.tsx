@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { conPorcentajes } from '@/features/dashboard/calculos'
 import { KpiCard } from '@/features/dashboard/components/KpiCard'
 import { Seccion } from '@/features/dashboard/components/Seccion'
@@ -56,9 +56,12 @@ function ContenidoMetricas({ datos, porMes, actualizando }: ContenidoMetricasPro
           <KpiCard label="Normativas" value={normativas.length} />
         </div>
         {sinVincular > 0 && (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          <Link
+            to="/admin/establecimientos/sin-vincular"
+            className="block rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
+          >
             {sinVincular} {sinVincular === 1 ? 'institución' : 'instituciones'} sin vincular
-          </p>
+          </Link>
         )}
       </section>
 
