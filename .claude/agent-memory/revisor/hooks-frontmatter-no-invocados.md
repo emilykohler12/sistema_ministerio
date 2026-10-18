@@ -31,6 +31,9 @@ En dashboard (2026-10-16) el perfil checks del revisor también bloqueó `npm ru
 En instituciones-sin-vincular (2026-10-18) también bloqueó `git stash list` y la sustitución de procesos `diff <(...) <(...)`. Para comparar
 diffs con y sin espacios, corré `git diff main --numstat` y `git diff main -w --numstat` uno detrás del otro y mirá la diferencia a ojo.
 
+En historial (2026-10-18) también bloqueó `curl` contra el PostgREST local y `supabase gen types --local`, aunque fuera a stdout. Marcá "a verificar"
+lo que dependa de PostgREST y pedí que lo confirme el `qa`. Para `database.ts`, compará el formato del bloque nuevo con uno generado parecido (por ejemplo, `es_admin`).
+
 **Why:** una lista blanca de "comandos de lectura" igual deja escribir o ejecutar si no se miran las banderas, y las comillas esconden
 banderas a los lookahead. Y un hook que "funciona a mano" puede no recibir los campos que espera en otro tipo de sesión.
 **How to apply:** al empezar una revisión de hooks, sondeá primero si el rol se aplica a VOS (`node --version` debería bloquearse); si no,

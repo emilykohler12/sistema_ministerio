@@ -78,6 +78,13 @@ En instituciones-sin-vincular (#19, 2026-10-18; RPC definer + invoker) la base s
 - Un desempate (`ultima desc`) agregado en la migración que no figura en el criterio, y un `results_eq` de orden cuyos empates comparten el
   valor del desempate: el assert no distingue las variantes. Mirá si cada clave del `order by` tiene datos que la ejerzan.
 
+En historial (#20, 2026-10-18; RPC definer `usuarios_historial` sobre `auth.users`) la base salió bien: por fin con `revoke` de `service_role` y su test.
+Se repitieron dos asserts débiles (ya marcados antes, ahora por **segunda** vez cada uno, así que proponé sumarlos a una regla si vuelven):
+- El orden de un `results_eq` coincidía con el de los uuid y con el de inserción (`historial-a`/`aaaa…` antes que `historial-b`/`bbbb…`): un `order by id`
+  o un `order by` faltante también daba verde. Mirá siempre si los datos de prueba ordenan distinto según la clave del criterio y según el id o la inserción.
+- `has_function` sin `pg_get_function_result`: una columna extra en `returns table` pasa.
+Del lado del cliente, `fechaReal` con `setUTCFullYear` acepta el año 0000, que Postgres rechaza: es un caso borde de URL que termina en "Reintentar" para siempre.
+
 **Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
 creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
 REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay

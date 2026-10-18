@@ -54,3 +54,7 @@ Lo que muestran:
 | instituciones-sin-vincular | 2026-10-18 | critico (código) | 7 (0/2/5) | 0 | 2 (diálogo cerrable mientras guarda, elección oculta por la búsqueda) | 2 | 1 (role="status" montado con el texto, también del revisor) |
 | instituciones-sin-vincular | 2026-10-18 | revisor | 7 (0/2/5) | 2 (test de skeleton y de foco de la página a notas) | 1 (orden sin test que lo distinga) | 1 | 2 (role="status", service_role con EXECUTE) |
 | instituciones-sin-vincular | 2026-10-18 | qa | 0 | 0 | 0 | 0 | — |
+| historial-operaciones | 2026-10-18 | critico (spec) | 12 (0/6/6) | 1 (mudar helpers del dashboard: en parte, a #39) | 5 (diff vacío al guardar sin cambios, PGRST103 en "Reintentar" en bucle, URL sin sanear, 42804 por `email` varchar, revoke de service_role) | 4 | — |
+| historial-operaciones | 2026-10-18 | critico (código) | 6 (0/2/4) | 0 | 2 (consulta e historial del navegador por cada tecla de la fecha, foco perdido al paginar) | 2 | — |
+| historial-operaciones | 2026-10-18 | revisor | 5 (0/0/5) | 0 | 1 (año 0000 en "Reintentar" en bucle) | 1 | 2 (orden que coincide con el de los uuid, retorno sin `pg_get_function_result`) |
+| historial-operaciones | 2026-10-18 | qa | 1 (0/0/1) | 1 (416 en consola con `?pagina=999`: lo maneja la app, documentado en notas) | 0 | 0 | — |
