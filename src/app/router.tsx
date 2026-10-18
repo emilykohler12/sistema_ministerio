@@ -51,6 +51,7 @@ const EstablecimientoFormPage = lazy(() =>
 const ConfiguracionPage = lazy(() =>
   import('@/pages/admin/ConfiguracionPage').then((m) => ({ default: m.ConfiguracionPage })),
 )
+const HistorialPage = lazy(() => import('@/pages/admin/HistorialPage').then((m) => ({ default: m.HistorialPage })))
 
 function AdminFallback() {
   return (
@@ -126,6 +127,7 @@ const router = createBrowserRouter([
         element: <EstablecimientoFormPage />,
         handle: { title: 'Editar establecimiento' },
       },
+      { path: 'historial', element: <HistorialPage />, handle: { title: 'Historial' } },
       { path: 'configuracion', element: <ConfiguracionPage />, handle: { title: 'Configuración' } },
     ],
   },

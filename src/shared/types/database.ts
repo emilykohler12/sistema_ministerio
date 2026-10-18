@@ -383,6 +383,11 @@ isOneToOne: false
 "resolver_etiquetas":
 { Args: { "p_etiquetas": (string)[] }; Returns: (number)[]
                            },
+"usuarios_historial":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "email": string,"id": string
+            }[]
+                           },
 "vincular_institucion":
 { Args: { "p_establecimiento_id": number,"p_localidad_id": number,"p_nombre": string }; Returns: number
                            }
