@@ -24,6 +24,15 @@ recurrente de UI del proyecto: buscalo siempre (`grep -n "aria-describedby"` en 
 En instituciones-sin-vincular (2026-10-18) el resultado de una acción iba en `{msg && <p role="status">}`: la región viva se monta con el texto
 (no se anuncia de forma confiable) y en el mismo commit el foco salta al `h1`. El test solo comprobaba que el nodo existiera. Pedí el contenedor
 siempre montado y el test con el mismo nodo antes y después. Buscalo con `grep -n 'role="status"'` en pantallas nuevas.
+Se repitió en cierre-inactividad (2026-10-23): el mensaje "Tu sesión se cerró por inactividad" de `LoginPage` es `{cond && <p role="status">}` montado
+con la página y sin mover el foco. Segunda vez: proponé sumarlo a `rules/react.md` (región viva siempre montada, o `role="alert"` si aparece con la pantalla).
+En la misma revisión: `Dialog` tiene `id="dialog-title"`/`dialog-description` literales y `useFocusTrap` escucha `keydown` en `document`. Con dos diálogos
+abiertos (un aviso global sobre un diálogo del panel), el de arriba toma el nombre del de abajo y Escape cierra los dos. Revisalo en todo modal global.
+Se arregló con `useId` y una pila de tokens de módulo en `useFocusTrap` (Revisión 2). Dos trampas en una pila así: (a) cuando el de **abajo** se cierra
+primero (`DialogoRecurso` se cierra solo al terminar `onSubmit`), su cleanup hace `previouslyFocused.focus()` y saca el foco del de arriba. Solo el
+de arriba debería restaurar el foco, y el de abajo le pasa su destino. (b) Un test de "sale de la pila aunque no sea la de arriba" que desmonta la de
+arriba antes del Escape es vacuo: pasa con `pop()` y con un token huérfano. Pedí tres trampas (desactivar la del medio, Escape llega a la de arriba;
+desmontar esa, Escape llega a la de abajo).
 También se repite: un test de "carga" que solo comprueba ausencias. `TableSkeleton` no tiene `role`, así que si se saca, el test sigue verde.
 
 En redes-contacto (2026-10-23, `ContactoPage`) las URL de Facebook/Instagram como texto del enlace dentro de `DatoDeContacto` (flex sin
@@ -35,5 +44,5 @@ el prefijo pelado.
 
 **Why:** el foco de a11y del proyecto pide que todo `aria-invalid` tenga explicación, y los estados vacíos no deben mentir ante un error.
 **How to apply:** en cada `setError` revisá que el input tenga `aria-describedby` hacia un mensaje existente; si el error abarca varios
-campos, mirá cómo se limpia. Para probar el comportamiento de RHF sin tocar `src/`: test en el scratchpad con `ln -s` a `node_modules`,
-`tsconfig.json` con `jsx: react-jsx` y `vitest run --root <scratch> --environment jsdom` (sin jest-dom; `--dir` falla por `fs.allow`).
+campos, mirá cómo se limpia. La receta de probar RHF con un test en el scratchpad ya no corre: el perfil checks bloquea el Write fuera
+del proyecto (ver [[hooks-frontmatter-no-invocados]]). Razoná leyendo el código y pedí el test al implementador.

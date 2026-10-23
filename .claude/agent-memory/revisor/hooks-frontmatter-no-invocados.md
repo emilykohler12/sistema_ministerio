@@ -36,6 +36,9 @@ lo que dependa de PostgREST y pedí que lo confirme el `qa`. Para `database.ts`,
 
 En validar-redes (2026-10-23) bloqueó asignar variables (`S=... ; mkdir`): la receta de RHF en el scratchpad de [[formularios-rhf-a11y]] no corre
 con el perfil checks. Razoná el comportamiento de RHF leyendo el código y pedí el test al implementador.
+En cierre-inactividad (2026-10-23) también bloqueó **Write al scratchpad** ("está fuera del proyecto") y `sed -n` sobre `node_modules`: no hay forma
+de correr un test propio. Leé `node_modules` con Read (offset/limit) y dejá constancia en la evidencia de que el hallazgo sale de leer el código.
+En la Revisión 2 también bloqueó `gh issue list`: no se puede comprobar si una observación ya tiene issue. Pedile al coordinador que lo confirme.
 
 **Why:** una lista blanca de "comandos de lectura" igual deja escribir o ejecutar si no se miran las banderas, y las comillas esconden
 banderas a los lookahead. Y un hook que "funciona a mano" puede no recibir los campos que espera en otro tipo de sesión.
