@@ -26,6 +26,11 @@ En instituciones-sin-vincular (2026-10-18) el resultado de una acción iba en `{
 siempre montado y el test con el mismo nodo antes y después. Buscalo con `grep -n 'role="status"'` en pantallas nuevas.
 También se repite: un test de "carga" que solo comprueba ausencias. `TableSkeleton` no tiene `role`, así que si se saca, el test sigue verde.
 
+En redes-contacto (2026-10-23, `ContactoPage`) las URL de Facebook/Instagram como texto del enlace dentro de `DatoDeContacto` (flex sin
+`min-w-0`, sin `break-all`): una URL larga desborda a 320 px (WCAG 1.4.10). Buscalo en toda tarjeta que muestre URL o correo como texto.
+Los valores de redes de `configuracion` no tienen zod `url()` ni `trim` (issue aparte, #24 fuera de alcance): no lo vuelvas a reportar como nuevo.
+`lucide-react` 1.x no trae íconos de marca (Facebook/Instagram): `Globe` es lo esperado.
+
 **Why:** el foco de a11y del proyecto pide que todo `aria-invalid` tenga explicación, y los estados vacíos no deben mentir ante un error.
 **How to apply:** en cada `setError` revisá que el input tenga `aria-describedby` hacia un mensaje existente; si el error abarca varios
 campos, mirá cómo se limpia. Para probar el comportamiento de RHF sin tocar `src/`: test en el scratchpad con `ln -s` a `node_modules`,
