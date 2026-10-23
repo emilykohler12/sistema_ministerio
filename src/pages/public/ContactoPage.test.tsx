@@ -98,6 +98,40 @@ describe('ContactoPage', () => {
     expect(await screen.findByText('3764 123456')).toBeInTheDocument()
   })
 
+  it('muestra Facebook e Instagram como enlaces externos que abren en otra pestaña', async () => {
+    vi.mocked(obtenerConfiguracion).mockResolvedValue({
+      ...base,
+      facebook: 'https://facebook.com/ministerio',
+      instagram: 'https://instagram.com/ministerio',
+    })
+    renderConProviders(<ContactoPage />)
+
+    const facebook = await screen.findByRole('link', { name: 'https://facebook.com/ministerio' })
+    expect(facebook).toHaveAttribute('href', 'https://facebook.com/ministerio')
+    expect(facebook).toHaveAttribute('target', '_blank')
+    expect(facebook).toHaveAttribute('rel', 'noreferrer')
+    const instagram = screen.getByRole('link', { name: 'https://instagram.com/ministerio' })
+    expect(instagram).toHaveAttribute('href', 'https://instagram.com/ministerio')
+    expect(instagram).toHaveAttribute('target', '_blank')
+    expect(instagram).toHaveAttribute('rel', 'noreferrer')
+  })
+
+  it('con solo las redes cargadas no muestra "Todavía no hay datos de contacto"', async () => {
+    vi.mocked(obtenerConfiguracion).mockResolvedValue({ ...base, instagram: 'https://instagram.com/ministerio' })
+    renderConProviders(<ContactoPage />)
+
+    expect(await screen.findByText('Instagram')).toBeInTheDocument()
+    expect(screen.queryByText(SIN_DATOS)).not.toBeInTheDocument()
+  })
+
+  it('oculta la red social que no tiene valor', async () => {
+    vi.mocked(obtenerConfiguracion).mockResolvedValue({ ...base, facebook: 'https://facebook.com/ministerio' })
+    renderConProviders(<ContactoPage />)
+
+    expect(await screen.findByText('Facebook')).toBeInTheDocument()
+    expect(screen.queryByText('Instagram')).not.toBeInTheDocument()
+  })
+
   it('ya no muestra los datos fijos de CABA', async () => {
     vi.mocked(obtenerConfiguracion).mockResolvedValue(base)
     renderConProviders(<ContactoPage />)

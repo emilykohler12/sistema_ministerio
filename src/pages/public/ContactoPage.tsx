@@ -1,4 +1,4 @@
-import { Mail, MapPin, Phone, type LucideIcon } from 'lucide-react'
+import { Globe, Mail, MapPin, Phone, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useConfiguracion } from '@/features/configuracion/hooks/useConfiguracion'
 import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
@@ -8,9 +8,9 @@ function DatoDeContacto({ icono: Icono, etiqueta, children }: { icono: LucideIco
   return (
     <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4">
       <Icono className="h-5 w-5 text-primary-600" aria-hidden="true" />
-      <div>
+      <div className="min-w-0">
         <dt className="text-xs text-gray-400">{etiqueta}</dt>
-        <dd className="font-medium text-gray-800">{children}</dd>
+        <dd className="break-words font-medium text-gray-800">{children}</dd>
       </div>
     </div>
   )
@@ -18,7 +18,9 @@ function DatoDeContacto({ icono: Icono, etiqueta, children }: { icono: LucideIco
 
 export function ContactoPage() {
   const { data: config, isPending, isError, refetch } = useConfiguracion()
-  const hayDatos = Boolean(config?.telefono || config?.correo || config?.direccion)
+  const hayDatos = Boolean(
+    config?.telefono || config?.correo || config?.direccion || config?.facebook || config?.instagram,
+  )
 
   return (
     <div className="px-4 py-10 sm:px-6">
@@ -52,6 +54,20 @@ export function ContactoPage() {
           {config?.direccion && (
             <DatoDeContacto icono={MapPin} etiqueta="Dirección">
               {config.direccion}
+            </DatoDeContacto>
+          )}
+          {config?.facebook && (
+            <DatoDeContacto icono={Globe} etiqueta="Facebook">
+              <a href={config.facebook} target="_blank" rel="noreferrer" className="hover:underline">
+                {config.facebook}
+              </a>
+            </DatoDeContacto>
+          )}
+          {config?.instagram && (
+            <DatoDeContacto icono={Globe} etiqueta="Instagram">
+              <a href={config.instagram} target="_blank" rel="noreferrer" className="hover:underline">
+                {config.instagram}
+              </a>
             </DatoDeContacto>
           )}
         </dl>
