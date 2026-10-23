@@ -28,7 +28,9 @@ También se repite: un test de "carga" que solo comprueba ausencias. `TableSkele
 
 En redes-contacto (2026-10-23, `ContactoPage`) las URL de Facebook/Instagram como texto del enlace dentro de `DatoDeContacto` (flex sin
 `min-w-0`, sin `break-all`): una URL larga desborda a 320 px (WCAG 1.4.10). Buscalo en toda tarjeta que muestre URL o correo como texto.
-Los valores de redes de `configuracion` no tienen zod `url()` ni `trim` (issue aparte, #24 fuera de alcance): no lo vuelvas a reportar como nuevo.
+Las redes de `configuracion` se validaron en #43 (validar-redes, 2026-10-23): `trim` + `https://`. Ahí se escapó `"https://"` solo
+(el `refine` era `startsWith`), cuando `DialogoRecurso` ya exige `length > 'https://'.length`. En toda validación "empieza con https://" probá
+el prefijo pelado.
 `lucide-react` 1.x no trae íconos de marca (Facebook/Instagram): `Globe` es lo esperado.
 
 **Why:** el foco de a11y del proyecto pide que todo `aria-invalid` tenga explicación, y los estados vacíos no deben mentir ante un error.

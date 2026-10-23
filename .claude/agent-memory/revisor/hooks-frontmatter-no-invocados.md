@@ -34,6 +34,9 @@ diffs con y sin espacios, corré `git diff main --numstat` y `git diff main -w -
 En historial (2026-10-18) también bloqueó `curl` contra el PostgREST local y `supabase gen types --local`, aunque fuera a stdout. Marcá "a verificar"
 lo que dependa de PostgREST y pedí que lo confirme el `qa`. Para `database.ts`, compará el formato del bloque nuevo con uno generado parecido (por ejemplo, `es_admin`).
 
+En validar-redes (2026-10-23) bloqueó asignar variables (`S=... ; mkdir`): la receta de RHF en el scratchpad de [[formularios-rhf-a11y]] no corre
+con el perfil checks. Razoná el comportamiento de RHF leyendo el código y pedí el test al implementador.
+
 **Why:** una lista blanca de "comandos de lectura" igual deja escribir o ejecutar si no se miran las banderas, y las comillas esconden
 banderas a los lookahead. Y un hook que "funciona a mano" puede no recibir los campos que espera en otro tipo de sesión.
 **How to apply:** al empezar una revisión de hooks, sondeá primero si el rol se aplica a VOS (`node --version` debería bloquearse); si no,
