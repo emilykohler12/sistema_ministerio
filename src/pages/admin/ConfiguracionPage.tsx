@@ -12,13 +12,21 @@ import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
 import { Skeleton } from '@/shared/components/ui/Skeleton'
 
+const redSocial = z
+  .string()
+  .trim()
+  .refine(
+    (v) => v === '' || (v.startsWith('https://') && v.length > 'https://'.length),
+    'Ingresá una URL que empiece con https://',
+  )
+
 const schema = z.object({
   nombre: z.string().trim().min(1, 'Ingresá el nombre de la institución'),
   telefono: z.string(),
   correo: z.union([z.literal(''), z.email('Ingresá un correo válido')]),
   direccion: z.string(),
-  facebook: z.string(),
-  instagram: z.string(),
+  facebook: redSocial,
+  instagram: redSocial,
   quienes_somos: z.string(),
   mision: z.string(),
   vision: z.string(),
@@ -123,11 +131,25 @@ export function ConfiguracionPage() {
           <div className="mt-4 space-y-4">
             <div>
               <Label htmlFor="facebook">Facebook</Label>
-              <Input id="facebook" placeholder="https://facebook.com/..." {...register('facebook')} />
+              <Input
+                id="facebook"
+                placeholder="https://facebook.com/..."
+                error={!!errors.facebook}
+                aria-describedby={errors.facebook ? 'facebook-error' : undefined}
+                {...register('facebook')}
+              />
+              <FieldError id="facebook-error" message={errors.facebook?.message} />
             </div>
             <div>
               <Label htmlFor="instagram">Instagram</Label>
-              <Input id="instagram" placeholder="https://instagram.com/..." {...register('instagram')} />
+              <Input
+                id="instagram"
+                placeholder="https://instagram.com/..."
+                error={!!errors.instagram}
+                aria-describedby={errors.instagram ? 'instagram-error' : undefined}
+                {...register('instagram')}
+              />
+              <FieldError id="instagram-error" message={errors.instagram?.message} />
             </div>
           </div>
         </Card>
