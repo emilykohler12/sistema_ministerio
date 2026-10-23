@@ -1,17 +1,37 @@
 import { useState } from 'react'
 import { Navigate, Outlet, useLocation, useMatches } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
+import { AvisoInactividad } from '@/features/auth/components/AvisoInactividad'
+import { useInactividad } from '@/features/auth/useInactividad'
 import { Skeleton } from '@/shared/components/ui/Skeleton'
 import { SkipLink } from '@/shared/components/ui/SkipLink'
 import { AdminHeader } from './AdminHeader'
 import { AdminSidebar } from './AdminSidebar'
 
+/** §5.2: cierre de sesión tras 30 minutos sin actividad, con aviso 2 minutos antes. */
+const LIMITE_INACTIVIDAD_MS = 30 * 60_000
+const AVISO_INACTIVIDAD_MS = 2 * 60_000
+
 export function AdminLayout() {
-  const { usuario, cargando } = useAuth()
+  const { usuario, cargando, cerrarSesion } = useAuth()
+  const [vencidaPorInactividad, setVencidaPorInactividad] = useState(false)
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const matches = useMatches() as { handle?: { title?: string } }[]
   const title = matches.findLast((m) => m.handle?.title)?.handle?.title ?? 'Panel de Administración'
+
+  const { aviso, venceEn, extender } = useInactividad({
+    activo: !!usuario,
+    limiteMs: LIMITE_INACTIVIDAD_MS,
+    avisoMs: AVISO_INACTIVIDAD_MS,
+    onVencida: () => {
+      // Se marca antes de cerrar: al caer el usuario, el <Navigate> de abajo lleva el motivo al login.
+      setVencidaPorInactividad(true)
+      // signOut borra la sesión local salvo si el access token ya venció y no hay red (auth-js no puede
+      // refrescarlo y no la borra). Ese caso raro queda abierto; el rechazo no tiene nada más que hacer acá.
+      cerrarSesion().catch(() => {})
+    },
+  })
 
   if (cargando) {
     return (
@@ -26,7 +46,13 @@ export function AdminLayout() {
   }
 
   if (!usuario) {
-    return <Navigate to="/admin/login" state={{ from: location }} replace />
+    return (
+      <Navigate
+        to="/admin/login"
+        state={{ from: location, ...(vencidaPorInactividad && { motivo: 'inactividad' }) }}
+        replace
+      />
+    )
   }
 
   return (
@@ -51,6 +77,8 @@ export function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      {aviso && venceEn !== null && <AvisoInactividad venceEn={venceEn} onSeguir={extender} />}
     </div>
   )
 }
