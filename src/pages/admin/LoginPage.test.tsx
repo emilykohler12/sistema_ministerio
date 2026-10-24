@@ -127,6 +127,19 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('Correo electrónico')).toHaveAttribute('type', 'email')
   })
 
+  it('si llega por inactividad avisa que la sesión se cerró', () => {
+    renderLogin({ pathname: '/admin/login', state: { motivo: 'inactividad' } })
+    emitir('INITIAL_SESSION', null)
+    expect(screen.getByRole('alert')).toHaveTextContent('Tu sesión se cerró por inactividad')
+  })
+
+  it('sin el motivo de inactividad no muestra ese aviso', () => {
+    renderLogin()
+    emitir('INITIAL_SESSION', null)
+    expect(screen.queryByText('Tu sesión se cerró por inactividad')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('no ofrece "Recordarme" ni "¿Olvidaste tu contraseña?"', () => {
     renderLogin()
     emitir('INITIAL_SESSION', null)

@@ -2,4 +2,5 @@
 - [Trampas no-contar-admin](trampas-no-contar-admin.md) — esperar la RPC antes de comparar contadores; sessionStorage de normativas
 - [Trampas sin vincular](trampas-sin-vincular.md) — h1 duplicado en móvil, combobox de localidad, RPC frenada
 - [Trampas del tablero](trampas-dashboard.md) — deltas, regiones, regex y token sin-permiso en e2e/dashboard
+- [Trampas de inactividad](trampas-inactividad.md) — page.clock, visibilitychange, 320 px tras el login
 - [Trampas del historial](trampas-historial.md) — input date mm/dd, sesión por pestaña, 416 en consola, >50 filas

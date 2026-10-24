@@ -27,7 +27,9 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [errorSesion, setErrorSesion] = useState<ErrorInicioSesion | null>(null)
   const { usuario, iniciarSesion } = useAuth()
-  const location = useLocation() as { state?: { from?: { pathname: string } } }
+  const location = useLocation() as {
+    state?: { from?: { pathname: string }; motivo?: 'inactividad' }
+  }
 
   const {
     register,
@@ -53,6 +55,15 @@ export function LoginPage() {
           </span>
           <h1 className="text-xl font-bold text-primary-800">Panel de Administración</h1>
         </div>
+
+        {location.state?.motivo === 'inactividad' && (
+          <p
+            role="alert"
+            className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800"
+          >
+            Tu sesión se cerró por inactividad. Ingresá de nuevo para continuar.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
           <div>
