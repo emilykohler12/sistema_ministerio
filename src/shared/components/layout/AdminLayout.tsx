@@ -27,8 +27,8 @@ export function AdminLayout() {
     onVencida: () => {
       // Se marca antes de cerrar: al caer el usuario, el <Navigate> de abajo lleva el motivo al login.
       setVencidaPorInactividad(true)
-      // signOut borra la sesión local salvo si el access token ya venció y no hay red (auth-js no puede
-      // refrescarlo y no la borra). Ese caso raro queda abierto; el rechazo no tiene nada más que hacer acá.
+      // Si signOut falla (access token vencido y sin red), cerrarSesion descarta la sesión y recarga en el
+      // login (#46). El rechazo no tiene nada más que hacer acá.
       cerrarSesion().catch(() => {})
     },
   })

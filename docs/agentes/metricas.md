@@ -58,3 +58,5 @@ Lo que muestran:
 | historial-operaciones | 2026-10-18 | critico (código) | 6 (0/2/4) | 0 | 2 (consulta e historial del navegador por cada tecla de la fecha, foco perdido al paginar) | 2 | — |
 | historial-operaciones | 2026-10-18 | revisor | 5 (0/0/5) | 0 | 1 (año 0000 en "Reintentar" en bucle) | 1 | 2 (orden que coincide con el de los uuid, retorno sin `pg_get_function_result`) |
 | historial-operaciones | 2026-10-18 | qa | 1 (0/0/1) | 1 (416 en consola con `?pagina=999`: lo maneja la app, documentado en notas) | 0 | 0 | — |
+| signout-sin-red | 2026-10-24 | revisor | 2 (0/1/1) | 0 | 1 (recarga sin red con el token vigente: regresión del carril sin red más común) | 1 | — |
+| signout-sin-red | 2026-10-24 | qa | 2 (0/0/2) | 0 | 0 (demora de ~26 s y página de error con token vencido: a #48) | 0 | 1 (demora de los reintentos de refresh, ya anticipada por el revisor) |

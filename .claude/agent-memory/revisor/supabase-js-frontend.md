@@ -39,8 +39,9 @@ y, si una regla se incumple, citala ("incumple rules/datos.md: …"). Si aparece
   datos viejos entre el éxito y la recarga.
 - En el working tree, la mayoría de los archivos de `src/` tiene CRLF (vienen de Windows), aunque el índice está en LF y
   `.gitattributes` tiene `eol=lf`. El warning "CRLF will be replaced" no indica un problema: compará con `git ls-files --eol`.
-- En auth-js 2.117.3, `signOut()` borra la sesión local aunque `/logout` falle por red y devuelve `{ error }` sin lanzar.
-  El `SIGNED_OUT` llega igual.
+- En auth-js 2.117.3, `signOut()` borra la sesión local aunque `/logout` falle por red y devuelve `{ error }` sin lanzar, pero
+  **solo con el access token vigente**. Si está vencido y el refresh falla, no borra nada (ver [[temporizadores-sesion]]). `flowType`
+  por defecto es `implicit`: no se escriben claves `-code-verifier`.
 - El bundle contiene el string `sb_secret_` porque supabase-js detecta el prefijo de la clave: no es una fuga. Para buscar una
   clave real, usá `sb_secret_[A-Za-z0-9_-]{6,}` y JWT `eyJ…\.…`.
 - Para verificar la clave publishable sin leer `.env*`, pasá `npx supabase status -o json` por stdin a un script de Node en el
