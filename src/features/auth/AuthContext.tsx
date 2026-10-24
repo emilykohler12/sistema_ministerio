@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUsuario({ id: idActual, email: user?.email })
       } else {
         setUsuario(null)
-        // signOut borra la sesión local aunque falle la red: el rechazo no tiene nada más que hacer.
+        // Si signOut falla, cerrarSesion descarta la sesión y recarga en el login (#46): el rechazo no tiene nada más que hacer.
         if (user) setTimeout(() => cerrarSesion().catch(() => {}), 0)
       }
       if (evento === 'INITIAL_SESSION') setCargando(false)

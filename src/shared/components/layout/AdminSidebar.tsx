@@ -16,7 +16,8 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { cerrarSesion } = useAuth()
 
   // La redirección al login la hace AdminLayout cuando `usuario` pasa a null.
-  // signOut borra la sesión local aunque falle la red: el rechazo no tiene nada más que hacer.
+  // Si signOut falla (access token vencido y sin red), cerrarSesion descarta la sesión y recarga en el
+  // login (#46). El rechazo no tiene nada más que hacer acá.
   function handleLogout() {
     cerrarSesion().catch(() => {})
   }
