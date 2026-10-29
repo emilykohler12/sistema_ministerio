@@ -1,3 +1,4 @@
+import { fechaReal, sumarDias } from '@/shared/lib/date'
 import { esEntidad } from './entidades'
 
 export const TAMANIO_PAGINA = 50
@@ -23,7 +24,6 @@ export const FILTROS_VACIOS: FiltrosHistorial = {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const FECHA = /^(\d{4})-(\d{2})-(\d{2})$/
 const ENTERO_POSITIVO = /^[1-9]\d*$/
 
 /**
@@ -62,17 +62,6 @@ export function filtrosAUrl(f: FiltrosHistorial): URLSearchParams {
   return params
 }
 
-/** Fecha `AAAA-MM-DD` real (rechaza 2026-02-30). Se arma con `setUTCFullYear` porque `Date.UTC` toma los años 0-99 como 1900-1999. */
-function fechaReal(fecha: string): Date | null {
-  const m = FECHA.exec(fecha)
-  if (!m) return null
-  const [anio, mes, dia] = [Number(m[1]), Number(m[2]), Number(m[3])]
-  if (anio < 1) return null // JS tiene año 0 y Postgres no (22008)
-  const d = new Date(0)
-  d.setUTCFullYear(anio, mes - 1, dia)
-  return d.getUTCFullYear() === anio && d.getUTCMonth() === mes - 1 && d.getUTCDate() === dia ? d : null
-}
-
 /** Mensaje de error o null. Solo fecha mal formada y `desde > hasta`: sin RPC de por medio, los topes del dashboard no protegen nada. */
 export function validarFiltros(f: FiltrosHistorial): string | null {
   for (const fecha of [f.desde, f.hasta]) {
@@ -83,11 +72,8 @@ export function validarFiltros(f: FiltrosHistorial): string | null {
   return null
 }
 
-function aTimestamp(d: Date): string {
-  const anio = String(d.getUTCFullYear()).padStart(4, '0')
-  const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const dia = String(d.getUTCDate()).padStart(2, '0')
-  return `${anio}-${mes}-${dia}T00:00:00${OFFSET_ARGENTINA}`
+function aTimestamp(fechaIso: string): string {
+  return `${fechaIso}T00:00:00${OFFSET_ARGENTINA}`
 }
 
 /** Límites del rango en hora de Argentina: medianoche de `desde` (inclusive) y medianoche del día siguiente a `hasta` (exclusiva). */
@@ -95,12 +81,11 @@ export function limitesDelDia(f: FiltrosHistorial): {
   desde: string | null
   hastaExclusivo: string | null
 } {
-  const desde = f.desde ? fechaReal(f.desde) : null
-  const hasta = f.hasta ? fechaReal(f.hasta) : null
-  if (hasta) hasta.setUTCDate(hasta.getUTCDate() + 1)
+  const desde = f.desde && fechaReal(f.desde) ? f.desde : null
+  const hasta = f.hasta && fechaReal(f.hasta) ? f.hasta : null
   return {
     desde: desde ? aTimestamp(desde) : null,
-    hastaExclusivo: hasta ? aTimestamp(hasta) : null,
+    hastaExclusivo: hasta ? aTimestamp(sumarDias(hasta, 1)) : null,
   }
 }
 

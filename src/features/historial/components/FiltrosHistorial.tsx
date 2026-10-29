@@ -1,17 +1,11 @@
-import { useEffect, useId, useState } from 'react'
+import { useCallback, useId } from 'react'
 import { FieldError } from '@/shared/components/ui/FieldError'
-import { Input } from '@/shared/components/ui/Input'
 import { Label } from '@/shared/components/ui/Label'
+import { RangoFechas } from '@/shared/components/ui/RangoFechas'
 import { Select } from '@/shared/components/ui/Select'
 import { ENTIDADES_FILTRABLES } from '../entidades'
 import type { FiltrosHistorial as Filtros } from '../filtros'
 import { nombreDeUsuario } from '../usuarios'
-
-/**
- * Espera a que termine de editar las fechas: al escribir el año, el navegador emite fechas intermedias válidas (0002-…, 0020-…)
- * que no hay que consultar. Mismo criterio que `SelectorPeriodo` del dashboard.
- */
-const ESPERA_FECHAS_MS = 300
 
 interface FiltrosHistorialProps {
   filtros: Filtros
@@ -36,27 +30,13 @@ export function FiltrosHistorial({
   onFechas,
 }: FiltrosHistorialProps) {
   const idError = useId()
-  const idDesde = useId()
-  const idHasta = useId()
   const idUsuario = useId()
   const idEntidad = useId()
-  const [borrador, setBorrador] = useState({ desde: filtros.desde ?? '', hasta: filtros.hasta ?? '' })
-  const [vistos, setVistos] = useState({ desde: filtros.desde ?? '', hasta: filtros.hasta ?? '' })
-
-  // Si las fechas cambian desde afuera (URL, atrás/adelante, "Limpiar filtros"), los campos las siguen.
-  if (vistos.desde !== (filtros.desde ?? '') || vistos.hasta !== (filtros.hasta ?? '')) {
-    const actuales = { desde: filtros.desde ?? '', hasta: filtros.hasta ?? '' }
-    setVistos(actuales)
-    setBorrador(actuales)
-  }
-
-  const { desde, hasta } = borrador
-  const hayCambio = desde !== (filtros.desde ?? '') || hasta !== (filtros.hasta ?? '')
-  useEffect(() => {
-    if (!hayCambio) return
-    const espera = setTimeout(() => onFechas(desde || null, hasta || null), ESPERA_FECHAS_MS)
-    return () => clearTimeout(espera)
-  }, [hayCambio, desde, hasta, onFechas])
+  // Las fechas vacías son "sin límite".
+  const alCambiarFechas = useCallback(
+    (desde: string, hasta: string) => onFechas(desde || null, hasta || null),
+    [onFechas],
+  )
 
   // Un usuario de la URL que todavía no está en la lista (carga o error) igual se muestra elegido.
   const usuarioFueraDeLista = filtros.usuario !== null && filtros.usuario !== 'sistema' && !emails.has(filtros.usuario)
@@ -64,30 +44,13 @@ export function FiltrosHistorial({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-start gap-4">
-        <div>
-          <Label htmlFor={idDesde}>Desde</Label>
-          <Input
-            id={idDesde}
-            type="date"
-            className="w-44"
-            value={desde}
-            error={error !== null}
-            aria-describedby={error ? idError : undefined}
-            onChange={(e) => setBorrador((b) => ({ ...b, desde: e.target.value }))}
-          />
-        </div>
-        <div>
-          <Label htmlFor={idHasta}>Hasta</Label>
-          <Input
-            id={idHasta}
-            type="date"
-            className="w-44"
-            value={hasta}
-            error={error !== null}
-            aria-describedby={error ? idError : undefined}
-            onChange={(e) => setBorrador((b) => ({ ...b, hasta: e.target.value }))}
-          />
-        </div>
+        <RangoFechas
+          desde={filtros.desde ?? ''}
+          hasta={filtros.hasta ?? ''}
+          error={error}
+          idError={idError}
+          onCambio={alCambiarFechas}
+        />
         <div>
           <Label htmlFor={idUsuario}>Usuario</Label>
           <Select
