@@ -137,6 +137,7 @@ describe('periodoDesdeUrl', () => {
     ['rango con fechas mal formadas', 'periodo=rango&desde=hoy&hasta=ayer'],
     ['rango con formato DD/MM/AAAA', 'periodo=rango&desde=10/03/2026&hasta=12/03/2026'],
     ['rango con una fecha inexistente', 'periodo=rango&desde=2026-02-31&hasta=2026-03-10'],
+    ['rango con el año 0000 (Postgres no lo tiene)', 'periodo=rango&desde=0000-01-01&hasta=2026-03-10'],
   ])('%s cae a los 30 días', (_nombre, qs) => {
     expect(periodoDesdeUrl(q(qs))).toEqual({
       tipo: '30d',

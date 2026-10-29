@@ -2,6 +2,8 @@
  * Período del tablero (puro, sin supabase). Las fechas son AAAA-MM-DD y "hoy" es la fecha en hora de Argentina:
  * `toISOString()` daría el día siguiente después de las 21:00 locales.
  */
+import { ZONA_ARGENTINA, diasEntre, fechaReal, sumarDias } from '@/shared/lib/date'
+
 export type TipoPeriodo = '30d' | 'anio' | 'rango'
 
 export interface Periodo {
@@ -15,11 +17,9 @@ export const FECHA_MINIMA = '2020-01-01'
 
 /** Hasta esta cantidad de días (inclusive) la serie va por día; más allá, por mes. */
 const MAX_DIAS_POR_DIA = 92
-const ZONA = 'America/Argentina/Buenos_Aires'
-const FORMATO_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/
 
 const formatoLocal = new Intl.DateTimeFormat('en-CA', {
-  timeZone: ZONA,
+  timeZone: ZONA_ARGENTINA,
   year: 'numeric',
   month: '2-digit',
   day: '2-digit',
@@ -30,38 +30,8 @@ export function hoyArgentina(ahora: Date = new Date()): string {
   return `${partes.year}-${partes.month}-${partes.day}`
 }
 
-/** Fecha UTC a medianoche; `setUTCFullYear` evita que los años 0 a 99 se lean como 19xx. */
-function aFecha(iso: string): Date {
-  const [anio, mes, dia] = iso.split('-').map(Number)
-  const fecha = new Date(0)
-  fecha.setUTCFullYear(anio, mes - 1, dia)
-  return fecha
-}
-
-function aIso(fecha: Date): string {
-  const anio = String(fecha.getUTCFullYear()).padStart(4, '0')
-  const mes = String(fecha.getUTCMonth() + 1).padStart(2, '0')
-  const dia = String(fecha.getUTCDate()).padStart(2, '0')
-  return `${anio}-${mes}-${dia}`
-}
-
-function sumarDias(iso: string, dias: number): string {
-  const fecha = aFecha(iso)
-  fecha.setUTCDate(fecha.getUTCDate() + dias)
-  return aIso(fecha)
-}
-
-/** Cantidad de días del período contando ambos extremos. */
-function diasDelPeriodo(desde: string, hasta: string): number {
-  return Math.round((aFecha(hasta).getTime() - aFecha(desde).getTime()) / 86_400_000) + 1
-}
-
-function esFechaReal(valor: string | null): valor is string {
-  return valor !== null && FORMATO_FECHA.test(valor) && aIso(aFecha(valor)) === valor
-}
-
 function armar(tipo: TipoPeriodo, desde: string, hasta: string): Periodo {
-  return { tipo, desde, hasta, porMes: diasDelPeriodo(desde, hasta) > MAX_DIAS_POR_DIA }
+  return { tipo, desde, hasta, porMes: diasEntre(desde, hasta) + 1 > MAX_DIAS_POR_DIA }
 }
 
 export function periodoDesdeUrl(params: URLSearchParams, ahora: Date = new Date()): Periodo {
@@ -70,7 +40,7 @@ export function periodoDesdeUrl(params: URLSearchParams, ahora: Date = new Date(
   if (params.get('periodo') === 'rango') {
     const desde = params.get('desde')
     const hasta = params.get('hasta')
-    if (esFechaReal(desde) && esFechaReal(hasta)) return armar('rango', desde, hasta)
+    if (desde !== null && hasta !== null && fechaReal(desde) && fechaReal(hasta)) return armar('rango', desde, hasta)
   }
   return armar('30d', sumarDias(hoy, -29), hoy)
 }

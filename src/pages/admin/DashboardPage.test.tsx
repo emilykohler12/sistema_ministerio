@@ -165,6 +165,17 @@ describe('DashboardPage: encabezado y período', () => {
     expect(obtenerMetricas).toHaveBeenCalledWith({ desde: '2026-03-10', hasta: '2026-03-12', porMes: false })
   })
 
+  it('vaciar un campo del rango no se aplica: la URL conserva las fechas y los campos siguen visibles', async () => {
+    await renderPagina(base(), '/admin?periodo=rango&desde=2026-03-10&hasta=2026-03-12')
+    fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '' } })
+    await new Promise((r) => setTimeout(r, 400)) // más que la espera de 300 ms del rango
+    const url = screen.getByTestId('ubicacion').textContent ?? ''
+    expect(url).toContain('desde=2026-03-10')
+    expect(url).toContain('hasta=2026-03-12')
+    expect(screen.getByLabelText('Desde')).toHaveValue('')
+    expect(screen.getByLabelText('Hasta')).toHaveValue('2026-03-12')
+  })
+
   it('un periodo inválido en la URL usa los 30 días', async () => {
     await renderPagina(base(), '/admin?periodo=semana')
     expect(obtenerMetricas).toHaveBeenCalledWith({ desde: '2026-09-17', hasta: '2026-10-16', porMes: false })
