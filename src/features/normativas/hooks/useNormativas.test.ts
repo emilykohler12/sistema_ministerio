@@ -203,10 +203,11 @@ describe('useGuardarNormativa', () => {
 })
 
 describe('useEliminarNormativa', () => {
-  it('llama a eliminarNormativa con el id e invalida la lista', async () => {
+  it('llama a eliminarNormativa con el id e invalida la lista y las etiquetas', async () => {
     vi.mocked(eliminarNormativa).mockResolvedValue(undefined)
     const { client, wrapper } = crearContexto()
     client.setQueryData(['normativas'], todas)
+    client.setQueryData(['etiquetas'], [])
     const { result } = renderHook(() => useEliminarNormativa(), { wrapper })
 
     await act(async () => {
@@ -215,12 +216,15 @@ describe('useEliminarNormativa', () => {
 
     expect(eliminarNormativa).toHaveBeenCalledWith(todas[0].id)
     expect(client.getQueryState(['normativas'])?.isInvalidated).toBe(true)
+    // La base borra las etiquetas que solo usaba la normativa: las sugerencias se refrescan.
+    expect(client.getQueryState(['etiquetas'])?.isInvalidated).toBe(true)
   })
 
   it('si falla, expone el error y no invalida', async () => {
     vi.mocked(eliminarNormativa).mockRejectedValue({ code: 'PGRST116' })
     const { client, wrapper } = crearContexto()
     client.setQueryData(['normativas'], todas)
+    client.setQueryData(['etiquetas'], [])
     const { result } = renderHook(() => useEliminarNormativa(), { wrapper })
 
     await act(async () => {
@@ -228,6 +232,7 @@ describe('useEliminarNormativa', () => {
     })
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(client.getQueryState(['normativas'])?.isInvalidated).toBe(false)
+    expect(client.getQueryState(['etiquetas'])?.isInvalidated).toBe(false)
   })
 })
 

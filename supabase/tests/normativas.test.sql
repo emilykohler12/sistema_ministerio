@@ -565,8 +565,8 @@ select results_eq(
   $$select (select count(*)::int from public.normativa where id = current_setting('test.borrar')::int),
           (select count(*)::int from public.normativa_etiqueta where normativa_id = current_setting('test.borrar')::int),
           (select count(*)::int from public.etiqueta where id = current_setting('test.etiq_borrar')::int)$$,
-  $$values (0, 0, 1)$$,
-  'la baja borra la fila y su puente, pero la etiqueta queda');
+  $$values (0, 0, 0)$$,
+  'la baja borra la fila y su puente, y la etiqueta que solo usaba esa normativa (#31)');
 
 -- admin: Storage ----------------------------------------------------------------------------------
 select lives_ok(

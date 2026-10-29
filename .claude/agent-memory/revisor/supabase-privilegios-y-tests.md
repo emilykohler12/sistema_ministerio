@@ -85,6 +85,16 @@ Se repitieron dos asserts débiles (ya marcados antes, ahora por **segunda** vez
 - `has_function` sin `pg_get_function_result`: una columna extra en `returns table` pasa.
 Del lado del cliente, `fechaReal` con `setUTCFullYear` acepta el año 0000, que Postgres rechaza: es un caso borde de URL que termina en "Reintentar" para siempre.
 
+En etiquetas-sin-uso (#31, 2026-10-29; trigger de sentencia `after delete` con tabla de transición y función definer) la base salió bien a la
+primera, con `revoke` de los cuatro roles (incluido `service_role`). Técnicas que sirvieron y que conviene repetir:
+- Una función `returns trigger` definer no se puede invocar por `/rpc` ni fuera de un trigger, y `CREATE TRIGGER` exige EXECUTE. Ojo: Supabase
+  sí da TRIGGER sobre las tablas a authenticated, así que el revoke de EXECUTE es la barrera real.
+- Para un borrado "solo de los ids afectados", mirá si los tests distinguen la versión "borrar todo lo que cumpla" (una huérfana ajena que
+  sobrevive, más un alta y una baja en la misma llamada que fallaría por FK si se borrara de más). Revisá que la RPC sincronice por diferencia y no con
+  delete+reinsert: con delete+reinsert, un trigger así borraría las etiquetas que se conservan.
+- Si un cambio invierte un assert viejo (`(0,0,1)` a `(0,0,0)`), seguí la fila de prueba por todo el archivo (grep del setting) para confirmar
+  que no la vincula otra cosa.
+
 **Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
 creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
 REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay
