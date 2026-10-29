@@ -140,10 +140,46 @@ describe('LoginPage', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('no ofrece "Recordarme" ni "¿Olvidaste tu contraseña?"', () => {
+  it('no ofrece "Recordarme"', () => {
     renderLogin()
     emitir('INITIAL_SESSION', null)
     expect(screen.queryByText('Recordarme')).not.toBeInTheDocument()
-    expect(screen.queryByText('¿Olvidaste tu contraseña?')).not.toBeInTheDocument()
+  })
+
+  it('ofrece "¿Olvidaste tu contraseña?" con enlace a /admin/recuperar', () => {
+    renderLogin()
+    emitir('INITIAL_SESSION', null)
+    expect(screen.getByRole('link', { name: '¿Olvidaste tu contraseña?' })).toHaveAttribute(
+      'href',
+      '/admin/recuperar',
+    )
+  })
+
+  it('tras actualizar la contraseña avisa en un role=status y no en un alert', () => {
+    renderLogin({ pathname: '/admin/login', state: { motivo: 'contrasena-actualizada' } })
+    emitir('INITIAL_SESSION', null)
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Contraseña actualizada. Ingresá con la nueva',
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('el aviso de contraseña actualizada recibe el foco', () => {
+    renderLogin({ pathname: '/admin/login', state: { motivo: 'contrasena-actualizada' } })
+    emitir('INITIAL_SESSION', null)
+    expect(screen.getByRole('status')).toHaveFocus()
+  })
+
+  it('sin ese motivo no muestra el aviso de contraseña actualizada', () => {
+    renderLogin()
+    emitir('INITIAL_SESSION', null)
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('el campo de contraseña sigue con su etiqueta y el boton de mostrar u ocultar', () => {
+    renderLogin()
+    emitir('INITIAL_SESSION', null)
+    expect(screen.getByLabelText('Contraseña')).toHaveAttribute('type', 'password')
+    expect(screen.getByRole('button', { name: 'Mostrar contraseña' })).toBeInTheDocument()
   })
 })
