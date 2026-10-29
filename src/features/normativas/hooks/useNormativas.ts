@@ -49,7 +49,12 @@ export function useEliminarNormativa() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => eliminarNormativa(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: CLAVE_NORMATIVAS }),
+    // La base borra las etiquetas que solo usaba la normativa: las sugerencias se refrescan.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: CLAVE_NORMATIVAS }),
+        queryClient.invalidateQueries({ queryKey: CLAVE_ETIQUETAS }),
+      ]),
   })
 }
 
