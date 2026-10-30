@@ -105,6 +105,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"intento_descarga": {
+                  Row: {
+                    "fecha_hora": string,"id": number,"ip_hash": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "fecha_hora"?: string,"id"?: never,"ip_hash": string
+                  }
+                  Update: {
+                    "fecha_hora"?: string,"id"?: never,"ip_hash"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"localidad": {
                   Row: {
                     "id": number,"nombre": string
@@ -338,6 +352,9 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: {
               "descargas": number,"localidad": string,"localidad_id": number,"nombre": string,"ultima": string,"variantes": (string)[]
             }[]
+                           },
+"ip_cliente":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "metricas_por_cargo":
 { Args: { "p_desde": string,"p_hasta": string }; Returns: {
