@@ -29,3 +29,5 @@ paths:
   Nunca la lista escrita a mano.
 - Mensajes de error de un dominio (DA00x) en su `errores.ts`, no copiados en cada pantalla.
 - `key` estable (id), nunca el texto visible: dos elementos con el mismo nombre repiten la key.
+- Un aviso `role="status"` o `role="alert"` que se monta ya con su texto (p. ej. «Contraseña actualizada» al llegar al login) no se anuncia
+  de forma confiable: dale `tabIndex={-1}` y llevale el foco en un efecto (molde: `RecuperarPage`), con un test `toHaveFocus()`.

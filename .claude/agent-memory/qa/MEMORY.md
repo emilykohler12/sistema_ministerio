@@ -4,4 +4,5 @@
 - [Trampas del tablero](trampas-dashboard.md) — deltas, regiones, regex y token sin-permiso en e2e/dashboard
 - [Trampas de inactividad](trampas-inactividad.md) — page.clock, visibilitychange, 320 px tras el login
 - [Trampas signout sin red](trampas-signout-sin-red.md) — setOffline, token vencido, 26 s y chrome-error
+- [Trampas de recuperación](trampas-recuperacion.md) — Mailpit con request, token_hash, refresh token y contextos
 - [Trampas del historial](trampas-historial.md) — input date mm/dd, sesión por pestaña, 416 en consola, >50 filas

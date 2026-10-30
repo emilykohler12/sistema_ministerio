@@ -8,6 +8,8 @@ import { TallerDetallePage } from '@/pages/public/TallerDetallePage'
 import { NormativasPublicPage } from '@/pages/public/NormativasPublicPage'
 import { ContactoPage } from '@/pages/public/ContactoPage'
 import { LoginPage } from '@/pages/admin/LoginPage'
+import { RecuperarPage } from '@/pages/admin/RecuperarPage'
+import { NuevaContrasenaPage } from '@/pages/admin/NuevaContrasenaPage'
 
 const AdminLayout = lazy(() =>
   import('@/shared/components/layout/AdminLayout').then((m) => ({ default: m.AdminLayout })),
@@ -77,6 +79,8 @@ const router = createBrowserRouter([
     ],
   },
   { path: '/admin/login', element: <LoginPage /> },
+  { path: '/admin/recuperar', element: <RecuperarPage /> },
+  { path: '/admin/nueva-contrasena', element: <NuevaContrasenaPage /> },
   {
     path: '/admin',
     element: withSuspense(<AdminLayout />),

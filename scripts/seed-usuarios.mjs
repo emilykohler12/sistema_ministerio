@@ -4,6 +4,8 @@
 // Credenciales de desarrollo (solo para la base local, nunca para la nube):
 //   admin@dam.local         / admin-dam-local         (app_metadata.admin = true)
 //   sin-permiso@dam.local   / sin-permiso-dam-local   (sin marca de admin)
+//   recuperacion@dam.local  / recuperacion-dam-local  (app_metadata.admin = true; solo para el e2e de recuperación,
+//                                                       que le fija una contraseña nueva en cada corrida)
 //
 // Es idempotente: si el usuario ya existe, lo informa y sigue.
 import { supabaseLocal } from './lib/supabaseLocal.ts'
@@ -17,6 +19,11 @@ const USUARIOS = [
   {
     email: 'sin-permiso@dam.local',
     password: 'sin-permiso-dam-local',
+  },
+  {
+    email: 'recuperacion@dam.local',
+    password: 'recuperacion-dam-local',
+    app_metadata: { admin: true },
   },
 ]
 

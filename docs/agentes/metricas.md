@@ -60,3 +60,7 @@ Lo que muestran:
 | historial-operaciones | 2026-10-18 | qa | 1 (0/0/1) | 1 (416 en consola con `?pagina=999`: lo maneja la app, documentado en notas) | 0 | 0 | — |
 | signout-sin-red | 2026-10-24 | revisor | 2 (0/1/1) | 0 | 1 (recarga sin red con el token vigente: regresión del carril sin red más común) | 1 | — |
 | signout-sin-red | 2026-10-24 | qa | 2 (0/0/2) | 0 | 0 (demora de ~26 s y página de error con token vencido: a #48) | 0 | 1 (demora de los reintentos de refresh, ya anticipada por el revisor) |
+| recuperacion-password | 2026-10-29 | critico (spec) | 16 (3/7/6) | 0 | 4 (flujo implicit que abre una sesión de admin antes de fijar la contraseña, 429 que revela qué cuentas existen, cierre del listener en carrera con `updateUser`, máximo de 72 en bytes) | 4 | — |
+| recuperacion-password | 2026-10-29 | critico (código) | 6 (0/3/3) | 2 (`PantallaAuth` y `MotivoLogin`, a `notas.md`) | 2 (enlace «ingresá con ella» que entraba al panel, mensajes «venció» y «revisá tu conexión» falsos) | 1 (mensajes que afirman una causa desconocida) | — |
+| recuperacion-password | 2026-10-29 | revisor | 3 (0/3/0) | 0 | 3 (enumeración de cuentas por un 5xx, enlace al login que entraba al panel, aviso del login sin foco) | 2 (enumeración por 5xx, aviso sin foco) | 1 (`role="status"` montado con su texto: tercera vez, pasó a `rules/react.md`) |
+| recuperacion-password | 2026-10-29 | qa | 0 | 0 | 0 | 0 | — |

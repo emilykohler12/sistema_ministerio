@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff } from 'lucide-react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth, type ErrorInicioSesion } from '@/features/auth/AuthContext'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
+import { InputPassword } from '@/shared/components/ui/InputPassword'
 import { Label } from '@/shared/components/ui/Label'
 import { FieldError } from '@/shared/components/ui/FieldError'
 
@@ -24,11 +24,11 @@ const MENSAJES_ERROR: Record<ErrorInicioSesion, string> = {
 }
 
 export function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false)
   const [errorSesion, setErrorSesion] = useState<ErrorInicioSesion | null>(null)
   const { usuario, iniciarSesion } = useAuth()
+  const avisoRef = useRef<HTMLParagraphElement>(null)
   const location = useLocation() as {
-    state?: { from?: { pathname: string }; motivo?: 'inactividad' }
+    state?: { from?: { pathname: string }; motivo?: 'inactividad' | 'contrasena-actualizada' }
   }
 
   const {
@@ -36,6 +36,13 @@ export function LoginPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
+
+  const contrasenaActualizada = location.state?.motivo === 'contrasena-actualizada'
+
+  // Una región viva que se monta con su texto no se anuncia de forma confiable: se enfoca.
+  useEffect(() => {
+    if (contrasenaActualizada) avisoRef.current?.focus()
+  }, [contrasenaActualizada])
 
   if (usuario) {
     return <Navigate to={location.state?.from?.pathname ?? '/admin'} replace />
@@ -65,6 +72,17 @@ export function LoginPage() {
           </p>
         )}
 
+        {contrasenaActualizada && (
+          <p
+            ref={avisoRef}
+            role="status"
+            tabIndex={-1}
+            className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
+          >
+            Contraseña actualizada. Ingresá con la nueva.
+          </p>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
           <div>
             <Label htmlFor="correo">Correo electrónico</Label>
@@ -82,26 +100,14 @@ export function LoginPage() {
 
           <div>
             <Label htmlFor="password">Contraseña</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="Ingrese su contraseña"
-                error={!!errors.password}
-                aria-describedby={errors.password ? 'password-error' : undefined}
-                className="pr-10"
-                {...register('password')}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
+            <InputPassword
+              id="password"
+              autoComplete="current-password"
+              placeholder="Ingrese su contraseña"
+              error={!!errors.password}
+              aria-describedby={errors.password ? 'password-error' : undefined}
+              {...register('password')}
+            />
             <FieldError id="password-error" message={errors.password?.message} />
           </div>
 
@@ -114,6 +120,12 @@ export function LoginPage() {
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? 'Ingresando...' : 'Ingresar'}
           </Button>
+
+          <p className="text-center text-sm">
+            <Link to="/admin/recuperar" className="text-primary-700 underline hover:text-primary-800">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
         </form>
       </div>
     </div>

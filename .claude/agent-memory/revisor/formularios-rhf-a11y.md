@@ -26,6 +26,8 @@ En instituciones-sin-vincular (2026-10-18) el resultado de una acción iba en `{
 siempre montado y el test con el mismo nodo antes y después. Buscalo con `grep -n 'role="status"'` en pantallas nuevas.
 Se repitió en cierre-inactividad (2026-10-23): el mensaje "Tu sesión se cerró por inactividad" de `LoginPage` es `{cond && <p role="status">}` montado
 con la página y sin mover el foco. Segunda vez: proponé sumarlo a `rules/react.md` (región viva siempre montada, o `role="alert"` si aparece con la pantalla).
+Tercera vez en recuperacion-password (2026-10-29): «Contraseña actualizada» de `LoginPage` es `{cond && <p role="status">}` sin foco, aunque en el mismo cambio
+`RecuperarPage` lo hizo bien (`tabIndex={-1}` y foco en un efecto). Sigue sin estar en `rules/react.md`: pedile al coordinador que la promueva.
 En la misma revisión: `Dialog` tiene `id="dialog-title"`/`dialog-description` literales y `useFocusTrap` escucha `keydown` en `document`. Con dos diálogos
 abiertos (un aviso global sobre un diálogo del panel), el de arriba toma el nombre del de abajo y Escape cierra los dos. Revisalo en todo modal global.
 Se arregló con `useId` y una pila de tokens de módulo en `useFocusTrap` (Revisión 2). Dos trampas en una pila así: (a) cuando el de **abajo** se cierra

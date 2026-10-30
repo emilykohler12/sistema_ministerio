@@ -182,7 +182,7 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
@@ -199,7 +199,8 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+# En local se sube para que el e2e y las pruebas manuales de recuperación no choquen con el tope (el 429 se prueba con test unitario).
+email_sent = 100
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -246,6 +247,12 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# Recuperación de contraseña (#21): el enlace lleva el token_hash a la pantalla propia, que lo verifica al enviar
+# el formulario. Sin redirectTo ni additional_redirect_urls. En la nube hay que cargar la misma plantilla a mano.
+[auth.email.template.recovery]
+subject = "Recuperá tu contraseña del panel DAM"
+content_path = "./supabase/templates/recuperacion.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
