@@ -4,6 +4,8 @@
 -- EXCEPCIONES: cada una debe justificarse por escrito y se declara por evento (mascara de eventos que se exceptuan).
 --   registro_operacion (28, todos): es la propia tabla de auditoria (auditarla seria recursivo).
 --   registro_descarga (4, INSERT): la tabla es el registro de un hecho anonimo; auditar el INSERT lo duplicaria con usuario_id nulo (0022).
+--   intento_descarga (28, todos): contador efimero del limite de frecuencia (0030, #26). Guarda solo un hash de la IP y se purga a los
+--     10 minutos: auditarlo copiaria esos seudonimos a registro_operacion, que es permanente, y escribiria una fila por descarga.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(5);
@@ -17,7 +19,7 @@ create function pg_temp.sin_cobertura() returns setof name language sql as $$
      and (coalesce((select bit_or(t.tgtype) from pg_trigger t
                      where t.tgrelid = c.oid and not t.tgisinternal
                        and t.tgfoid = to_regproc('public.auditar')), 0)
-          | coalesce((select e.eventos from (values ('registro_operacion', 28), ('registro_descarga', 4)) as e(tabla, eventos)
+          | coalesce((select e.eventos from (values ('registro_operacion', 28), ('registro_descarga', 4), ('intento_descarga', 28)) as e(tabla, eventos)
                        where e.tabla = c.relname), 0)) & 28 <> 28
 $$;
 

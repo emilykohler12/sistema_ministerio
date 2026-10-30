@@ -620,7 +620,7 @@ El código es un único paquete Vite organizado por dominios (`src/features/<dom
 **Descarga de un taller**
 
 1. El usuario presiona "Descargar" y completa el formulario (cargo, localidad, institución).
-2. El navegador llama a la RPC `registrar_descarga`, que normaliza los campos, verifica que el taller esté publicado e inserta el registro en `registro_descarga`. Un taller que ya no está disponible o un establecimiento inactivo o de otra localidad se rechazan con un error propio. El navegador recuerda el formulario y los talleres registrados durante la visita: un taller ya registrado no se vuelve a registrar.
+2. El navegador llama a la RPC `registrar_descarga`, que normaliza los campos, verifica que el taller esté publicado e inserta el registro en `registro_descarga`; si la IP del cliente ya tiene 30 intentos en los últimos 10 minutos, responde bien pero no lo inserta (0030). Un taller que ya no está disponible o un establecimiento inactivo o de otra localidad se rechazan con un error propio. El navegador recuerda el formulario y los talleres registrados durante la visita: un taller ya registrado no se vuelve a registrar.
 3. Con el registro hecho, el navegador firma con `createSignedUrl` (1 hora) cada archivo del taller (la política de Storage lo permite solo para talleres publicados) y reúne los enlaces firmados con los enlaces externos.
 4. El modal muestra la lista de recursos para descargar uno por uno.
 
@@ -663,7 +663,7 @@ El formulario de descarga no registra nombres de personas, sino cargo, localidad
 
 ### 10.3 Calidad de los datos de descarga
 
-Los datos del formulario son autodeclarados. El padrón reduce las variantes de escritura; las instituciones ingresadas como "Otra" se normalizan con la pantalla de vinculación. Cualquiera puede invocar la RPC `registrar_descarga` e inflar los registros, y firmar el enlace de un archivo visible sin pasar por el formulario: se protegen las métricas, no el acceso (0006, 0022). El riesgo se acepta y se agregará un captcha (Cloudflare Turnstile) solo si aparece abuso; verificarlo del lado del servidor obligaría a volver a una Edge Function.
+Los datos del formulario son autodeclarados. El padrón reduce las variantes de escritura; las instituciones ingresadas como "Otra" se normalizan con la pantalla de vinculación. Cualquiera puede invocar la RPC `registrar_descarga` e inflar los registros, y firmar el enlace de un archivo visible sin pasar por el formulario: se protegen las métricas, no el acceso (0006, 0022). La RPC deja de contar las descargas de una IP que pasa 30 en 10 minutos, sin rechazarlas ni afectar el acceso (0030, #26). El riesgo restante se acepta y se agregará un captcha (Cloudflare Turnstile) solo si aparece abuso; verificarlo del lado del servidor obligaría a volver a una Edge Function.
 
 ---
 

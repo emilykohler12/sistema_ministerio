@@ -95,6 +95,13 @@ primera, con `revoke` de los cuatro roles (incluido `service_role`). Técnicas q
 - Si un cambio invierte un assert viejo (`(0,0,1)` a `(0,0,0)`), seguí la fila de prueba por todo el archivo (grep del setting) para confirmar
   que no la vincula otra cosa.
 
+En limite-descargas (#26, 2026-10-29; tabla `intento_descarga` sin grants + `ip_cliente()` + tope en `registrar_descarga` definer) la migración salió
+bien, con `revoke` de los cuatro roles. Se repitió por **segunda** vez el assert de **orden de validaciones** con una entrada que no distingue
+(antes: "sin marca da 42501" con un establecimiento válido): los `throws_ok` de `DA003`/`DA004` "antes que el tope" corrían con 29 intentos, no con la
+IP topeada. Si vuelve, proponé llevarlo a una regla: para probar "X se evalúa antes que Y", la entrada tiene que disparar las dos y el assert esperar X.
+También: el `revoke` de la secuencia quedó sin assert (no explotable; observación). Para el lock de concurrencia (no testeable en pgTAP), verificá
+que vaya antes del conteo y que la función sea volátil (READ COMMITTED: foto nueva por sentencia).
+
 **Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
 creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
 REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay

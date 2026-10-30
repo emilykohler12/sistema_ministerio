@@ -14,4 +14,5 @@ Patrones recurrentes del proyecto. La mantiene el subagente; se revisa en los PR
 - [Métricas y período (dashboard)](project_metricas-periodo-trampas.md): filtro en una auxiliar, TZ en date_trunc y en "hoy", cobertura vs vinculación, sin vincular por localidad; perform+limit en SRF, test anon/42501, placeholder
 - [Lectura de la auditoría (historial)](project_historial-lectura-auditoria.md): diff vacío por updated_at, PGRST103 con count exact, mapa exhaustivo por Tables, helpers de fecha a shared; date sin espera, disabled en paginación pierde foco
 - [auth-js: eventos y enlaces por correo](project_supabase-auth-eventos.md): INITIAL_SESSION antes que PASSWORD_RECOVERY, broadcast entre pestañas, hash en historial, signOut global, token_hash, sesión de verifyOtp tras fallo, mapeo de errores
+- [Límite de frecuencia por IP](project_limite-frecuencia-trampas.md): rechazo vs no contar, encabezado del alojado, purga global, GUC '', e2e con IP compartida; tests de orden bajo el tope, andamiaje RED, e2e sin guardia de URL
 - [Archivo de crítica fijo](feedback_archivo-de-critica.md): solo puedo escribir critica.md; si piden otro nombre, agrego una sección ahí y aviso

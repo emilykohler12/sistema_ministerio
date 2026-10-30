@@ -64,3 +64,6 @@ Lo que muestran:
 | recuperacion-password | 2026-10-29 | critico (código) | 6 (0/3/3) | 2 (`PantallaAuth` y `MotivoLogin`, a `notas.md`) | 2 (enlace «ingresá con ella» que entraba al panel, mensajes «venció» y «revisá tu conexión» falsos) | 1 (mensajes que afirman una causa desconocida) | — |
 | recuperacion-password | 2026-10-29 | revisor | 3 (0/3/0) | 0 | 3 (enumeración de cuentas por un 5xx, enlace al login que entraba al panel, aviso del login sin foco) | 2 (enumeración por 5xx, aviso sin foco) | 1 (`role="status"` montado con su texto: tercera vez, pasó a `rules/react.md`) |
 | recuperacion-password | 2026-10-29 | qa | 0 | 0 | 0 | 0 | — |
+| limite-descargas | 2026-10-30 | critico (spec) | 8 (3/1/4) | 1 (encabezado fijado antes de implementar: en parte, verificación a #54 antes de desplegar) | 3 (`DA006` cortaba las descargas de escuelas detrás de un NAT sin frenar a un bot, purga por IP que guardaba hashes para siempre, `''::json` → 22P02) | 3 | — |
+| limite-descargas | 2026-10-30 | critico (código) | 4 (0/2/2) | 0 | 0 | 0 | 1 (test de orden DA003/DA004 con 29 intentos) |
+| limite-descargas | 2026-10-30 | revisor | 3 (0/1/2) | 0 | 0 | 0 | 1 (el mismo test de orden) |

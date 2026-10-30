@@ -2,7 +2,8 @@ import type { Database } from '@/shared/types/database'
 import { filaDe } from './diff'
 import type { Operacion } from './types'
 
-type TablaAuditada = Exclude<keyof Database['public']['Tables'], 'registro_operacion'>
+// registro_operacion es el historial mismo; intento_descarga es un contador efímero sin auditar (0030) y nunca aparece en él.
+type TablaAuditada = Exclude<keyof Database['public']['Tables'], 'registro_operacion' | 'intento_descarga'>
 
 interface Entidad {
   /** Valor del filtro en la URL (`?entidad=`). */

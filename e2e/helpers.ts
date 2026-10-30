@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import { supabaseLocal } from '../scripts/lib/supabaseLocal.ts'
 
 // Usuario sembrado por `npm run db:reset` (scripts/seed-usuarios.mjs). Solo existe en el Supabase local.
 const ADMIN = { correo: 'admin@dam.local', password: 'admin-dam-local' }
@@ -11,6 +12,17 @@ export async function loginAdmin(page: Page) {
   await page.getByRole('button', { name: 'Ingresar' }).click()
   await expect(page).toHaveURL(/\/admin$/)
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+}
+
+/** Vacía `intento_descarga` (tope de frecuencia, 0030) con la clave de servicio del Supabase local. */
+export async function vaciarIntentos() {
+  const { url, clave } = supabaseLocal()
+  const r = await fetch(`${url}/rest/v1/intento_descarga?id=gt.0`, {
+    method: 'DELETE',
+    headers: { apikey: clave, Authorization: `Bearer ${clave}` },
+  })
+  if (!r.ok) throw new Error(`No se pudo vaciar intento_descarga (${r.status}).`)
+  return { url, clave }
 }
 
 export const sufijoUnico = () => `${Date.now().toString().slice(-7)}${Math.floor(Math.random() * 100)}`
