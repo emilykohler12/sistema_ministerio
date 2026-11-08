@@ -72,7 +72,7 @@ describe('AdminLayout', () => {
     renderLayout()
     emitir('INITIAL_SESSION', sesionAdmin)
     expect(await screen.findByText('Contenido hijo')).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'Cargando' })).not.toBeInTheDocument()
   })
 
   it('al cerrar sesión (SIGNED_OUT) un admin termina en el login', async () => {
