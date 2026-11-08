@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react'
 import { cerrarSesion, escucharSesion, iniciarSesion as iniciarSesionConsulta } from './consultas'
-import { esAdmin } from './esAdmin'
+import { esAdmin, esSesionDeRecuperacion } from './esAdmin'
 
 export interface UsuarioAdmin {
   id: string
@@ -30,13 +30,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return escucharSesion((evento, session) => {
       const user = session?.user
-      const idActual = user && esAdmin(user) ? user.id : null
+      // La sesión de recuperación (verifyOtp) no es de admin hasta cambiar la contraseña (#53). No se
+      // cierra: NuevaContrasenaPage la necesita para reintentar updateUser. Sin usuario, AdminLayout redirige.
+      const recuperacion = esSesionDeRecuperacion(session)
+      const idActual = user && esAdmin(user) && !recuperacion ? user.id : null
       if (idActual) {
         setUsuario({ id: idActual, email: user?.email })
       } else {
         setUsuario(null)
         // Si signOut falla, cerrarSesion descarta la sesión y recarga en el login (#46): el rechazo no tiene nada más que hacer.
-        if (user) setTimeout(() => cerrarSesion().catch(() => {}), 0)
+        if (user && !recuperacion) setTimeout(() => cerrarSesion().catch(() => {}), 0)
       }
       if (evento === 'INITIAL_SESSION') setCargando(false)
       // Los datos cambian según el rol (RLS): se limpia al cambiar el usuario derivado (anon a admin y
