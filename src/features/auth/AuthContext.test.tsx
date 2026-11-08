@@ -20,6 +20,16 @@ vi.mock('@/features/auth/consultas', () => ({
   escucharSesion: vi.fn(),
 }))
 
+function base64url(texto: string) {
+  return btoa(texto).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+/** Sesión del admin con un access_token cuyo único método de autenticación es `method`. */
+function sesionConAmr(method: string) {
+  const payload = base64url(JSON.stringify({ amr: [{ method, timestamp: 1 }] }))
+  return { ...sesionAdmin, access_token: `${base64url('{"alg":"HS256"}')}.${payload}.firma` }
+}
+
 let client: QueryClient
 let emitir: ReturnType<typeof simularSesion>['emitir']
 let desuscribir: ReturnType<typeof simularSesion>['desuscribir']
@@ -86,6 +96,31 @@ describe('AuthProvider', () => {
     // Si el rechazo quedara sin capturar, Vitest fallaría la corrida por "unhandled rejection".
     await new Promise((r) => setTimeout(r, 0))
     expect(result.current.usuario).toBeNull()
+  })
+
+  it('una sesión de recuperación (amr otp) de un admin no es usuario y no se cierra', async () => {
+    const { result } = montar()
+    emitir('INITIAL_SESSION', sesionConAmr('otp'))
+    expect(result.current.usuario).toBeNull()
+    expect(result.current.cargando).toBe(false)
+    // NuevaContrasenaPage la necesita viva para reintentar updateUser.
+    await new Promise((r) => setTimeout(r, 0))
+    expect(cerrarSesion).not.toHaveBeenCalled()
+  })
+
+  it('una sesión con amr password de un admin es usuario', () => {
+    const { result } = montar()
+    emitir('INITIAL_SESSION', sesionConAmr('password'))
+    expect(result.current.usuario).toEqual({ id: 'u1', email: 'admin@dam.local' })
+  })
+
+  it('SIGNED_IN con una sesión de recuperación no es usuario ni limpia la caché', () => {
+    const clear = vi.spyOn(client, 'clear')
+    const { result } = montar()
+    emitir('INITIAL_SESSION', null)
+    emitir('SIGNED_IN', sesionConAmr('otp'))
+    expect(result.current.usuario).toBeNull()
+    expect(clear).not.toHaveBeenCalled()
   })
 
   it('SIGNED_OUT limpia usuario y la caché de React Query', () => {

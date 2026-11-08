@@ -235,6 +235,78 @@ test('éxito: login con aviso enfocado, token fuera de la URL y las otras sesion
   await ctxA.close()
 })
 
+test('si el cambio falla, la sesión de recuperación no habilita /admin (#53)', async ({
+  page,
+  request,
+  browser,
+}) => {
+  test.setTimeout(60_000)
+  const { tokenHash } = await pedirEnlace(page, request, CUENTA)
+  const ctx = await browser.newContext({ baseURL: BASE })
+  const otra = await ctx.newPage()
+  // El cambio de contraseña (PUT /auth/v1/user) falla; verifyOtp ya abrió la sesión de recuperación.
+  await otra.route('**/auth/v1/user', (ruta) =>
+    ruta.request().method() === 'PUT' ? ruta.fulfill({ status: 500, json: { message: 'error' } }) : ruta.continue(),
+  )
+  await otra.goto(`/admin/nueva-contrasena?token_hash=${tokenHash}&type=recovery`)
+  await guardarContrasena(otra, aleatoria())
+  await expect(otra.getByRole('alert')).toBeVisible()
+  const hayRefresh = await otra.evaluate(() => sessionStorage.getItem('dam-auth-sesion') !== null)
+  expect(hayRefresh, 'verifyOtp dejó la sesión en sessionStorage').toBe(true)
+
+  await otra.goto('/admin')
+  await expect(otra).toHaveURL(/\/admin\/login/)
+  await ctx.close()
+})
+
+test('tras el fallo, recargar la pantalla tampoco habilita /admin (#53)', async ({ page, request, browser }) => {
+  test.setTimeout(60_000)
+  const { tokenHash } = await pedirEnlace(page, request, CUENTA)
+  const ctx = await browser.newContext({ baseURL: BASE })
+  const otra = await ctx.newPage()
+  await otra.route('**/auth/v1/user', (ruta) =>
+    ruta.request().method() === 'PUT' ? ruta.fulfill({ status: 500, json: { message: 'error' } }) : ruta.continue(),
+  )
+  await otra.goto(`/admin/nueva-contrasena?token_hash=${tokenHash}&type=recovery`)
+  await guardarContrasena(otra, aleatoria())
+  await expect(otra.getByRole('alert')).toBeVisible()
+  await otra.reload()
+  await expect(otra.getByRole('heading', { level: 1 })).toBeVisible()
+  await otra.goto('/admin')
+  await expect(otra).toHaveURL(/\/admin\/login/)
+  await ctx.close()
+})
+
+test('tras el fallo, el reintento cambia la contraseña y el login nuevo sobrevive a recargar (#53)', async ({
+  page,
+  request,
+  browser,
+}) => {
+  test.setTimeout(90_000)
+  const { tokenHash } = await pedirEnlace(page, request, CUENTA)
+  const ctx = await browser.newContext({ baseURL: BASE })
+  const otra = await ctx.newPage()
+  await otra.route('**/auth/v1/user', (ruta) =>
+    ruta.request().method() === 'PUT' ? ruta.fulfill({ status: 500, json: { message: 'error' } }) : ruta.continue(),
+  )
+  await otra.goto(`/admin/nueva-contrasena?token_hash=${tokenHash}&type=recovery`)
+  const nueva = aleatoria()
+  await guardarContrasena(otra, nueva)
+  await expect(otra.getByRole('alert')).toBeVisible()
+
+  await otra.unroute('**/auth/v1/user')
+  await guardarContrasena(otra, nueva)
+  await expect(otra).toHaveURL(/\/admin\/login$/)
+  await expect(otra.getByRole('status')).toHaveText('Contraseña actualizada. Ingresá con la nueva.')
+
+  await ingresar(otra, CUENTA, nueva)
+  await expect(otra).toHaveURL(/\/admin$/)
+  await otra.reload()
+  await expect(otra).toHaveURL(/\/admin$/)
+  await expect(otra.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+  await ctx.close()
+})
+
 test('una cuenta sin la marca admin no cambia la contraseña', async ({ page, request, browser }) => {
   test.setTimeout(60_000)
   const { tokenHash } = await pedirEnlace(page, request, 'sin-permiso@dam.local')
@@ -255,7 +327,9 @@ test('sin scroll horizontal en 320 px en las tres pantallas', async ({ page }) =
   for (const ruta of ['/admin/login', '/admin/recuperar', '/admin/nueva-contrasena?token_hash=x']) {
     await page.goto(ruta)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    const desborda = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
+    const desborda = (await page.evaluate(
+      'document.documentElement.scrollWidth > document.documentElement.clientWidth',
+    )) as boolean
     expect(desborda, ruta).toBe(false)
   }
 })

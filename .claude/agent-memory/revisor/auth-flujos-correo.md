@@ -17,6 +17,17 @@ En recuperacion-password (2026-10-29, Revisión 1) aparecieron dos huecos que co
    (`updateUser`) falla, la persona queda en el panel sin haber terminado el flujo. Los tests de página mockean `consultas` y usan un marcador como ruta del login,
    así que no lo detectan: hay que razonarlo leyendo `AuthContext` y `LoginPage`.
 
+3. **Afirmaciones falsas que se repiten en la doc y en los comentarios** (#53, 2026-10-30):
+   - «La sesión vence»: `[auth.sessions]` (`timebox`, `inactivity_timeout`) está comentada en `config.toml`, así que el refresh token no
+     vence solo. Lo revoca solo un `signOut` global.
+   - «Las páginas de recuperación están fuera de `AuthProvider`»: `AppProviders` envuelve todo el router, así que `AuthContext` sí escucha
+     en `NuevaContrasenaPage`.
+
+   Hay que verificar las dos cosas antes de aceptarlas.
+4. **Cómo se distingue la sesión de recuperación.** Desde #53, `esSesionDeRecuperacion` la reconoce porque el `amr` del JWT es solo `otp`.
+   En #34 (invitaciones), comprobá qué `amr` deja el enlace de invitación: si también es `otp`, el invitado quedará fuera de `/admin` hasta
+   fijar la contraseña.
+
 **Why:** el criterio de neutralidad (no revelar cuentas) y la promesa de «sin sesión hasta terminar» se rompen sin que falle ningún test.
 **How to apply:** en todo flujo de Auth por correo, buscá los `return 'red'` por defecto y cada salida con una sesión abierta (enlaces o recarga). Ver
 [[supabase-js-frontend]] y [[temporizadores-sesion]].
