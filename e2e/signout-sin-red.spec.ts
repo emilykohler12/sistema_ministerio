@@ -57,6 +57,8 @@ test('token vencido y sin red: se descarta la sesión y no revive al volver la r
   await context.setOffline(true)
   const t0 = Date.now()
   await page.getByRole('button', { name: 'Cerrar sesión' }).click()
+  // La espera de auth-js es larga (#48): el botón avisa que el cierre está en curso.
+  await expect(page.getByRole('button', { name: /Cerrando sesión/ })).toHaveText('Cerrando sesión…')
   // Sin red la recarga a /admin/login falla (página de error del navegador): el panel desaparece, pero
   // el documento deja de ser el de la app. Se mide cuánto tarda y no se toca el storage de ese documento.
   await expect.poll(() => page.url(), { timeout: 30_000 }).toMatch(/chrome-error|\/admin\/login/)

@@ -28,6 +28,10 @@ Se repitió en cierre-inactividad (2026-10-23): el mensaje "Tu sesión se cerró
 con la página y sin mover el foco. Segunda vez: proponé sumarlo a `rules/react.md` (región viva siempre montada, o `role="alert"` si aparece con la pantalla).
 Tercera vez en recuperacion-password (2026-10-29): «Contraseña actualizada» de `LoginPage` es `{cond && <p role="status">}` sin foco, aunque en el mismo cambio
 `RecuperarPage` lo hizo bien (`tabIndex={-1}` y foco en un efecto). Sigue sin estar en `rules/react.md`: pedile al coordinador que la promueva.
+Ya se promovió a `rules/react.md`, pero la regla solo dice "tabIndex -1 y foco". Cuarta vez en cierre-sesion-sin-red (#48, 2026-11-08): `AdminSidebar`
+usa `{cerrando && <p role="status">Cerrando sesión</p>}` para el estado de un botón que conserva el foco, y ahí la receta del foco no sirve. Pedí la
+región siempre montada con texto condicional y avisá que `AdminLayout.test.tsx` busca `queryByRole('status')` sin nombre (filtrar por `Cargando`).
+Sugerí sumar a la regla la variante "si el foco se queda donde está, región siempre montada".
 En la misma revisión: `Dialog` tiene `id="dialog-title"`/`dialog-description` literales y `useFocusTrap` escucha `keydown` en `document`. Con dos diálogos
 abiertos (un aviso global sobre un diálogo del panel), el de arriba toma el nombre del de abajo y Escape cierra los dos. Revisalo en todo modal global.
 Se arregló con `useId` y una pila de tokens de módulo en `useFocusTrap` (Revisión 2). Dos trampas en una pila así: (a) cuando el de **abajo** se cierra

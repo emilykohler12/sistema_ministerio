@@ -1,4 +1,5 @@
-import { Home, History, LayoutGrid, LogOut, ScrollText, School, Settings, BookOpen } from 'lucide-react'
+import { Home, History, LayoutGrid, Loader2, LogOut, ScrollText, School, Settings, BookOpen } from 'lucide-react'
+import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/shared/lib/utils'
@@ -14,12 +15,16 @@ const links = [
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { cerrarSesion } = useAuth()
+  const [cerrando, setCerrando] = useState(false)
 
   // La redirección al login la hace AdminLayout cuando `usuario` pasa a null.
   // Si signOut falla (access token vencido y sin red), cerrarSesion descarta la sesión y recarga en el
-  // login (#46). El rechazo no tiene nada más que hacer acá.
+  // login (#46). Con el token vencido, auth-js reintenta ~26 s antes de responder (#48): mientras tanto el
+  // botón muestra "Cerrando sesión…". Si cerrarSesion rechaza, vuelve a estar disponible.
   function handleLogout() {
-    cerrarSesion().catch(() => {})
+    if (cerrando) return
+    setCerrando(true)
+    cerrarSesion().catch(() => setCerrando(false))
   }
 
   return (
@@ -66,11 +71,23 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       <button
         type="button"
         onClick={handleLogout}
-        className="mx-3 mb-6 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-primary-100 hover:bg-primary-800"
+        aria-disabled={cerrando || undefined}
+        className={cn(
+          'mx-3 mb-6 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-primary-100 hover:bg-primary-800',
+          cerrando && 'cursor-wait opacity-70',
+        )}
       >
-        <LogOut className="h-5 w-5" aria-hidden="true" />
-        Cerrar sesión
+        {cerrando ? (
+          <Loader2 className="h-5 w-5 motion-safe:animate-spin" aria-hidden="true" />
+        ) : (
+          <LogOut className="h-5 w-5" aria-hidden="true" />
+        )}
+        {cerrando ? 'Cerrando sesión…' : 'Cerrar sesión'}
       </button>
+      {/* Siempre montada: una región que aparece ya con texto no se anuncia de forma confiable. */}
+      <p role="status" className="sr-only">
+        {cerrando ? 'Cerrando sesión' : ''}
+      </p>
     </div>
   )
 }
