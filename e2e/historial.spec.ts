@@ -85,6 +85,7 @@ test('historial: un taller creado, editado y con un recurso borrado se ve con em
   await expect(page.getByRole('table', { name: 'Operaciones' }).getByText('Baja').first()).toBeVisible()
 })
 
+// Depende de que el primer test del archivo haya creado operaciones: sobre una base vacía no se renderiza la tabla.
 test('historial: filtros inválidos, vacíos y URL compartible', async ({ page, context }) => {
   await loginAdmin(page)
   const errores: string[] = []
@@ -132,9 +133,15 @@ test('historial: filtros inválidos, vacíos y URL compartible', async ({ page, 
   consultas = 0
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date())
   const [y, m, d] = hoy.split('-')
+  // La URL cambia antes de que salga la consulta y, con keepPreviousData, la tabla anterior sigue visible:
+  // hay que esperar la respuesta con el filtro para que el conteo no se evalúe antes de tiempo.
+  const respuesta = page.waitForResponse(
+    (r) => r.url().includes('/rest/v1/registro_operacion') && r.url().includes('fecha_hora=gte.'),
+  )
   await page.getByLabel('Desde').focus() // el clic cae en el segmento del año
   await page.keyboard.type(`${m}${d}${y}`) // Chromium en-US: mm/dd/aaaa
   await expect(page).toHaveURL(new RegExp(`desde=${hoy}`))
+  await respuesta
   await expect(page.getByRole('table', { name: 'Operaciones' })).toBeVisible()
   expect(consultas).toBe(1)
 
