@@ -8,7 +8,7 @@ Errores que se repiten en el proyecto. La mantiene el subagente; se revisa en lo
 - [Temporizadores de sesión](temporizadores-sesion.md) — actividad/extender tras el límite sin tic reinicia en vez de vencer; signOut no borra con token vencido sin red; `{error}` con token vigente sí borró (no recargar)
 - [Flujos de Auth por correo](auth-flujos-correo.md) — "todo error es red" enumera cuentas (500 SMTP); sesión de verifyOtp + AuthContext sin filtro → login redirige al panel; doc «la sesión vence» y «fuera de AuthProvider» falsas; amr otp (#53, ojo #34)
 - [Extraer un componente compartido](refactors-extraccion-componente.md) — guarda que queda en el padre sin test (#39); juzgar "sin cambio visible" leyendo el handler de la página
-- [Scripts de carga por CSV](scripts-carga-csv.md) — comilla sin cerrar, cp1252 como UTF-8, `obj[clave]` con prototipo, resumen planificado
-- [Permisos por rol de subagentes](hooks-frontmatter-no-invocados.md) — roles.mjs (0021) solo restringe si la sesión arrancó con él (sin psql, sed -n, git stash, supabase status ni Write al scratchpad para el revisor); banderas que escriben (tsc --generate*, -o, --output); tampoco Playwright ni test:e2e
+- [Scripts con service_role](scripts-carga-csv.md) — comilla sin cerrar, cp1252, `obj[clave]` con prototipo, resumen planificado; offset con bajas concurrentes borra referenciados (#28)
+- [Permisos por rol de subagentes](hooks-frontmatter-no-invocados.md) — roles.mjs (0021) solo restringe si arrancó con él (sin psql, sed -n, git stash, supabase status, Write al scratchpad); banderas que escriben; ni Playwright ni scripts/*.ts
 - [Conteos de requests en e2e](e2e-aserciones-de-conteo.md) — `toBe(1)` sin waitForResponse es flaky (#49, #40); `toBe(0)` tras ver el error es vacuo
 - [Evasión de hooks por regex](hooks-denylist-evasion.md) — comillas, `\`+salto, flags intercalados, $(), pipes a bash; y "node" en tsconfig.app

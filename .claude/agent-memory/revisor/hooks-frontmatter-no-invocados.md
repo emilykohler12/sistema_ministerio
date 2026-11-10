@@ -41,6 +41,8 @@ de correr un test propio. Leé `node_modules` con Read (offset/limit) y dejá co
 En la Revisión 2 también bloqueó `gh issue list`: no se puede comprobar si una observación ya tiene issue. Pedile al coordinador que lo confirme.
 En e2e-historial-flaky (2026-11-09) bloqueó `npx playwright test` y `npm run test:e2e -- <spec>` aunque el coordinador los pidiera: el revisor no
 corre e2e. Razoná el test leyendo la app y dejá en la evidencia que las corridas repetidas las confirma el coordinador. `npm run db:reset` sí pasa.
+En limpieza-huerfanos (2026-11-10) bloqueó `npm run storage:limpiar` (simulación incluida) aunque el coordinador lo autorizara: los scripts
+`scripts/*.ts` no los corre el revisor. Dejá la verificación contra la base local al `qa`.
 
 **Why:** una lista blanca de "comandos de lectura" igual deja escribir o ejecutar si no se miran las banderas, y las comillas esconden
 banderas a los lookahead. Y un hook que "funciona a mano" puede no recibir los campos que espera en otro tipo de sesión.

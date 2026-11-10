@@ -7,3 +7,4 @@
 - [Trampas de recuperación](trampas-recuperacion.md) — Mailpit con request, token_hash, refresh token y contextos
 - [Trampas sesión de recuperación](trampas-sesion-recuperacion.md) — plantilla de auth vieja, atajo token=, reintento sin recargar
 - [Trampas del historial](trampas-historial.md) — input date mm/dd, sesión por pestaña, 416 en consola, >50 filas
+- [Trampas scripts de Storage](trampas-scripts-storage.md) — probar storage:limpiar siendo qa: spec con execFile, edad, falla cerrada
