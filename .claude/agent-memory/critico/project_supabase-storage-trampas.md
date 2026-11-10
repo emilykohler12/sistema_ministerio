@@ -52,6 +52,23 @@ En la crítica de la spec `descargas` (2026-10-10; propone ADR 0022: RPC + polí
   `exists (recurso visible)` no expone nada nuevo al listar (es lo mismo que `GET /recurso`) y oculta los huérfanos. Calificar `objects.name`.
 - El perfil `critico` **no** deja usar `docker`, `psql` ni `sed`/`for` en Bash: verificar en `node_modules` con grep/Read o marcar "a verificar".
 
+En la crítica de la spec `subida-reanudable` (2026-11-10, #29, TUS con tus-js-client). Lo que sigue sale del código fuente de la librería y no
+se verificó en `node_modules`, porque todavía no estaba instalada:
+- El `defaultOnShouldRetry` de tus-js-client **no reintenta sin conexión** (`&& isOnline()`, `navigator.onLine`). En cambio sí reintenta 409 y 423, y
+  no reintenta el resto de los 4xx. Los `retryDelays` por defecto suman 9 s. Tampoco hay evento de «reintentando»: hay que usar un `onShouldRetry` propio.
+- Si el HEAD de retomar da 4xx, la librería crea un upload nuevo. Con `x-upsert: false` eso da 409, que se reintenta.
+- `abort(true)` en la carrera con el último PATCH puede dejar un objeto completo sin fila: el huérfano de 0016.
+- Quedaron a verificar en storage-api: CORS de `Location`, 413 por `Upload-Length`, 415 por el metadato `contentType`, soporte de DELETE, HEAD tras
+  completar, si exige `apikey` y si expira los incompletos.
+
+En la crítica del código de `subida-reanudable` (2026-11-10), verificado en `node_modules/tus-js-client` 4.3.1 (`lib.esm/upload.js`):
+- **`abort(true)` → `BaseUpload.terminate` llama al `onShouldRetry` del usuario** (`:886` → `:1033`) si el DELETE falla, y reintenta el DELETE con
+  los mismos `retryDelays`. Un `onShouldRetry` con efectos (p. ej. `onReintento()`) se dispara después de que la promesa ya resolvió. Hay que tener
+  un flag "cerrada" en el adaptador, y el fake de los tests no lo modela.
+- `abort()` limpia `_retryTimeout` (`:422`), y `_emitError` no emite nada si `_aborted` (`:445`). Con `url == null` (POST en vuelo) no hay DELETE.
+- `vi.mocked(fn)` sobre una función con sobrecargas toma la **última**. Un implementador agregó sobrecargas en producción solo para tipar mocks.
+- Con «Cancelar» escondido por `fase === 'finalizando'`, un `reintentando` al 100 % lo vuelve a mostrar. Conviene derivarlo de `progreso < 100`.
+
 **Why:** Storage es un sistema aparte, sin transacción común con Postgres. Sus detalles (qué MIME llega, cuándo se ve la fila) no salen
 en los tipos ni en el pgTAP y deciden si un diseño se sostiene.
 

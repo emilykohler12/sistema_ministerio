@@ -1,15 +1,17 @@
-import { borrarArchivo as borrarDelBucket, subirArchivo as subirAlBucket } from '@/shared/lib/storage'
+import { borrarArchivo as borrarDelBucket } from '@/shared/lib/storage'
 import { supabase } from '@/shared/lib/supabase'
+import { type OpcionesSubida, subirReanudable } from '@/shared/lib/subidaReanudable'
 import type { TablesInsert } from '@/shared/types/database'
 import type { CambiosRecurso, Recurso } from './types'
 
 const BUCKET = 'talleres'
 
-/** Wrappers finos sobre `shared/lib/storage` con el bucket `talleres`. */
-export function subirArchivo(ruta: string, file: File, mime: string): Promise<void> {
-  return subirAlBucket(BUCKET, ruta, file, mime)
+/** Sube por TUS (progreso, reintentos y cancelación) al bucket `talleres`. */
+export function subirArchivo(ruta: string, file: File, mime: string, opciones: OpcionesSubida = {}): Promise<void> {
+  return subirReanudable(BUCKET, ruta, file, mime, opciones)
 }
 
+/** Wrapper fino sobre `shared/lib/storage` con el bucket `talleres`. */
 export function borrarArchivo(ruta: string): Promise<void> {
   return borrarDelBucket(BUCKET, ruta)
 }

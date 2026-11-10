@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { actualizarRecurso, eliminarFilaRecurso } from './consultas'
+import { subirReanudable } from '@/shared/lib/subidaReanudable'
+import { actualizarRecurso, eliminarFilaRecurso, subirArchivo } from './consultas'
+
+vi.mock('@/shared/lib/subidaReanudable', () => ({ subirReanudable: vi.fn() }))
 
 /*
  * Contrato (fix-ruta-recursos). src/features/recursos/consultas.ts, solo supabase. Se mockea `supabase.from` como una
@@ -32,6 +35,39 @@ beforeEach(() => {
   cadena.eq.mockReturnValue(cadena)
   cadena.select.mockReturnValue(cadena)
   cadena.single.mockImplementation(async () => resultado.actual)
+})
+
+/*
+ * Subida reanudable (#29): subirArchivo(ruta, file, mime, opciones?) delega en subirReanudable('talleres', ruta, file, mime, opciones)
+ * (shared/lib/subidaReanudable.ts). Sin opciones sigue valiendo (objeto vacío).
+ */
+describe('subirArchivo (reanudable)', () => {
+  it('delega en subirReanudable con el bucket talleres y las opciones recibidas', async () => {
+    const file = new File(['x'], 'a.pdf')
+    const opciones = { onProgress: vi.fn(), onReintento: vi.fn(), signal: new AbortController().signal }
+    vi.mocked(subirReanudable).mockResolvedValue(undefined)
+
+    await subirArchivo('5/a.pdf', file, 'application/pdf', opciones)
+
+    expect(subirReanudable).toHaveBeenCalledWith('talleres', '5/a.pdf', file, 'application/pdf', opciones)
+  })
+
+  it('sin opciones igual usa la subida reanudable', async () => {
+    const file = new File(['x'], 'a.pdf')
+    vi.mocked(subirReanudable).mockResolvedValue(undefined)
+
+    await subirArchivo('5/a.pdf', file, 'application/pdf')
+
+    expect(subirReanudable).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(subirReanudable).mock.calls[0].slice(0, 4)).toEqual(['talleres', '5/a.pdf', file, 'application/pdf'])
+  })
+
+  it('propaga el rechazo de la subida', async () => {
+    const rechazo = { statusCode: '413' }
+    vi.mocked(subirReanudable).mockRejectedValue(rechazo)
+
+    await expect(subirArchivo('5/a.pdf', new File(['x'], 'a.pdf'), 'application/pdf')).rejects.toBe(rechazo)
+  })
 })
 
 describe('actualizarRecurso', () => {
