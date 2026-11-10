@@ -18,3 +18,7 @@ acepta `*.test.ts(x)`, así que el test-writer no podía escribir pgTAP (`.sql`)
 y los perfiles de `.claude/hooks/perfiles.mjs` (desde 0021 el frontmatter de los agentes ya no lleva hooks); recomendar regex
 anclados y bloqueos en `proteger-bash.mjs` (ve cualquier invocación) antes que deny por prefijo.
 Relacionado: [[tipos-v1-vs-firma-hooks]].
+
+Perfil propio (2026-11-10): `roles.mjs` deja al crítico en perfil lectura. Le bloquea `npm run build`, `typecheck`, `lint`, `npx vitest`, `gzip`
+y asignar variables, aunque el que llama le diga que puede correrlos. Para el bundle sirve leer el `dist/` existente (comparar su mtime con el de las
+fuentes y hacer grep de strings de la librería en los chunks). Avisar en la crítica qué checks no se corrieron.
