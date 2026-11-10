@@ -9,8 +9,10 @@ const PDF = Buffer.from(
 async function tallerConArchivo(page: Page, s: string, nombreRecurso: string, conEnlace = false) {
   let ruta = ''
   page.on('request', (r) => {
-    const m = /\/storage\/v1\/object\/talleres\/(.+)$/.exec(r.url())
-    if (m && r.method() === 'POST') ruta = decodeURIComponent(m[1])
+    // Desde #29 la subida es TUS: la ruta viaja en `Upload-Metadata` (`objectName <base64>`) del POST que crea el upload.
+    if (r.method() !== 'POST' || !/\/storage\/v1\/upload\/resumable$/.test(r.url())) return
+    const m = /objectName ([A-Za-z0-9+/=]+)/.exec(r.headers()['upload-metadata'] ?? '')
+    if (m) ruta = Buffer.from(m[1], 'base64').toString('utf8')
   })
   const id = await crearTaller(page, { nombre: `Taller Desc ${s}`, categoria: `Cat Desc ${s}`, estado: 'Publicado' })
   await page.locator('input[type=file]').first().setInputFiles({ name: `base${s}.pdf`, mimeType: 'application/pdf', buffer: PDF })

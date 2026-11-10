@@ -1,5 +1,6 @@
 import { MOTIVO_FORMATO, extensionDe, formatoDeArchivo, nombreSinExtension, rutaNueva } from './archivos'
 import { borrarOAvisar as borrarOAvisarEn, compensar as compensarEn } from '@/shared/lib/storage'
+import type { OpcionesSubida } from '@/shared/lib/subidaReanudable'
 import { actualizarRecurso, borrarArchivo, eliminarFilaRecurso, insertarRecurso, subirArchivo } from './consultas'
 import type { Recurso } from './types'
 
@@ -19,11 +20,19 @@ function datosDeArchivo(file: File) {
   return { formato, ext }
 }
 
-/** Sube el archivo y recién entonces inserta la fila; si el servidor rechaza el insert, borra el archivo y propaga el error. */
-export async function altaArchivo(tallerId: number, file: File, orden: number): Promise<Recurso> {
+/**
+ * Sube el archivo y recién entonces inserta la fila; si el servidor rechaza el insert, borra el archivo y propaga el error.
+ * Si la subida falla o se cancela no hay objeto ni fila (el upload incompleto no es un objeto): no se compensa nada.
+ */
+export async function altaArchivo(
+  tallerId: number,
+  file: File,
+  orden: number,
+  opciones: OpcionesSubida = {},
+): Promise<Recurso> {
   const { formato, ext } = datosDeArchivo(file)
   const ruta = rutaNueva(tallerId, ext)
-  await subirArchivo(ruta, file, formato.mime)
+  await subirArchivo(ruta, file, formato.mime, opciones)
   try {
     return await insertarRecurso({
       taller_id: tallerId,
@@ -41,12 +50,16 @@ export async function altaArchivo(tallerId: number, file: File, orden: number): 
 }
 
 /** Sube el nuevo, actualiza la fila (conserva nombre, orden e id) y recién entonces borra el anterior. */
-export async function reemplazarArchivo(recurso: Recurso, file: File): Promise<Recurso> {
+export async function reemplazarArchivo(
+  recurso: Recurso,
+  file: File,
+  opciones: OpcionesSubida = {},
+): Promise<Recurso> {
   const anterior = recurso.ruta_archivo
   if (anterior === null) throw new Error('Un enlace no se reemplaza: se elimina y se crea otro.')
   const { formato, ext } = datosDeArchivo(file)
   const ruta = rutaNueva(recurso.taller_id, ext)
-  await subirArchivo(ruta, file, formato.mime)
+  await subirArchivo(ruta, file, formato.mime, opciones)
   let actualizado: Recurso
   try {
     // Con `anterior` el UPDATE solo aplica si la fila sigue apuntando a ese archivo (caché vieja: PGRST116).

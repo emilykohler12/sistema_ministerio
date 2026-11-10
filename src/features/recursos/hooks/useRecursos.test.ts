@@ -187,7 +187,7 @@ describe('useReemplazarArchivo', () => {
       await result.current.mutateAsync({ recurso: actual, file })
     })
 
-    expect(reemplazarArchivo).toHaveBeenCalledWith(actual, file)
+    expect(reemplazarArchivo).toHaveBeenCalledWith(actual, file, expect.anything())
     expect(invalidar).toHaveBeenCalledWith(invalidaTalleres)
   })
 
@@ -279,9 +279,9 @@ describe('useAltaArchivos', () => {
     })
 
     expect(vi.mocked(altaArchivo).mock.calls).toEqual([
-      [5, a, 5],
-      [5, b, 6],
-      [5, c, 7],
+      [5, a, 5, expect.anything()],
+      [5, b, 6, expect.anything()],
+      [5, c, 7, expect.anything()],
     ])
   })
 
@@ -311,11 +311,11 @@ describe('useAltaArchivos', () => {
     })
 
     await waitFor(() => expect(altaArchivo).toHaveBeenCalledTimes(1))
-    expect(altaArchivo).toHaveBeenLastCalledWith(5, a, 5)
+    expect(altaArchivo).toHaveBeenLastCalledWith(5, a, 5, expect.anything())
 
     await act(async () => pendientes[0]())
     await waitFor(() => expect(altaArchivo).toHaveBeenCalledTimes(2))
-    expect(altaArchivo).toHaveBeenLastCalledWith(5, b, 6)
+    expect(altaArchivo).toHaveBeenLastCalledWith(5, b, 6, expect.anything())
 
     await act(async () => {
       pendientes[1]()
@@ -412,6 +412,323 @@ describe('useAltaArchivos', () => {
     })
 
     expect(invalidar).toHaveBeenCalledTimes(1)
+  })
+})
+
+/*
+ * Subida reanudable (#29). altaArchivo(tallerId, file, orden, opciones) y reemplazarArchivo(recurso, file, opciones) reciben
+ * opciones = { onProgress(porcentaje: entero), onReintento(), signal }.
+ * EstadoArchivo = { archivo, estado: 'esperando' | 'subiendo' | 'reintentando' | 'finalizando' | 'listo' | 'error' | 'cancelado',
+ *                   progreso: number (entero 0-100), motivo? }
+ *   - onProgress(p) -> progreso = p y estado 'subiendo'; con p = 100 el estado pasa a 'finalizando' (ya se enviaron todos los bytes).
+ *   - onReintento() -> estado 'reintentando'; el próximo onProgress lo devuelve a 'subiendo'.
+ *   - useAltaArchivos() suma cancelar(indice): aborta el signal de ese archivo; un AbortError deja 'cancelado' (sin motivo) y el lote sigue.
+ *     Un archivo cancelado mientras esperaba no llega a llamar a altaArchivo. Al desmontar se aborta todo (incluidos los que esperan).
+ *   - useReemplazarArchivo() devuelve además { progreso: number, estadoSubida: 'subiendo'|'reintentando'|'finalizando'|null, cancelar() }.
+ */
+type OpcionesSubida = { onProgress: (p: number) => void; onReintento: () => void; signal: AbortSignal }
+type Pendiente = { file: File; opciones: OpcionesSubida; resolver: () => void; rechazar: (e: unknown) => void }
+
+function controlarAlta() {
+  const pendientes: Pendiente[] = []
+  vi.mocked(altaArchivo).mockImplementation(
+    (_t, file, orden, opciones) =>
+      new Promise<Recurso>((resolver, rechazar) => {
+        opciones?.signal?.addEventListener('abort', () => rechazar(new DOMException('Subida cancelada', 'AbortError')))
+        pendientes.push({ file, opciones: opciones as OpcionesSubida, resolver: () => resolver(recurso(100 + orden, orden)), rechazar })
+      }),
+  )
+  return pendientes
+}
+
+describe('useAltaArchivos: progreso, reintento y finalización', () => {
+  const a = new File(['a'], 'a.pdf')
+  const b = new File(['b'], 'b.pdf')
+
+  it('cada archivo arranca con progreso 0', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useAltaArchivos(), { wrapper })
+
+    act(() => void result.current.subir(5, [a, b], []))
+
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+    expect(result.current.estados.map((e) => e.progreso)).toEqual([0, 0])
+    await act(async () => result.current.cancelar(0))
+    await act(async () => result.current.cancelar(1))
+  })
+
+  it('altaArchivo recibe onProgress, onReintento y un AbortSignal', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useAltaArchivos(), { wrapper })
+
+    act(() => void result.current.subir(5, [a], []))
+
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+    const { opciones } = pendientes[0]
+    expect(opciones.onProgress).toBeTypeOf('function')
+    expect(opciones.onReintento).toBeTypeOf('function')
+    expect(opciones.signal).toBeInstanceOf(AbortSignal)
+    expect(opciones.signal.aborted).toBe(false)
+    await act(async () => pendientes[0].resolver())
+  })
+
+  it('onProgress actualiza el progreso entero del archivo en curso y lo deja "subiendo"', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useAltaArchivos(), { wrapper })
+
+    act(() => void result.current.subir(5, [a, b], []))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+
+    act(() => pendientes[0].opciones.onProgress(40))
+
+    expect(result.current.estados[0]).toMatchObject({ estado: 'subiendo', progreso: 40 })
+    expect(result.current.estados[1]).toMatchObject({ estado: 'esperando', progreso: 0 })
+    await act(async () => pendientes[0].resolver())
+    await waitFor(() => expect(pendientes).toHaveLength(2))
+    await act(async () => pendientes[1].resolver())
+  })
+
+  it('no vuelve a renderizar si el porcentaje no cambió', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper } = crearContexto()
+    let renders = 0
+    const { result } = renderHook(
+      () => {
+        renders++
+        return useAltaArchivos()
+      },
+      { wrapper },
+    )
+    act(() => void result.current.subir(5, [a], []))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+    act(() => pendientes[0].opciones.onProgress(40))
+    const antes = renders
+
+    act(() => {
+      pendientes[0].opciones.onProgress(40)
+      pendientes[0].opciones.onProgress(40)
+      pendientes[0].opciones.onProgress(40)
+    })
+
+    expect(renders).toBe(antes)
+    await act(async () => pendientes[0].resolver())
+  })
+
+  it('onReintento deja el archivo "reintentando" y el próximo onProgress lo vuelve a "subiendo"', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useAltaArchivos(), { wrapper })
+    act(() => void result.current.subir(5, [a], []))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+    act(() => pendientes[0].opciones.onProgress(30))
+
+    act(() => pendientes[0].opciones.onReintento())
+    expect(result.current.estados[0].estado).toBe('reintentando')
+    expect(result.current.estados[0].progreso).toBe(30)
+
+    act(() => pendientes[0].opciones.onProgress(35))
+    expect(result.current.estados[0]).toMatchObject({ estado: 'subiendo', progreso: 35 })
+    await act(async () => pendientes[0].resolver())
+  })
+
+  it('con el progreso en 100 el estado es "finalizando"', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useAltaArchivos(), { wrapper })
+    act(() => void result.current.subir(5, [a], []))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+
+    act(() => pendientes[0].opciones.onProgress(100))
+
+    expect(result.current.estados[0]).toMatchObject({ estado: 'finalizando', progreso: 100 })
+    await act(async () => pendientes[0].resolver())
+    await waitFor(() => expect(result.current.estados[0].estado).toBe('listo'))
+  })
+
+  it('un error de la subida deja "error" con el motivo y el lote sigue', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useAltaArchivos(), { wrapper })
+    act(() => void result.current.subir(5, [a, b], []))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+
+    await act(async () => pendientes[0].rechazar({ statusCode: '415', message: 'mime' }))
+
+    await waitFor(() => expect(pendientes).toHaveLength(2))
+    expect(result.current.estados[0].estado).toBe('error')
+    expect(result.current.estados[0].motivo).toMatch(/formato/i)
+    await act(async () => pendientes[1].resolver())
+  })
+})
+
+describe('useAltaArchivos: cancelar', () => {
+  const a = new File(['a'], 'a.pdf')
+  const b = new File(['b'], 'b.pdf')
+  const c = new File(['c'], 'c.pdf')
+
+  it('cancelar el que está subiendo aborta su signal, lo deja "cancelado" sin motivo y el lote sigue', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useAltaArchivos(), { wrapper })
+    act(() => void result.current.subir(5, [a, b], []))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+
+    act(() => result.current.cancelar(0))
+
+    expect(pendientes[0].opciones.signal.aborted).toBe(true)
+    await waitFor(() => expect(result.current.estados[0].estado).toBe('cancelado'))
+    expect(result.current.estados[0].motivo).toBeUndefined()
+    await waitFor(() => expect(pendientes).toHaveLength(2))
+    expect(pendientes[1].file).toBe(b)
+    expect(result.current.estados[1].estado).toBe('subiendo')
+    await act(async () => pendientes[1].resolver())
+    await waitFor(() => expect(result.current.estados.map((e) => e.estado)).toEqual(['cancelado', 'listo']))
+  })
+
+  it('cancelar uno que espera lo marca "cancelado" y nunca llama a altaArchivo con él; el resto sigue', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useAltaArchivos(), { wrapper })
+    act(() => void result.current.subir(5, [a, b, c], []))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+
+    act(() => result.current.cancelar(1))
+    expect(result.current.estados[1].estado).toBe('cancelado')
+
+    await act(async () => pendientes[0].resolver())
+    await waitFor(() => expect(pendientes).toHaveLength(2))
+    expect(pendientes.map((p) => p.file)).toEqual([a, c])
+    await act(async () => pendientes[1].resolver())
+    await waitFor(() => expect(result.current.estados.map((e) => e.estado)).toEqual(['listo', 'cancelado', 'listo']))
+    expect(altaArchivo).toHaveBeenCalledTimes(2)
+  })
+
+  it('un AbortError no es un error: no queda "error" ni motivo', async () => {
+    vi.mocked(altaArchivo).mockRejectedValue(new DOMException('Subida cancelada', 'AbortError'))
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useAltaArchivos(), { wrapper })
+
+    await act(async () => {
+      await result.current.subir(5, [a], [])
+    })
+
+    expect(result.current.estados[0].estado).toBe('cancelado')
+    expect(result.current.estados[0].motivo).toBeUndefined()
+  })
+
+  it('con cancelaciones y errores en el lote invalida los talleres una sola vez', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper, invalidar } = crearContexto()
+    const { result } = renderHook(() => useAltaArchivos(), { wrapper })
+    let terminado: Promise<void> = Promise.resolve()
+    act(() => {
+      terminado = result.current.subir(5, [a, b, c], [])
+    })
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+
+    act(() => result.current.cancelar(0))
+    await waitFor(() => expect(pendientes).toHaveLength(2))
+    await act(async () => pendientes[1].rechazar({ statusCode: '413' }))
+    await waitFor(() => expect(pendientes).toHaveLength(3))
+    await act(async () => {
+      pendientes[2].resolver()
+      await terminado
+    })
+
+    expect(invalidar).toHaveBeenCalledTimes(1)
+    expect(invalidar).toHaveBeenCalledWith(invalidaTalleres)
+  })
+
+  it('al desmontar aborta la subida en curso y no arranca las que esperaban', async () => {
+    const pendientes = controlarAlta()
+    const { wrapper } = crearContexto()
+    const { result, unmount } = renderHook(() => useAltaArchivos(), { wrapper })
+    act(() => void result.current.subir(5, [a, b], []))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+
+    unmount()
+
+    expect(pendientes[0].opciones.signal.aborted).toBe(true)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(altaArchivo).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('useReemplazarArchivo: progreso y cancelación', () => {
+  const actual = recurso(1, 1)
+  const file = new File(['x'], 'nuevo.pdf')
+
+  function controlarReemplazo() {
+    const pendientes: Array<{ opciones: OpcionesSubida; resolver: () => void }> = []
+    vi.mocked(reemplazarArchivo).mockImplementation(
+      (r, _f, opciones) =>
+        new Promise<Recurso>((resolver, rechazar) => {
+          opciones?.signal?.addEventListener('abort', () => rechazar(new DOMException('Subida cancelada', 'AbortError')))
+          pendientes.push({ opciones: opciones as OpcionesSubida, resolver: () => resolver(r) })
+        }),
+    )
+    return pendientes
+  }
+
+  it('sin subida en curso: progreso 0 y estadoSubida null', () => {
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useReemplazarArchivo(), { wrapper })
+
+    expect(result.current.progreso).toBe(0)
+    expect(result.current.estadoSubida).toBeNull()
+  })
+
+  it('expone el progreso, "reintentando" y "finalizando" de la subida en curso', async () => {
+    const pendientes = controlarReemplazo()
+    const { wrapper } = crearContexto()
+    const { result } = renderHook(() => useReemplazarArchivo(), { wrapper })
+    act(() => result.current.mutate({ recurso: actual, file }))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+
+    act(() => pendientes[0].opciones.onProgress(30))
+    expect(result.current.progreso).toBe(30)
+    expect(result.current.estadoSubida).toBe('subiendo')
+
+    act(() => pendientes[0].opciones.onReintento())
+    expect(result.current.estadoSubida).toBe('reintentando')
+
+    act(() => pendientes[0].opciones.onProgress(100))
+    expect(result.current.estadoSubida).toBe('finalizando')
+
+    await act(async () => pendientes[0].resolver())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.estadoSubida).toBeNull()
+  })
+
+  it('cancelar() aborta el signal; la mutación falla con AbortError e invalida igual', async () => {
+    const pendientes = controlarReemplazo()
+    const { wrapper, invalidar } = crearContexto()
+    const { result } = renderHook(() => useReemplazarArchivo(), { wrapper })
+    act(() => result.current.mutate({ recurso: actual, file }))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+
+    act(() => result.current.cancelar())
+
+    expect(pendientes[0].opciones.signal.aborted).toBe(true)
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error).toMatchObject({ name: 'AbortError' })
+    expect(invalidar).toHaveBeenCalledWith(invalidaTalleres)
+    expect(result.current.estadoSubida).toBeNull()
+  })
+
+  it('al desmontar aborta la subida en curso', async () => {
+    const pendientes = controlarReemplazo()
+    const { wrapper } = crearContexto()
+    const { result, unmount } = renderHook(() => useReemplazarArchivo(), { wrapper })
+    act(() => result.current.mutate({ recurso: actual, file }))
+    await waitFor(() => expect(pendientes).toHaveLength(1))
+
+    unmount()
+
+    expect(pendientes[0].opciones.signal.aborted).toBe(true)
   })
 })
 

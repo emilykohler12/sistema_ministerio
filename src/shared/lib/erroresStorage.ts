@@ -8,3 +8,8 @@ export function codigosDeError(error: unknown): string[] {
   const { status, statusCode, code } = error as { status?: unknown; statusCode?: unknown; code?: unknown }
   return [status, statusCode, code].filter((v) => typeof v === 'number' || typeof v === 'string').map(String)
 }
+
+/** `true` si el error es una cancelación del admin (`AbortError`): no es una falla y no se muestra como error. */
+export function esCancelacion(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError'
+}

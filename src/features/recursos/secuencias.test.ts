@@ -272,6 +272,80 @@ describe('reemplazarArchivo', () => {
   })
 })
 
+/*
+ * Subida reanudable (#29): altaArchivo(tallerId, file, orden, opciones?) y reemplazarArchivo(recurso, file, opciones?) reciben
+ * { onProgress, onReintento, signal } y se lo pasan tal cual a consultas.subirArchivo(ruta, file, mime, opciones). El orden
+ * (sube -> inserta / sube -> actualiza -> borra el viejo) y `compensar` no cambian (0016). Si la subida se cancela
+ * (AbortError) o falla, no hay fila ni compensación.
+ */
+describe('subida reanudable: opciones', () => {
+  const abortError = () => new DOMException('Subida cancelada', 'AbortError')
+
+  function opciones() {
+    return { onProgress: vi.fn(), onReintento: vi.fn(), signal: new AbortController().signal }
+  }
+
+  it('altaArchivo pasa las opciones a subirArchivo como cuarto argumento', async () => {
+    const o = opciones()
+    await altaArchivo(5, new File(['x'], 'guia.pdf'), 1, o)
+
+    expect(vi.mocked(subirArchivo).mock.calls[0][3]).toBe(o)
+  })
+
+  it('reemplazarArchivo pasa las opciones a subirArchivo como cuarto argumento', async () => {
+    const o = opciones()
+    await reemplazarArchivo(recurso(), new File(['x'], 'otro.docx'), o)
+
+    expect(vi.mocked(subirArchivo).mock.calls[0][3]).toBe(o)
+  })
+
+  it('altaArchivo cancelada: propaga el AbortError, no inserta, no compensa y no avisa de huérfano', async () => {
+    const cancelado = abortError()
+    vi.mocked(subirArchivo).mockRejectedValue(cancelado)
+
+    await expect(altaArchivo(5, new File(['x'], 'guia.pdf'), 1, opciones())).rejects.toBe(cancelado)
+
+    expect(insertarRecurso).not.toHaveBeenCalled()
+    expect(borrarArchivo).not.toHaveBeenCalled()
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('reemplazarArchivo cancelado: propaga el AbortError, no actualiza la fila ni borra nada (queda el archivo anterior)', async () => {
+    const cancelado = abortError()
+    vi.mocked(subirArchivo).mockRejectedValue(cancelado)
+
+    await expect(reemplazarArchivo(recurso(), new File(['x'], 'otro.docx'), opciones())).rejects.toBe(cancelado)
+
+    expect(actualizarRecurso).not.toHaveBeenCalled()
+    expect(borrarArchivo).not.toHaveBeenCalled()
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('altaArchivo con la subida agotada (5xx): propaga { statusCode }, sin fila ni compensación', async () => {
+    const agotado = { statusCode: '503', message: 'unavailable' }
+    vi.mocked(subirArchivo).mockRejectedValue(agotado)
+
+    await expect(altaArchivo(5, new File(['x'], 'guia.pdf'), 1, opciones())).rejects.toBe(agotado)
+
+    expect(insertarRecurso).not.toHaveBeenCalled()
+    expect(borrarArchivo).not.toHaveBeenCalled()
+  })
+
+  it('si el insert falla tras una subida con opciones, sigue compensando como hoy', async () => {
+    vi.mocked(insertarRecurso).mockRejectedValue({ code: '23514', message: 'check' })
+
+    await expect(altaArchivo(5, new File(['x'], 'guia.pdf'), 1, opciones())).rejects.toMatchObject({ code: '23514' })
+
+    expect(borrarArchivo).toHaveBeenCalledWith(rutaSubida())
+  })
+
+  it('reemplazarArchivo con opciones conserva el orden sube -> actualiza -> borra el viejo', async () => {
+    await reemplazarArchivo(recurso(), new File(['0123456789'], 'otro.docx'), opciones())
+
+    expect(llamadas).toEqual([`subir:${rutaSubida()}`, 'actualizar:20', `borrar:${RUTA_VIEJA}`])
+  })
+})
+
 describe('eliminarRecurso', () => {
   it('orden: borra la fila y después el archivo de Storage', async () => {
     await eliminarRecurso(recurso())

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -11,6 +11,7 @@ import {
   subirArchivo,
   urlFirmada,
 } from '@/features/recursos/consultas'
+import { formatearTamanio } from '@/features/recursos/archivos'
 import { ETIQUETA_TIPO_RECURSO, type Recurso } from '@/features/recursos/types'
 import { obtenerCategorias, obtenerTalleres } from '@/features/talleres/consultas'
 import type { Categoria, Taller } from '@/features/talleres/types'
@@ -279,7 +280,7 @@ describe('RecursosPage: alta de archivos (criterio 1)', () => {
 
     await usuario().upload(inputDeAlta(container), archivo('uno.pdf', 'application/pdf'))
 
-    expect(await screen.findByText(/subiendo/i)).toBeInTheDocument()
+    expect(await screen.findByRole('progressbar', { name: 'uno.pdf' })).toBeInTheDocument()
     terminar()
     await waitFor(() => expect(insertarRecurso).toHaveBeenCalled())
   })
@@ -690,7 +691,7 @@ describe('RecursosPage: durante un lote de subida (crítica fase B 2 y revisión
     expect(screen.getByRole('button', { name: 'Agregar enlace' })).toBeEnabled()
 
     await usuario().upload(inputDeAlta(container), archivo('uno.pdf', 'application/pdf'))
-    await screen.findByText(/subiendo/i)
+    await screen.findByRole('progressbar', { name: 'uno.pdf' })
 
     expect(boton(fila('Video de la clase'), 'Subir')).toBeDisabled()
     expect(boton(fila('Video de la clase'), 'Bajar')).toBeDisabled()
@@ -708,7 +709,7 @@ describe('RecursosPage: durante un lote de subida (crítica fase B 2 y revisión
     await screen.findByText('Guía de huerta')
 
     await usuario().upload(inputDeAlta(container), archivo('uno.pdf', 'application/pdf'))
-    await screen.findByText(/subiendo/i)
+    await screen.findByRole('progressbar', { name: 'uno.pdf' })
     await usuario().upload(inputDeAlta(container), archivo('dos.pdf', 'application/pdf'))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/esper/i)
@@ -775,5 +776,418 @@ describe('RecursosPage: ramas de error de las mutaciones (revisión 2)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/tamaño/i)
     expect(actualizarRecurso).not.toHaveBeenCalled()
     expect(borrarArchivo).not.toHaveBeenCalled()
+  })
+})
+
+/*
+ * Subida reanudable (#29), criterios 1, 2, 3, 6, 7, 9 y 10 en la pantalla. Se sigue mockeando solo `consultas`:
+ * subirArchivo(ruta, file, mime, { onProgress(porcentaje entero), onReintento(), signal }) recibe las opciones de la secuencia real.
+ *  - Cada archivo en curso o en espera es un <li> con <ProgresoSubida>: <progress> con el nombre del archivo, texto con los MiB y
+ *    "Cancelar"; "En espera", "Sin conexión, reintentando…" y "Finalizando…" (sin "Cancelar") según el estado.
+ *  - Un único role="status" siempre montado anuncia solo hitos: "Subiendo <archivo>", "<archivo> subido", "<archivo> cancelado",
+ *    "Sin conexión, reintentando…" y "No se pudo subir <archivo>" (sin el motivo: ese va solo en el Alerta).
+ *  - Al terminar o cancelar una fila: el foco va al input de alta (el "botón" del dropzone) o al "Reemplazar" de la fila.
+ *  - Con una subida en curso `beforeunload` se cancela (preventDefault); sin subida, no.
+ *  - En reemplazo, la barra lleva el nombre del archivo nuevo y vive en la fila del recurso; cancelar no es un error (sin alert).
+ */
+type OpcionesSubida = { onProgress?: (p: number) => void; onReintento?: () => void; signal?: AbortSignal }
+type Subida = { opciones: OpcionesSubida; resolver: () => void; rechazar: (e: unknown) => void }
+
+const MIB = 1024 * 1024
+
+describe('RecursosPage: barra de progreso y cancelación (#29)', () => {
+  let subidas: Subida[]
+
+  beforeEach(() => {
+    subidas = []
+    vi.mocked(subirArchivo).mockImplementation(
+      (_ruta, _file, _mime, opciones) =>
+        new Promise<void>((resolver, rechazar) => {
+          opciones?.signal?.addEventListener('abort', () => rechazar(new DOMException('Subida cancelada', 'AbortError')))
+          subidas.push({ opciones: opciones ?? {}, resolver, rechazar })
+        }),
+    )
+  })
+
+  const filaDeSubida = (nombre: string) => {
+    const li = screen.getByRole('progressbar', { name: nombre }).closest('li')
+    if (!li) throw new Error(`No hay fila de subida para ${nombre}`)
+    return within(li)
+  }
+  const cancelar = (f: ReturnType<typeof within>) => f.getByRole('button', { name: /^Cancelar/ })
+
+  async function subirLote(nombres: string[], tamanio?: number) {
+    const r = renderPagina()
+    await screen.findByText('Guía de huerta')
+    await usuario().upload(
+      inputDeAlta(r.container),
+      nombres.map((n) => archivo(n, 'application/pdf', tamanio)),
+    )
+    await waitFor(() => expect(subidas).toHaveLength(1))
+    return r
+  }
+
+  async function elegirReemplazo(nombreRecurso: string, file: File) {
+    await userEvent.click(boton(fila(nombreRecurso), 'Reemplazar'))
+    const input = screen.getByText(nombreRecurso).closest('li')!.querySelector('input[type="file"]') as HTMLInputElement
+    await usuario().upload(input, file)
+    await waitFor(() => expect(subidas).toHaveLength(1))
+  }
+
+  describe('barra (criterio 1)', () => {
+    it('cada archivo en curso muestra un <progress> con su nombre y el valor entero que informa la subida', async () => {
+      await subirLote(['uno.pdf'])
+
+      expect(screen.getByRole('progressbar', { name: 'uno.pdf' })).toHaveAttribute('value', '0')
+      act(() => subidas[0].opciones.onProgress?.(40))
+
+      expect(screen.getByRole('progressbar', { name: 'uno.pdf' })).toHaveAttribute('value', '40')
+      expect(screen.getByRole('progressbar', { name: 'uno.pdf' })).toHaveAttribute('max', '100')
+    })
+
+    it('el texto muestra los MiB subidos, el total y el porcentaje', async () => {
+      await subirLote(['uno.pdf'], 40 * MIB)
+
+      act(() => subidas[0].opciones.onProgress?.(25))
+
+      expect(
+        filaDeSubida('uno.pdf').getByText(`${formatearTamanio(10 * MIB)} de ${formatearTamanio(40 * MIB)} (25 %)`),
+      ).toBeInTheDocument()
+    })
+
+    it('al llegar a 100 % dice "Finalizando…" y desaparece "Cancelar"; al completar se inserta el recurso', async () => {
+      await subirLote(['uno.pdf'])
+
+      act(() => subidas[0].opciones.onProgress?.(100))
+
+      expect(filaDeSubida('uno.pdf').getByText('Finalizando…')).toBeInTheDocument()
+      expect(filaDeSubida('uno.pdf').queryByRole('button', { name: /^Cancelar/ })).not.toBeInTheDocument()
+
+      await act(async () => subidas[0].resolver())
+      await waitFor(() => expect(insertarRecurso).toHaveBeenCalledTimes(1))
+    })
+  })
+
+  describe('lote (criterio 2)', () => {
+    it('los pendientes dicen "En espera" y tienen su propia barra; al llegar su turno ya no esperan', async () => {
+      await subirLote(['uno.pdf', 'dos.pdf', 'tres.pdf'])
+
+      expect(filaDeSubida('dos.pdf').getByText('En espera')).toBeInTheDocument()
+      expect(filaDeSubida('tres.pdf').getByText('En espera')).toBeInTheDocument()
+      expect(screen.getByRole('progressbar', { name: 'dos.pdf' })).toHaveAttribute('value', '0')
+      expect(filaDeSubida('uno.pdf').queryByText('En espera')).not.toBeInTheDocument()
+      expect(subirArchivo).toHaveBeenCalledTimes(1)
+
+      await act(async () => subidas[0].resolver())
+      await waitFor(() => expect(subidas).toHaveLength(2))
+
+      expect(filaDeSubida('dos.pdf').queryByText('En espera')).not.toBeInTheDocument()
+      expect(filaDeSubida('tres.pdf').getByText('En espera')).toBeInTheDocument()
+      await act(async () => subidas[1].resolver())
+      await waitFor(() => expect(subidas).toHaveLength(3))
+      await act(async () => subidas[2].resolver())
+    })
+  })
+
+  describe('reintento (criterio 3)', () => {
+    it('mientras reintenta la fila dice "Sin conexión, reintentando…" y vuelve a subir con el próximo progreso', async () => {
+      await subirLote(['uno.pdf'])
+      act(() => subidas[0].opciones.onProgress?.(30))
+
+      act(() => subidas[0].opciones.onReintento?.())
+      expect(filaDeSubida('uno.pdf').getByText('Sin conexión, reintentando…')).toBeInTheDocument()
+
+      act(() => subidas[0].opciones.onProgress?.(35))
+      expect(filaDeSubida('uno.pdf').queryByText('Sin conexión, reintentando…')).not.toBeInTheDocument()
+      expect(screen.getByRole('progressbar', { name: 'uno.pdf' })).toHaveAttribute('value', '35')
+    })
+  })
+
+  describe('cancelar (criterio 6)', () => {
+    it('cancelar el que sube aborta su subida, no inserta fila, no muestra error y el resto sigue', async () => {
+      await subirLote(['uno.pdf', 'dos.pdf'])
+
+      await userEvent.click(cancelar(filaDeSubida('uno.pdf')))
+
+      expect(subidas[0].opciones.signal?.aborted).toBe(true)
+      await waitFor(() => expect(subidas).toHaveLength(2))
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(insertarRecurso).not.toHaveBeenCalled()
+
+      await act(async () => subidas[1].resolver())
+      await waitFor(() => expect(insertarRecurso).toHaveBeenCalledTimes(1))
+      expect(vi.mocked(insertarRecurso).mock.calls[0][0].nombre).toBe('dos')
+    })
+
+    it('cancelar uno que espera no lo sube nunca y los demás siguen', async () => {
+      await subirLote(['uno.pdf', 'dos.pdf', 'tres.pdf'])
+
+      await userEvent.click(cancelar(filaDeSubida('dos.pdf')))
+      await act(async () => subidas[0].resolver())
+      await waitFor(() => expect(subidas).toHaveLength(2))
+      await act(async () => subidas[1].resolver())
+
+      await waitFor(() => expect(insertarRecurso).toHaveBeenCalledTimes(2))
+      expect(vi.mocked(insertarRecurso).mock.calls.map((c) => c[0].nombre)).toEqual(['uno', 'tres'])
+      expect(subirArchivo).toHaveBeenCalledTimes(2)
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('errores (criterios 4 y 5)', () => {
+    it('un error de la subida queda en un único Alerta con el motivo y no inserta fila', async () => {
+      vi.mocked(subirArchivo).mockReset()
+      vi.mocked(subirArchivo).mockRejectedValue({ statusCode: '413', message: 'too big' })
+      const { container } = renderPagina()
+      await screen.findByText('Guía de huerta')
+
+      await usuario().upload(inputDeAlta(container), archivo('uno.pdf', 'application/pdf'))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('uno.pdf')
+      expect(screen.getAllByRole('alert')).toHaveLength(1)
+      expect(screen.getAllByText(/tamaño/i)).toHaveLength(1)
+      expect(insertarRecurso).not.toHaveBeenCalled()
+    })
+
+    it('tras el error ya no queda barra de esa fila', async () => {
+      vi.mocked(subirArchivo).mockReset()
+      vi.mocked(subirArchivo).mockRejectedValue({ statusCode: '503', message: 'unavailable' })
+      const { container } = renderPagina()
+      await screen.findByText('Guía de huerta')
+
+      await usuario().upload(inputDeAlta(container), archivo('uno.pdf', 'application/pdf'))
+
+      await screen.findByRole('alert')
+      expect(screen.queryByRole('progressbar', { name: 'uno.pdf' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('anuncios (criterio 10)', () => {
+    it('hay un único role="status" siempre montado, vacío antes de subir', async () => {
+      renderPagina()
+      await screen.findByText('Guía de huerta')
+
+      expect(screen.getAllByRole('status')).toHaveLength(1)
+      expect(screen.getByRole('status')).toBeEmptyDOMElement()
+    })
+
+    it('anuncia el inicio, el fin y la cancelación de cada archivo, sin repetir los porcentajes', async () => {
+      await subirLote(['uno.pdf', 'dos.pdf'])
+      const estado = screen.getByRole('status')
+      expect(estado).toHaveTextContent(/subiendo/i)
+      expect(estado).toHaveTextContent('uno.pdf')
+
+      act(() => subidas[0].opciones.onProgress?.(10))
+      const textoInicial = estado.textContent
+      act(() => subidas[0].opciones.onProgress?.(20))
+      act(() => subidas[0].opciones.onProgress?.(30))
+      expect(estado.textContent).toBe(textoInicial)
+      expect(estado.textContent).not.toMatch(/%/)
+
+      await act(async () => subidas[0].resolver())
+      await waitFor(() => expect(estado).toHaveTextContent(/uno\.pdf.*subido|subido.*uno\.pdf/i))
+      await waitFor(() => expect(subidas).toHaveLength(2))
+      await waitFor(() => expect(estado).toHaveTextContent('dos.pdf'))
+
+      await userEvent.click(cancelar(filaDeSubida('dos.pdf')))
+      await waitFor(() => expect(estado).toHaveTextContent(/dos\.pdf.*cancelad|cancelad.*dos\.pdf/i))
+      expect(screen.getAllByRole('status')).toHaveLength(1)
+    })
+
+    it('en un lote [A, B, C] donde se cancela C mientras espera, al terminar A anuncia «A subido» (no «C cancelado»)', async () => {
+      await subirLote(['a.pdf', 'b.pdf', 'c.pdf'])
+      const estado = screen.getByRole('status')
+
+      await userEvent.click(cancelar(filaDeSubida('c.pdf')))
+      await waitFor(() => expect(estado).toHaveTextContent('c.pdf cancelado'))
+
+      await act(async () => subidas[0].resolver())
+      await waitFor(() => expect(subidas).toHaveLength(2))
+
+      await waitFor(() => expect(estado).toHaveTextContent('a.pdf subido'))
+      expect(estado).toHaveTextContent('Subiendo b.pdf')
+      expect(estado).not.toHaveTextContent('c.pdf cancelado')
+
+      await act(async () => subidas[1].resolver())
+    })
+
+    it('un reemplazo terminado y después un lote: al terminar X anuncia «X subido» y no queda pegado el del reemplazo', async () => {
+      const { container } = renderPagina()
+      await screen.findByText('Guía de huerta')
+      await elegirReemplazo('Guía de huerta', archivo('nueva.docx'))
+      const estado = screen.getByRole('status')
+
+      await act(async () => subidas[0].resolver())
+      await waitFor(() => expect(estado).toHaveTextContent('nueva.docx subido'))
+      await waitFor(() => expect(boton(fila('Guía de huerta'), 'Reemplazar')).toBeEnabled())
+
+      await usuario().upload(inputDeAlta(container), archivo('x.pdf', 'application/pdf'))
+      await waitFor(() => expect(subidas).toHaveLength(2))
+      expect(estado).not.toHaveTextContent('nueva.docx subido')
+
+      await act(async () => subidas[1].resolver())
+
+      await waitFor(() => expect(estado).toHaveTextContent('x.pdf subido'))
+      expect(estado).not.toHaveTextContent('nueva.docx subido')
+    })
+
+    it('anuncia "reintentando" y el error de un archivo, y el motivo va solo en el Alerta', async () => {
+      await subirLote(['uno.pdf'])
+      act(() => subidas[0].opciones.onReintento?.())
+      expect(screen.getByRole('status')).toHaveTextContent(/reintentando/i)
+
+      await act(async () => subidas[0].rechazar({ statusCode: '413', message: 'too big' }))
+
+      const alerta = await screen.findByRole('alert')
+      expect(alerta).toHaveTextContent(/tamaño/i)
+      expect(screen.getAllByRole('alert')).toHaveLength(1)
+      expect(screen.getByRole('status')).toHaveTextContent('uno.pdf')
+      expect(screen.getByRole('status')).toHaveTextContent(/error|no se pudo/i)
+      expect(screen.getByRole('status')).not.toHaveTextContent(/tamaño/i)
+      expect(screen.getAllByText(/tamaño/i)).toHaveLength(1)
+    })
+
+    it('la lista de subidas ya no es una región aria-live', async () => {
+      await subirLote(['uno.pdf'])
+
+      expect(screen.getByRole('progressbar', { name: 'uno.pdf' }).closest('[aria-live]')).toBeNull()
+    })
+  })
+
+  describe('foco (criterio 10)', () => {
+    it('al terminar una fila del alta el foco va al input del dropzone', async () => {
+      const { container } = await subirLote(['uno.pdf'])
+      act(() => cancelar(filaDeSubida('uno.pdf')).focus())
+      expect(cancelar(filaDeSubida('uno.pdf'))).toHaveFocus()
+
+      await act(async () => subidas[0].resolver())
+
+      await waitFor(() => expect(inputDeAlta(container)).toHaveFocus())
+    })
+
+    it('al cancelar una fila del alta el foco va al input del dropzone', async () => {
+      const { container } = await subirLote(['uno.pdf'])
+
+      await userEvent.click(cancelar(filaDeSubida('uno.pdf')))
+
+      await waitFor(() => expect(inputDeAlta(container)).toHaveFocus())
+    })
+
+    it('al terminar un reemplazo el foco va al "Reemplazar" de esa fila', async () => {
+      renderPagina()
+      await screen.findByText('Guía de huerta')
+      await elegirReemplazo('Guía de huerta', archivo('nueva.docx'))
+      act(() => boton(fila('Guía de huerta'), 'Cancelar').focus())
+
+      await act(async () => subidas[0].resolver())
+
+      await waitFor(() => expect(boton(fila('Guía de huerta'), 'Reemplazar')).toHaveFocus())
+    })
+
+    it('al cancelar un reemplazo el foco va al "Reemplazar" de esa fila', async () => {
+      renderPagina()
+      await screen.findByText('Guía de huerta')
+      await elegirReemplazo('Guía de huerta', archivo('nueva.docx'))
+
+      await userEvent.click(boton(fila('Guía de huerta'), 'Cancelar'))
+
+      await waitFor(() => expect(boton(fila('Guía de huerta'), 'Reemplazar')).toHaveFocus())
+    })
+  })
+
+  describe('cerrar o recargar (criterio 9)', () => {
+    const intentarCerrar = () => {
+      const evento = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(evento)
+      return evento.defaultPrevented
+    }
+
+    it('sin subida en curso no pide confirmación', async () => {
+      renderPagina()
+      await screen.findByText('Guía de huerta')
+
+      expect(intentarCerrar()).toBe(false)
+    })
+
+    it('con una subida en curso pide confirmación; al terminar deja de pedirla', async () => {
+      await subirLote(['uno.pdf'])
+
+      expect(intentarCerrar()).toBe(true)
+
+      await act(async () => subidas[0].resolver())
+      await waitFor(() => expect(insertarRecurso).toHaveBeenCalled())
+      await waitFor(() => expect(intentarCerrar()).toBe(false))
+    })
+
+    it('al cancelar la única subida deja de pedir confirmación', async () => {
+      await subirLote(['uno.pdf'])
+
+      await userEvent.click(cancelar(filaDeSubida('uno.pdf')))
+
+      await waitFor(() => expect(intentarCerrar()).toBe(false))
+    })
+
+    it('al desmontar la página aborta la subida en curso y suelta beforeunload', async () => {
+      const { unmount } = await subirLote(['uno.pdf'])
+
+      unmount()
+
+      expect(subidas[0].opciones.signal?.aborted).toBe(true)
+      expect(intentarCerrar()).toBe(false)
+    })
+  })
+
+  describe('reemplazo (criterio 7)', () => {
+    it('muestra la misma barra, con el nombre del archivo nuevo, en la fila del recurso', async () => {
+      renderPagina()
+      await screen.findByText('Guía de huerta')
+
+      await elegirReemplazo('Guía de huerta', archivo('nueva.docx'))
+      act(() => subidas[0].opciones.onProgress?.(50))
+
+      const barra = fila('Guía de huerta').getByRole('progressbar', { name: 'nueva.docx' })
+      expect(barra).toHaveAttribute('value', '50')
+      expect(boton(fila('Guía de huerta'), 'Cancelar')).toBeInTheDocument()
+    })
+
+    it('"Sin conexión, reintentando…" y "Finalizando…" también valen para el reemplazo', async () => {
+      renderPagina()
+      await screen.findByText('Guía de huerta')
+      await elegirReemplazo('Guía de huerta', archivo('nueva.docx'))
+
+      act(() => subidas[0].opciones.onReintento?.())
+      expect(fila('Guía de huerta').getByText('Sin conexión, reintentando…')).toBeInTheDocument()
+
+      act(() => subidas[0].opciones.onProgress?.(100))
+      expect(fila('Guía de huerta').getByText('Finalizando…')).toBeInTheDocument()
+      expect(fila('Guía de huerta').queryByRole('button', { name: /^Cancelar/ })).not.toBeInTheDocument()
+    })
+
+    it('cancelar deja la fila con su archivo anterior: no actualiza la fila, no borra nada y no muestra error', async () => {
+      renderPagina()
+      await screen.findByText('Guía de huerta')
+      await elegirReemplazo('Guía de huerta', archivo('nueva.docx'))
+
+      await userEvent.click(boton(fila('Guía de huerta'), 'Cancelar'))
+
+      await waitFor(() => expect(subidas[0].opciones.signal?.aborted).toBe(true))
+      await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument())
+      expect(actualizarRecurso).not.toHaveBeenCalled()
+      expect(borrarArchivo).not.toHaveBeenCalled()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(fila('Guía de huerta').getByText('1,5 MB')).toBeInTheDocument()
+      expect(screen.getByRole('status')).toHaveTextContent(/cancelad/i)
+    })
+
+    it('al completarse sigue el orden sube, actualiza y borra el viejo', async () => {
+      renderPagina()
+      await screen.findByText('Guía de huerta')
+      await elegirReemplazo('Guía de huerta', archivo('nueva.docx'))
+
+      await act(async () => subidas[0].resolver())
+
+      await waitFor(() => expect(borrarArchivo).toHaveBeenCalledWith('5/viejo-1.pdf'))
+      expect(actualizarRecurso).toHaveBeenCalledTimes(1)
+    })
   })
 })

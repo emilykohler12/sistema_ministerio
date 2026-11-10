@@ -24,4 +24,9 @@ normativas y logo van a tener el mismo problema.
 ## Consecuencias
 - Pueden quedar huérfanos en Storage. Su limpieza es un script de mantenimiento, `npm run storage:limpiar` (#28, ver Entorno en
   `arquitectura.md`): borra solo los objetos sin fila que los referencie y más viejos que una edad mínima, y la nube la corre una persona.
+- Subida reanudable de recursos (#29): el orden y `compensar` no cambian. Un upload TUS incompleto no es un objeto: no tiene fila en
+  `storage.objects` y `storage:limpiar` no lo ve; la subida lo borra con `abort(true)` al cancelar o ante un error definitivo. Si se cancela
+  cuando ya se enviaron todos los bytes («Finalizando…» no ofrece «Cancelar»), el servidor puede haber completado el objeto, que queda
+  huérfano y limpia `storage:limpiar`. Los errores de TUS llegan como `{ statusCode }`, sin `code`: `compensar` no los recibe, solo los
+  del insert o el update.
 - Cada dominio con archivos reutiliza el molde `secuencias.ts` y la sección Storage de la skill `supabase-rls`.

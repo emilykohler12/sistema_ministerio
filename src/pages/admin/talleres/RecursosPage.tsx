@@ -1,10 +1,13 @@
-import { useRef, useState } from 'react'
+import { type Ref, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { formatearTamanio, validarArchivo } from '@/features/recursos/archivos'
 import { DialogoRecurso } from '@/features/recursos/components/DialogoRecurso'
+import { ProgresoSubida } from '@/features/recursos/components/ProgresoSubida'
 import { mensajeDeErrorRecurso } from '@/features/recursos/errores'
 import {
+  type EstadoArchivo,
+  type EstadoEnCurso,
   useActualizarRecurso,
   useAltaArchivos,
   useCrearEnlace,
@@ -26,6 +29,7 @@ import { ErrorFallback } from '@/shared/components/ui/ErrorFallback'
 import { FileDropzone } from '@/shared/components/ui/FileDropzone'
 import { CardSkeleton } from '@/shared/components/ui/Skeleton'
 import { NoEncontrado } from '@/shared/components/ui/NoEncontrado'
+import { esCancelacion } from '@/shared/lib/erroresStorage'
 import { idDeRuta } from '@/shared/lib/rutas'
 
 const FORMATOS_ACEPTADOS = '.pdf,.pptx,.docx,.jpg,.jpeg,.png,.webp,.mp4'
@@ -68,6 +72,50 @@ export function RecursosPage() {
 
 type Edicion = { tipo: 'enlace-nuevo' } | { tipo: 'editar'; recurso: Recurso }
 
+type Hito = { nombre: string; estado: EstadoArchivo['estado'] }
+
+const EN_CURSO: EstadoArchivo['estado'][] = ['subiendo', 'reintentando', 'finalizando']
+const TERMINADOS: EstadoArchivo['estado'][] = ['listo', 'cancelado', 'error']
+
+function frase({ nombre, estado }: Hito): string {
+  switch (estado) {
+    case 'subiendo':
+    case 'finalizando':
+      return `Subiendo ${nombre}`
+    case 'reintentando':
+      return `Sin conexión, reintentando… (${nombre})`
+    case 'listo':
+      return `${nombre} subido`
+    case 'cancelado':
+      return `${nombre} cancelado`
+    case 'error':
+      return `No se pudo subir ${nombre}`
+    case 'esperando':
+      return ''
+  }
+}
+
+/**
+ * Texto del `role="status"`: solo hitos (inicio, fin, cancelación, reintento y error de cada archivo), nunca el
+ * porcentaje. Suma el último archivo que terminó (por orden de llegada, no de posición en el lote) al que sigue en
+ * curso, porque al pasar de uno a otro el aviso de «subido» y el de «subiendo» llegan en el mismo render. El motivo
+ * del error va solo en la `Alerta`.
+ */
+function anuncioDeSubida({ terminado, actual }: { terminado?: Hito; actual?: Hito }): string {
+  return [terminado, actual]
+    .filter((h): h is Hito => h !== undefined)
+    .map(frase)
+    .join('. ')
+}
+
+/** Estado del reemplazo, derivado de la mutación: en curso (barra), o el resultado del último que terminó. */
+function estadoDeReemplazo(r: ReturnType<typeof useReemplazarArchivo>): EstadoArchivo['estado'] | null {
+  if (r.estadoSubida !== null) return r.estadoSubida
+  if (r.isSuccess) return 'listo'
+  if (r.isError) return esCancelacion(r.error) ? 'cancelado' : 'error'
+  return null
+}
+
 function Pantalla({ taller, migas }: { taller: Taller; migas: { label: string; to?: string }[] }) {
   const recursos = taller.recurso
   const alta = useAltaArchivos()
@@ -85,20 +133,77 @@ function Pantalla({ taller, migas }: { taller: Taller; migas: { label: string; t
 
   // Durante un lote la caché está vieja hasta que termina: reordenar o agregar un enlace fallaría o repetiría un `orden`.
   const ocupado = alta.enCurso || ordenar.isPending || eliminar.isPending || reemplazar.isPending
+  const subiendo = alta.enCurso || reemplazar.isPending
   const erroresDeSubida = [
     ...rechazados,
     ...alta.estados
       .filter((e) => e.estado === 'error')
       .map((e) => `${e.archivo.name}: ${e.motivo ?? ''}`),
   ]
-  const enProceso = alta.estados.filter((e) => e.estado === 'esperando' || e.estado === 'subiendo')
+  // El índice es el del lote (estable mientras dura): `cancelar` lo necesita.
+  const enProceso = alta.estados
+    .map((e, indice) => ({ e, indice }))
+    .filter(({ e }) => e.estado === 'esperando' || EN_CURSO.includes(e.estado))
+  // El reemplazo sale de la mutación (`variables` queda tras terminar); `reset()` al empezar un lote lo olvida.
+  const reemplazo = reemplazar.variables
+  const estadoReemplazo = estadoDeReemplazo(reemplazar)
+  const hitoReemplazo: Hito | undefined =
+    reemplazo && estadoReemplazo ? { nombre: reemplazo.file.name, estado: estadoReemplazo } : undefined
+  const ultimaDelLote = alta.ultimoTerminado === null ? undefined : alta.estados[alta.ultimoTerminado]
+  const enCursoDelLote = alta.estados.find((e) => EN_CURSO.includes(e.estado))
+  const anuncio = anuncioDeSubida({
+    terminado:
+      hitoReemplazo && TERMINADOS.includes(hitoReemplazo.estado)
+        ? hitoReemplazo
+        : ultimaDelLote && { nombre: ultimaDelLote.archivo.name, estado: ultimaDelLote.estado },
+    actual: enCursoDelLote
+      ? { nombre: enCursoDelLote.archivo.name, estado: enCursoDelLote.estado }
+      : hitoReemplazo && EN_CURSO.includes(hitoReemplazo.estado)
+        ? hitoReemplazo
+        : undefined,
+  })
+
+  // Foco: al terminar o cancelar una fila se desmonta el «Cancelar» que lo tenía y el foco cae al <body>. Se lo lleva al
+  // botón del dropzone (alta) o al «Reemplazar» de la fila (reemplazo), pero solo si nadie más lo tomó.
+  const dropzoneRef = useRef<HTMLInputElement>(null)
+  const reemplazarRef = useRef<HTMLButtonElement>(null)
+  const foco = useRef<'alta' | number | null>(null)
+  const terminadosAntes = useRef(0)
+  const terminados = alta.estados.filter((e) => TERMINADOS.includes(e.estado)).length
+  useEffect(() => {
+    if (terminados > terminadosAntes.current) foco.current = 'alta'
+    terminadosAntes.current = terminados
+  }, [terminados])
+  useEffect(() => {
+    if (foco.current === null) return
+    const activo = document.activeElement
+    if (activo && activo !== document.body) {
+      foco.current = null
+      return
+    }
+    const destino = foco.current === 'alta' ? dropzoneRef.current : reemplazarRef.current
+    // El «Reemplazar» sigue deshabilitado hasta que termina la mutación: se reintenta en el próximo render.
+    if (destino && !destino.disabled) {
+      destino.focus()
+      foco.current = null
+    }
+  })
+
+  // Cerrar o recargar con una subida en curso la pierde (no se retoma): el navegador pide confirmación. Navegar dentro
+  // de la app no se bloquea (estorbaría el cierre por inactividad): al desmontar los hooks abortan las subidas.
+  useEffect(() => {
+    if (!subiendo) return
+    const confirmar = (evento: BeforeUnloadEvent) => evento.preventDefault()
+    window.addEventListener('beforeunload', confirmar)
+    return () => window.removeEventListener('beforeunload', confirmar)
+  }, [subiendo])
 
   function avisar(error: unknown) {
     setAvisos([mensajeDeErrorRecurso(error)])
   }
 
   function elegirArchivos(files: File[]) {
-    if (alta.enCurso) {
+    if (subiendo) {
       setAvisos(['Esperá a que termine la subida en curso antes de elegir más archivos.'])
       return
     }
@@ -111,6 +216,8 @@ function Pantalla({ taller, migas }: { taller: Taller; migas: { label: string; t
       else validos.push(file)
     }
     setRechazados(motivos)
+    // Un lote nuevo olvida el reemplazo anterior: si no, su «subido» taparía los del lote.
+    reemplazar.reset()
     void alta.subir(taller.id, validos, recursos)
   }
 
@@ -134,7 +241,19 @@ function Pantalla({ taller, migas }: { taller: Taller; migas: { label: string; t
       setAvisos([`${file.name}: ${motivo}`])
       return
     }
-    reemplazar.mutate({ recurso, file }, { onError: avisar })
+    reemplazar.mutate(
+      { recurso, file },
+      {
+        onSuccess: () => {
+          foco.current = recurso.id
+        },
+        onError: (error) => {
+          foco.current = recurso.id
+          // Cancelar no es una falla: la fila queda con su archivo anterior y no hay nada que avisar.
+          if (!esCancelacion(error)) avisar(error)
+        },
+      },
+    )
   }
 
   return (
@@ -151,12 +270,23 @@ function Pantalla({ taller, migas }: { taller: Taller; migas: { label: string; t
           label="Arrastrá los archivos o"
           hint="PDF, PPTX, DOCX, imagen (JPG, PNG, WebP) o MP4, hasta 50 MB cada uno"
           onFiles={elegirArchivos}
+          inputRef={dropzoneRef}
         />
+        {/* Siempre montado y fuera de la lista: un aviso que se monta ya con su texto no se anuncia de forma confiable. */}
+        <p role="status" className="sr-only">
+          {anuncio}
+        </p>
         {enProceso.length > 0 && (
-          <ul className="text-sm text-gray-600" aria-live="polite">
-            {enProceso.map((e) => (
-              <li key={`${e.archivo.name}-${e.archivo.lastModified}-${e.archivo.size}`}>
-                {e.archivo.name}: {e.estado === 'subiendo' ? 'Subiendo…' : 'En espera'}
+          <ul className="space-y-3 text-sm">
+            {enProceso.map(({ e, indice }) => (
+              <li key={indice} className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+                <ProgresoSubida
+                  nombre={e.archivo.name}
+                  tamanio={e.archivo.size}
+                  progreso={e.progreso}
+                  estado={e.estado as EstadoEnCurso}
+                  onCancelar={() => alta.cancelar(indice)}
+                />
               </li>
             ))}
           </ul>
@@ -174,7 +304,10 @@ function Pantalla({ taller, migas }: { taller: Taller; migas: { label: string; t
         ) : (
           <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
             {recursos.map((r, i) => (
-              <li key={r.id} className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+              <li
+                key={r.id}
+                className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between"
+              >
                 <div className="flex min-w-0 items-center gap-3">
                   <Badge variant="neutral">{ETIQUETA_TIPO_RECURSO[r.tipo]}</Badge>
                   <span className="truncate font-medium text-gray-800">{r.nombre}</span>
@@ -211,6 +344,7 @@ function Pantalla({ taller, migas }: { taller: Taller; migas: { label: string; t
                       <BotonReemplazar
                         recurso={r}
                         disabled={ocupado}
+                        botonRef={reemplazo?.recurso.id === r.id ? reemplazarRef : undefined}
                         onElegido={(file) => reemplazarArchivo(r, file)}
                       />
                     </>
@@ -234,6 +368,17 @@ function Pantalla({ taller, migas }: { taller: Taller; migas: { label: string; t
                     Eliminar
                   </Button>
                 </div>
+                {reemplazo?.recurso.id === r.id && reemplazar.estadoSubida !== null && (
+                  <div className="w-full text-sm">
+                    <ProgresoSubida
+                      nombre={reemplazo.file.name}
+                      tamanio={reemplazo.file.size}
+                      progreso={reemplazar.progreso}
+                      estado={reemplazar.estadoSubida}
+                      onCancelar={reemplazar.cancelar}
+                    />
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -300,16 +445,20 @@ function Alerta({ lineas }: { lineas: string[] }) {
 function BotonReemplazar({
   recurso,
   disabled,
+  botonRef,
   onElegido,
 }: {
   recurso: Recurso
   disabled: boolean
+  /** Para devolverle el foco al terminar o cancelar el reemplazo. */
+  botonRef?: Ref<HTMLButtonElement>
   onElegido: (file: File) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   return (
     <>
       <Button
+        ref={botonRef}
         size="sm"
         variant="ghost"
         aria-label={`Reemplazar ${recurso.nombre}`}
