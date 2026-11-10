@@ -39,6 +39,8 @@ con el perfil checks. Razoná el comportamiento de RHF leyendo el código y ped�
 En cierre-inactividad (2026-10-23) también bloqueó **Write al scratchpad** ("está fuera del proyecto") y `sed -n` sobre `node_modules`: no hay forma
 de correr un test propio. Leé `node_modules` con Read (offset/limit) y dejá constancia en la evidencia de que el hallazgo sale de leer el código.
 En la Revisión 2 también bloqueó `gh issue list`: no se puede comprobar si una observación ya tiene issue. Pedile al coordinador que lo confirme.
+En e2e-historial-flaky (2026-11-09) bloqueó `npx playwright test` y `npm run test:e2e -- <spec>` aunque el coordinador los pidiera: el revisor no
+corre e2e. Razoná el test leyendo la app y dejá en la evidencia que las corridas repetidas las confirma el coordinador. `npm run db:reset` sí pasa.
 
 **Why:** una lista blanca de "comandos de lectura" igual deja escribir o ejecutar si no se miran las banderas, y las comillas esconden
 banderas a los lookahead. Y un hook que "funciona a mano" puede no recibir los campos que espera en otro tipo de sesión.
