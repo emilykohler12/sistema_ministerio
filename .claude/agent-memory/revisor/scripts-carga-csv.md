@@ -1,6 +1,6 @@
 ---
 name: scripts-carga-csv
-description: Huecos de los scripts de carga por CSV del DAM (padrón fase B); comilla sin cerrar que se traga filas, CSV cp1252 leído como UTF-8, lookup en objeto con prototipo, resumen con contadores planificados, paginación por max_rows
+description: Huecos de los scripts de mantenimiento con service_role (padrón fase B, limpieza de Storage #28); comilla sin cerrar, cp1252 como UTF-8, lookup con prototipo, resumen planificado, paginación por max_rows y por offset con bajas concurrentes
 metadata:
   type: project
 ---
@@ -15,6 +15,10 @@ estaban en los **bordes de la entrada** y en el orquestador, que no tiene test:
 - `mapa[clave]` sobre un objeto literal: una entrada `constructor` devuelve una función y revienta todo el script. Pedí `Object.hasOwn` o un `Map`.
 - Con `--aplicar`, el resumen final usa los contadores del plan y no los escritos.
 - Paginar con "página < 1000 = fin" depende de `max_rows` del proyecto de la nube.
+- Se repitió en limpieza-huerfanos (#28, 2026-11-10), y es peor en un script que **borra**: `traerTodo` corta bien con página vacía, pero
+  pagina las rutas referenciadas por offset. Una baja concurrente de una fila con id menor saltea otra, que queda fuera de las referencias, y su
+  archivo se borra con la fila viva. Pedí keyset (`.gt('id', ultimo)`) en toda lectura que decida qué conservar. El listado de Storage por
+  offset sí es seguro: lo que no se lista, no se borra. La guardia de argumentos (`--edad-minima`) quedó sin test por no estar exportada.
 - `normalizar` (NFD + `\p{Diacritic}`) no es igual a `unaccent` (`Ø`, `Æ`, `ß`). Sirve para provocar a propósito un 23505 al escribir y probar el
   criterio de "23505 rechaza la fila y sigue".
 

@@ -22,5 +22,6 @@ normativas y logo van a tener el mismo problema.
 - El bucket se crea por migración y es la autoridad de formato y tamaño. La base no consulta `storage.objects`; el cliente informa `file.size`.
 
 ## Consecuencias
-- Pueden quedar huérfanos en Storage. Su limpieza está pendiente (Brechas en `arquitectura.md`).
+- Pueden quedar huérfanos en Storage. Su limpieza es un script de mantenimiento, `npm run storage:limpiar` (#28, ver Entorno en
+  `arquitectura.md`): borra solo los objetos sin fila que los referencie y más viejos que una edad mínima, y la nube la corre una persona.
 - Cada dominio con archivos reutiliza el molde `secuencias.ts` y la sección Storage de la skill `supabase-rls`.

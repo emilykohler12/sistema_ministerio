@@ -54,6 +54,12 @@ Carga del padrón (0019): `npm run padron:importar -- <csv> [--aplicar]` (`scrip
 service_role. Por defecto apunta al Supabase local; un destino remoto exige `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `--confirmar=<host>`
 (`scripts/lib/entorno.ts`, que también usa `seed-usuarios.mjs`), y `proteger-bash` lo bloquea para los agentes. Los scripts en TypeScript corren con
 `node` directo (type stripping de Node 24) y `tsconfig.node.json` los tipa.
+Limpieza de huérfanos de Storage (#28, 0016): `npm run storage:limpiar [-- --aplicar] [--edad-minima=<min>]` (`scripts/limpiar-storage.ts`). Sin `--aplicar` simula. Lista
+recursivamente los buckets `talleres` y `normativas` (la fecha de cada objeto sale de `created_at` del listado), lee `recurso.ruta_archivo` y `normativa.ruta_archivo` y arma el plan puro
+(`scripts/storage/planificar.ts`): huérfano = objeto sin fila que lo referencie y con más de la edad mínima (60 min por defecto, porque el alta sube primero e inserta después). Los
+referenciados nunca se borran y las filas sin archivo solo se informan. Falla cerrada: si un listado o consulta falla no se borra nada y sale con 1; un `remove()` que devuelve menos
+objetos de los pedidos también es error. Mismo destino que el padrón (`resolverDestino`: local por defecto, nube con `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `--confirmar=<host>`), y
+`proteger-bash` lo bloquea para los agentes.
 Pruebas en el navegador (0020): Playwright con Chromium headless (se instala al crear el contenedor), `npm run test:e2e`, specs en `e2e/` y
 `playwright.config.ts` (un worker, levanta `npm run dev` si no hay servidor). Corren contra el Supabase local con `admin@dam.local`
 (`e2e/helpers.ts`: `loginAdmin`). Las escribe el agente `qa` después de implementar; Vitest no toma `e2e/`. Sin CI por ahora.
@@ -131,8 +137,9 @@ Describen el sistema; el trabajo pendiente y quién lo tiene se siguen en los is
   `config.toml` exige `npm run db:stop` + `npm run db:start`: `db:reset` no recrea el contenedor de auth.
 - Descargas: faltan el captcha (Turnstile; obligaría a volver a una Edge Function) y el tope de `expiresIn` (hoy lo elige
   el cliente y despublicar no revoca los enlaces ya emitidos, 0022), "Descargar todo (.zip)".
-- Recursos: limpieza de archivos huérfanos en Storage
-  (hoy solo un `console.warn`; vale también para normativas), subida reanudable (TUS) y barra de progreso.
+- Recursos: subida reanudable (TUS) y barra de progreso. Los archivos huérfanos de Storage (talleres y normativas) se
+  limpian a mano con `npm run storage:limpiar` (ver Entorno); falta una ejecución programada, una pantalla del admin y dar de
+  baja las filas cuyo archivo no existe (hoy solo se informan).
 - Normativas: `taller_normativa` (C-02). Las descargas de normativas por período exigen una tabla de eventos (hoy el dashboard muestra el contador acumulado).
 - Nuevas pantallas: usuarios. Instituciones sin vincular: falta desvincular, descartar grupos basura y alias automáticos.
 - Dashboard: validar los indicadores con el Ministerio (C-11), las descargas de normativas por período (hoy solo el contador

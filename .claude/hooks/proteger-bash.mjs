@@ -40,6 +40,15 @@ if (/padron:importar|importar-padron/.test(cmd) && /--confirmar|SUPABASE_URL/.te
   )
 }
 
+// Limpieza de huérfanos de Storage (issue #28): mismo criterio que el padrón. Borra archivos, así que la nube
+// la limpia una persona.
+if (/storage:limpiar|limpiar-storage/.test(cmd) && /--confirmar|SUPABASE_URL/.test(cmd)) {
+  block(
+    'Bloqueado: la limpieza de huérfanos de Storage se corre solo contra el Supabase local. SUPABASE_URL y ' +
+      '--confirmar apuntan a una base remota: esa limpieza la hace una persona, no un agente.',
+  )
+}
+
 const { segmentos } = analizarComando(cmd)
 
 // Escrituras por shell sobre archivos que no se editan a mano.
