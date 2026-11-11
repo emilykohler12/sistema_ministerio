@@ -240,7 +240,6 @@ test('si el cambio falla, la sesión de recuperación no habilita /admin (#53)',
   request,
   browser,
 }) => {
-  test.setTimeout(60_000)
   const { tokenHash } = await pedirEnlace(page, request, CUENTA)
   const ctx = await browser.newContext({ baseURL: BASE })
   const otra = await ctx.newPage()
@@ -260,7 +259,6 @@ test('si el cambio falla, la sesión de recuperación no habilita /admin (#53)',
 })
 
 test('tras el fallo, recargar la pantalla tampoco habilita /admin (#53)', async ({ page, request, browser }) => {
-  test.setTimeout(60_000)
   const { tokenHash } = await pedirEnlace(page, request, CUENTA)
   const ctx = await browser.newContext({ baseURL: BASE })
   const otra = await ctx.newPage()
@@ -308,7 +306,6 @@ test('tras el fallo, el reintento cambia la contraseña y el login nuevo sobrevi
 })
 
 test('una cuenta sin la marca admin no cambia la contraseña', async ({ page, request, browser }) => {
-  test.setTimeout(60_000)
   const { tokenHash } = await pedirEnlace(page, request, 'sin-permiso@dam.local')
   const ctx = await browser.newContext({ baseURL: BASE })
   const otra = await ctx.newPage()
