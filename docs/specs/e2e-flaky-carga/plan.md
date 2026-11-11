@@ -1,0 +1,22 @@
+# Plan: e2e sensibles a la carga (#61 y #40)
+
+**Objetivo.** Que la corrida completa de `npm run test:e2e` deje de fallar de forma intermitente. Solo se tocan tests y la config de Playwright; la app no.
+
+**Causa de #61 (medida).** `playwright.config.ts` no define `timeout`, así que rige el valor por defecto de 30 s. En la última corrida completa (78 tests, sin carga paralela): `dashboard` 32,2 s (falló), `signout-sin-red` (token vencido) 30,0 s, `no-contar-admin` 26,6 s, `recuperacion-password` 23,9 s, `auth-configuracion` 22,7 s, `sin-vincular` 22,0 s, `categorias` 20,1 s. Son flujos largos por naturaleza (login, alta de taller, descargas anónimas, normativa, tablero); fallan cuando la máquina está algo más lenta. `limpiar-storage` ya fija su propio timeout.
+
+**Cambios.**
+1. `playwright.config.ts`: `timeout: 60_000`. Los `expect` siguen en 5 s: un asserto que no se cumple falla igual de rápido. Un test colgado cuesta 30 s más; es aceptable. Quitar los `setTimeout` propios solo si quedan redundantes (no tocar el de `limpiar-storage`).
+2. `e2e/historial.spec.ts` (~línea 100): `expect(consultas).toBe(0)` tras el rango invertido se evalúa apenas aparece el error, así que una regresión que dispare la consulta saldría después y el test pasaría igual. Esperar a que la red se asiente (`waitForLoadState('networkidle')`) antes de contar, con un comentario del porqué.
+3. `e2e/normativas-admin.spec.ts` (#40, test de la línea 22): reproducir con `--retries=0 --repeat-each=15`, también con la CPU cargada (varios procesos ocupados en segundo plano). Mirar el trace. Hipótesis del issue: tras guardar, la lista muestra la fila vieja de la caché hasta que termina el refetch de `['normativas']`. Si se confirma, esperar la respuesta de la lista (o la fila nueva con un timeout de 15 s en ese `expect`); si no se reproduce, dejarlo documentado y aplicar esa espera como endurecimiento.
+
+**Resultados de la implementación (cambian el plan).**
+- Cambio 2 (historial): **descartado**. Con `enabled: true` puesto a propósito en `useHistorial.ts`, el test original falló 5 de 5 en `expect(consultas).toBe(0)`: la consulta indebida sale al montar, antes de que aparezca el mensaje, así que el test sí detectaba la regresión. No se aplica `networkidle` y la app quedó intacta.
+- Cambio 3 (#40): la hipótesis del refetch era **falsa**. Causa real, vista en el trace de una falla (1 de 15 sin carga): `getByLabel('Título')` coincide por subcadena con el buscador de la lista («Buscar por título, número o etiqueta…»); si el `fill` corre antes de que monte el formulario de edición, escribe en el buscador, la navegación lo descarta y se guarda el título viejo. Arreglo: helper `abrirEdicion` que espera el encabezado «Editar normativa». Antes 1 de 15 falla; después 30 de 30 pasan.
+- Cambio 4 (nuevo, `e2e/dashboard.spec.ts`): el timeout global no alcanzaba para `dashboard`. En la corrida completa, ya con 60 s, tardó 57,3 s (rango observado 22-57 s) y en una repetición posterior falló a los 31 s por una **aserción**, no por tiempo: `TablaRanking` muestra solo los 10 primeros (`LIMITE = 10`) y los empates en 1 descarga se ordenan por id, así que con la base cargada por otros specs o por una repetición anterior los talleres nuevos quedan fuera de la vista. El test pasaba o fallaba según el estado que dejaban otros tests. Arreglo: expandir con «Ver todos» antes de buscar las filas, y `test.setTimeout(120_000)` propio porque es un flujo largo. Antes la 4.ª de 4 repeticiones fallaba; después 7 de 7 pasan.
+- Aparte: bajo CPU saturada fallaron 2 de 15 en `loginAdmin` (`helpers.ts:14`, el encabezado «Dashboard» no aparece en 5 s), probablemente la compilación en frío del servidor de desarrollo. Sin verificar; queda para otro issue si molesta.
+
+**Pasos.** Reproducir antes y después de cada cambio. Un cambio por commit lógico.
+
+**Verificación.** `npx playwright test e2e/normativas-admin.spec.ts --retries=0 --repeat-each=15` y `e2e/historial.spec.ts --retries=0 --repeat-each=5` en verde; `npm run lint` y `npm run typecheck`; corrida completa `npm run test:e2e` sin carga paralela con 0 fallos y `npm run db:reset` al final. Es solo test: sin `qa` (no toca Storage, permisos de anon ni rutas). No lanzar `db:reset` mientras corra un e2e.
+
+**Fuera de alcance.** Acortar los flujos largos o partirlos, los tests de la feature de subida, y cualquier cambio en la app. Si la corrida completa muestra otro fallo no listado, se abre un issue aparte.
