@@ -19,6 +19,16 @@ async function alta(page: Page, titulo: string, numero: string, anio: string, ad
   await page.getByRole('button', { name: 'Guardar', exact: true }).click()
 }
 
+/**
+ * Abre la edición desde la lista y espera a que el formulario esté montado. Sin esa espera, `getByLabel('Título')`
+ * (subcadena, sin distinguir mayúsculas) coincide con el buscador de la lista, "Buscar por título, número o etiqueta":
+ * el `fill` cae ahí, la navegación lo descarta y se guarda el título viejo (#40).
+ */
+async function abrirEdicion(page: Page, titulo: string) {
+  await page.getByRole('row', { name: new RegExp(titulo) }).getByRole('link', { name: 'Editar' }).click()
+  await expect(page.getByRole('heading', { name: 'Editar normativa', level: 1 })).toBeVisible()
+}
+
 test('normativas admin: alta, duplicado, edición con y sin PDF y baja', async ({ page }) => {
   const s = sufijoUnico()
   const titulo = `Resolución ${s}`
@@ -45,14 +55,14 @@ test('normativas admin: alta, duplicado, edición con y sin PDF y baja', async (
   await expect(page).toHaveURL(/\/admin\/normativas$/)
 
   // Edición sin archivo.
-  await page.getByRole('row', { name: new RegExp(titulo) }).getByRole('link', { name: 'Editar' }).click()
+  await abrirEdicion(page, titulo)
   await page.getByLabel('Título').fill(`${titulo} editada`)
   await page.getByRole('button', { name: 'Guardar', exact: true }).click()
   await expect(page).toHaveURL(/\/admin\/normativas$/)
   await expect(page.getByRole('row', { name: new RegExp(`${titulo} editada`) })).toBeVisible()
 
   // Edición reemplazando el PDF.
-  await page.getByRole('row', { name: new RegExp(`${titulo} editada`) }).getByRole('link', { name: 'Editar' }).click()
+  await abrirEdicion(page, `${titulo} editada`)
   await page.locator('input[type=file]').setInputFiles(pdf('reemplazo'))
   await page.getByRole('button', { name: 'Guardar', exact: true }).click()
   await expect(page).toHaveURL(/\/admin\/normativas$/)

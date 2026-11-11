@@ -66,6 +66,8 @@ async function descargar(
 }
 
 test('tablero: 3 descargas de talleres y una de normativa se ven en /admin', async ({ page, browser }) => {
+  // Flujo largo (3 talleres, 3 descargas anónimas, una normativa y el tablero): dura entre 25 y 57 s según la carga.
+  test.setTimeout(120_000)
   const s = sufijoUnico()
   const escuela = `Escuela Dash ${s}`
   const otra = `Privada Dash ${s}`
@@ -126,6 +128,10 @@ test('tablero: 3 descargas de talleres y una de normativa se ven en /admin', asy
 
   // Ranking con los 3 talleres (cada uno con 1; el orden entre empates es por id).
   const ranking = page.getByRole('region', { name: 'Ranking de talleres' })
+  // La tabla muestra solo los 10 primeros y los empates se ordenan por id: con la base ya cargada por otros specs (o
+  // por una repetición anterior de este mismo) los talleres nuevos quedan fuera de la vista. Se expande antes de buscar.
+  const verTodos = ranking.getByRole('button', { name: 'Ver todos' })
+  if (await verTodos.count()) await verTodos.click()
   for (const suf of ['a', 'b', 'c']) {
     await expect(ranking.getByRole('row', { name: new RegExp(`Taller Dash ${s}${suf}`) })).toContainText('1')
   }
