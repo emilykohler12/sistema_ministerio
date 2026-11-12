@@ -2,6 +2,8 @@ import { Home, History, LayoutGrid, Loader2, LogOut, ScrollText, School, Setting
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
+import { LogoInstitucional } from '@/features/configuracion/components/LogoInstitucional'
+import { useConfiguracion } from '@/features/configuracion/hooks/useConfiguracion'
 import { cn } from '@/shared/lib/utils'
 
 const links = [
@@ -16,6 +18,7 @@ const links = [
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { cerrarSesion } = useAuth()
   const [cerrando, setCerrando] = useState(false)
+  const { data: config } = useConfiguracion()
 
   // La redirección al login la hace AdminLayout cuando `usuario` pasa a null.
   // Si signOut falla (access token vencido y sin red), cerrarSesion descarta la sesión y recarga en el
@@ -30,13 +33,8 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full w-64 flex-col bg-primary-900 text-white">
       <div className="flex items-center gap-2 px-5 py-6">
-        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-sm font-bold text-primary-900">
-          SE
-        </span>
-        <div className="text-sm font-semibold leading-tight">
-          <p>Subsecretaría</p>
-          <p>de Educación</p>
-        </div>
+        <LogoInstitucional className="h-9 w-9" claseFallback="bg-white text-primary-900" />
+        <p className="text-sm font-semibold leading-tight">{config?.nombre || 'Sitio institucional'}</p>
       </div>
 
       <nav aria-label="Administración" className="flex-1 space-y-1 px-3">

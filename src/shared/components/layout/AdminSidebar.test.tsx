@@ -1,8 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { cerrarSesion } from '@/features/auth/consultas'
+import { obtenerConfiguracion, urlLogo } from '@/features/configuracion/consultas'
+import type { Configuracion } from '@/features/configuracion/types'
 import { ConAuth, simularSesion } from '@/test/auth'
 import { AdminSidebar } from './AdminSidebar'
 
@@ -15,6 +17,28 @@ vi.mock('@/features/auth/consultas', () => ({
   cerrarSesion: vi.fn(),
   escucharSesion: vi.fn(),
 }))
+
+// El panel muestra el nombre y el logo de la configuración (contrato de consultas: ver useConfiguracion.test.ts).
+vi.mock('@/features/configuracion/consultas', () => ({
+  obtenerConfiguracion: vi.fn(),
+  guardarConfiguracion: vi.fn(),
+  urlLogo: vi.fn(),
+}))
+
+const config: Configuracion = {
+  id: 1,
+  nombre: 'Escuela Modelo',
+  logo_ruta: null,
+  telefono: '',
+  correo: '',
+  direccion: '',
+  facebook: '',
+  instagram: '',
+  quienes_somos: '',
+  mision: '',
+  vision: '',
+  updated_at: '2026-10-10T00:00:00Z',
+}
 
 function renderSidebar() {
   return render(
@@ -42,6 +66,37 @@ function cierrePendiente() {
 beforeEach(() => {
   vi.clearAllMocks()
   simularSesion()
+  vi.mocked(obtenerConfiguracion).mockResolvedValue(config)
+  vi.mocked(urlLogo).mockImplementation((ruta) => `https://storage.test/logo/${ruta}`)
+})
+
+describe('AdminSidebar: identidad', () => {
+  it('muestra config.nombre en lugar del texto fijo de la Subsecretaría', async () => {
+    renderSidebar()
+    expect(await screen.findByText('Escuela Modelo')).toBeInTheDocument()
+    expect(screen.queryByText(/Subsecretaría/)).not.toBeInTheDocument()
+  })
+
+  it('sin logo muestra las iniciales del nombre', async () => {
+    renderSidebar()
+    expect(await screen.findByText('EM')).toBeInTheDocument()
+  })
+
+  it('con logo muestra la imagen decorativa (alt vacío)', async () => {
+    vi.mocked(obtenerConfiguracion).mockResolvedValue({ ...config, logo_ruta: 'abc.png' })
+    const { container } = renderSidebar()
+    await waitFor(() => expect(container.querySelector('img')).not.toBeNull())
+    const img = container.querySelector('img')!
+    expect(img).toHaveAttribute('src', 'https://storage.test/logo/abc.png')
+    expect(img).toHaveAttribute('alt', '')
+  })
+
+  it('si la configuración falla usa el nombre de respaldo "Sitio institucional" y no se rompe', async () => {
+    vi.mocked(obtenerConfiguracion).mockRejectedValue(new Error('sin red'))
+    renderSidebar()
+    expect(await screen.findByText('Sitio institucional')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
+  })
 })
 
 describe('AdminSidebar: cerrar sesión', () => {

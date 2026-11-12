@@ -15,6 +15,26 @@ vi.mock('@/shared/lib/supabase', () => ({
   CLAVE_SESION: 'dam-sesion-test',
 }))
 
+// La barra del panel lee la configuración (nombre y logo); acá no interesa su contenido.
+vi.mock('@/features/configuracion/consultas', () => ({
+  obtenerConfiguracion: vi.fn().mockResolvedValue({
+    id: 1,
+    nombre: 'Escuela Modelo',
+    logo_ruta: null,
+    telefono: '',
+    correo: '',
+    direccion: '',
+    facebook: '',
+    instagram: '',
+    quienes_somos: '',
+    mision: '',
+    vision: '',
+    updated_at: '2026-10-10T00:00:00Z',
+  }),
+  guardarConfiguracion: vi.fn(),
+  urlLogo: vi.fn(),
+}))
+
 const MIN = 60_000
 const assign = vi.fn()
 

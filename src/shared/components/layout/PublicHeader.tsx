@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { LogIn, Menu, School, X } from 'lucide-react'
+import { LogIn, Menu, X } from 'lucide-react'
 import { NavLink, Link } from 'react-router-dom'
+import { LogoInstitucional } from '@/features/configuracion/components/LogoInstitucional'
 import { useConfiguracion } from '@/features/configuracion/hooks/useConfiguracion'
-import { cn, getInitials } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/utils'
 
 const links = [
   { to: '/', label: 'Inicio', end: true },
@@ -15,19 +16,12 @@ export function PublicHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: config } = useConfiguracion()
   const nombre = config?.nombre || 'Sitio institucional'
-  const iniciales = getInitials(config?.nombre ?? '')
 
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link to="/" className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded-md">
-          {/* Sin URL de Storage todavía (logo diferido): hasta entonces siempre iniciales o ícono. */}
-          <span
-            className="flex h-9 w-9 items-center justify-center rounded-md bg-primary-800 text-sm font-bold text-white"
-            aria-hidden="true"
-          >
-            {iniciales || <School className="h-4 w-4" />}
-          </span>
+          <LogoInstitucional className="h-9 w-9" />
           <span className="text-sm font-semibold leading-tight text-primary-800">{nombre}</span>
         </Link>
 

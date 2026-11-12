@@ -1,9 +1,10 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useIsMutating } from '@tanstack/react-query'
 import { useState } from 'react'
+import { TarjetaLogo } from '@/features/configuracion/components/TarjetaLogo'
 import { useConfiguracion, useGuardarConfiguracion } from '@/features/configuracion/hooks/useConfiguracion'
-import { getInitials } from '@/shared/lib/utils'
 import { Label } from '@/shared/components/ui/Label'
 import { Input } from '@/shared/components/ui/Input'
 import { Textarea } from '@/shared/components/ui/Textarea'
@@ -35,33 +36,38 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function ConfiguracionPage() {
-  const { data, isLoading, refetch } = useConfiguracion()
+  const { data, isPending, refetch } = useConfiguracion()
   const guardar = useGuardarConfiguracion()
   const [guardado, setGuardado] = useState(false)
+  // Mientras el logo (otra mutación de ['configuracion']) está pendiente, «Guardar» espera: ver TarjetaLogo.
+  const ocupado = useIsMutating({ mutationKey: ['configuracion'] }) > 0
 
-  // `values` recarga el formulario cuando cambia la fila (también tras guardar). El schema descarta
-  // las claves que no declara, así que id, logo_ruta y updated_at nunca llegan a guardarConfiguracion.
+  // `values` recarga el formulario cuando cambia la fila (también tras guardar o cambiar el logo); con
+  // `keepDirtyValues` lo que el admin escribió y no guardó se conserva. El schema descarta las claves que
+  // no declara, así que id, logo_ruta y updated_at nunca llegan a guardarConfiguracion.
   const {
     register,
     handleSubmit,
-    watch,
+    reset,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), values: data })
-
-  const nombre = watch('nombre')
+  } = useForm<FormValues>({ resolver: zodResolver(schema), values: data, resetOptions: { keepDirtyValues: true } })
 
   async function onSubmit(values: FormValues) {
     setGuardado(false)
+    let fila
     try {
-      await guardar.mutateAsync(values)
+      fila = await guardar.mutateAsync(values)
     } catch {
       return // el error se muestra desde guardar.isError
     }
+    // `reset` hereda `resetOptions` (`keepDirtyValues`), que dejaría los espacios que zod recortó: se desactiva acá
+    // para que, tras guardar, el formulario muestre lo guardado.
+    reset(fila, { keepDirtyValues: false })
     setGuardado(true)
     setTimeout(() => setGuardado(false), 2500)
   }
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
@@ -89,18 +95,13 @@ export function ConfiguracionPage() {
       <h1 className="text-2xl font-bold text-primary-800">Configuración</h1>
       <p className="mt-1 text-sm text-gray-500">Gestioná la información institucional y las preferencias del sitio.</p>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 grid gap-4 lg:grid-cols-3">
+      {/* El logo va fuera del <form>: sus botones no envían el formulario y es independiente de «Guardar». */}
+      <TarjetaLogo />
+
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <h2 className="text-base font-semibold text-primary-700">Datos institucionales</h2>
           <div className="mt-4 flex flex-col gap-4 sm:flex-row">
-            <div className="flex flex-col items-center gap-2">
-              <span
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-800 text-lg font-bold text-white"
-                aria-hidden="true"
-              >
-                {getInitials(nombre ?? '')}
-              </span>
-            </div>
             <div className="flex-1 space-y-4">
               <div>
                 <Label htmlFor="nombre">Nombre de la institución</Label>
@@ -181,7 +182,7 @@ export function ConfiguracionPage() {
             </p>
           )}
           {guardado && <span className="text-sm font-medium text-green-600">Cambios guardados</span>}
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={ocupado}>
             {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
           </Button>
         </div>
