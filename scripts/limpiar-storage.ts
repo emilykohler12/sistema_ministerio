@@ -5,7 +5,7 @@
 //   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run storage:limpiar -- --aplicar --confirmar=<host>
 //   --edad-minima=<minutos>                              por defecto 60: un objeto más joven no se toca
 //
-// Un huérfano es un objeto de `talleres` o `normativas` que ninguna fila referencia. El alta sube primero e inserta después,
+// Un huérfano es un objeto de `talleres`, `normativas` o `logo` que ninguna fila referencia. El alta sube primero e inserta después,
 // por eso una subida en curso parece huérfana y se protege con la edad mínima. Falla cerrada: si algún listado o consulta
 // falla no se borra nada. Usa supabase-js con service_role. Salida 1 si hubo errores.
 import { createClient } from '@supabase/supabase-js'
@@ -17,13 +17,14 @@ import { leerArgumentos } from './storage/argumentos.ts'
 import { traerPorClave } from './storage/paginar.ts'
 import { planificar } from './storage/planificar.ts'
 import type { Objeto, Referencias } from './storage/planificar.ts'
+import { armarReferencias } from './storage/referencias.ts'
 
 type Cliente = SupabaseClient<Database>
 
 const PAGINA = 1000
 const PAGINA_LISTADO = 100
 const LOTE_BORRADO = 100
-const BUCKETS = ['talleres', 'normativas']
+const BUCKETS = ['talleres', 'normativas', 'logo']
 
 function conectarLocal(): { cliente: Cliente; etiqueta: string } {
   const { url, clave } = supabaseLocal()
@@ -77,10 +78,11 @@ async function leerReferencias(cliente: Cliente): Promise<Referencias> {
     (ultimoId, limite) => cliente.from('normativa').select('id, ruta_archivo').gt('id', ultimoId).order('id').limit(limite),
     PAGINA,
   )
-  return {
-    talleres: recursos.flatMap((r) => (r.ruta_archivo ? [r.ruta_archivo] : [])),
-    normativas: normativas.map((n) => n.ruta_archivo),
-  }
+  // `configuracion` tiene una sola fila (id 1). `.single()` falla si no está: falla cerrada, porque sin ella no se sabe
+  // qué logo está en uso y todo el bucket `logo` pasaría por huérfano.
+  const { data: configuracion, error } = await cliente.from('configuracion').select('logo_ruta').eq('id', 1).single()
+  if (error) throw new Error(`No se pudo leer configuracion: ${error.message}`)
+  return armarReferencias({ recursos, normativas, configuracion })
 }
 
 const kib = (bytes: number) => `${(bytes / 1024).toFixed(1)} KiB`

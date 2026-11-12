@@ -1,23 +1,16 @@
 import { Mail, Phone } from 'lucide-react'
+import { LogoInstitucional } from '@/features/configuracion/components/LogoInstitucional'
 import { useConfiguracion } from '@/features/configuracion/hooks/useConfiguracion'
-import { getInitials } from '@/shared/lib/utils'
 
 export function PublicFooter() {
   const { data: config } = useConfiguracion()
   const nombre = config?.nombre || 'Sitio institucional'
-  const iniciales = getInitials(config?.nombre ?? '')
 
   return (
     <footer className="mt-auto bg-primary-800 text-white">
       <div className="mx-auto flex flex-col items-center gap-4 px-4 py-6 text-sm sm:flex-row sm:justify-between sm:px-6">
         <div className="flex items-center gap-2 font-semibold">
-          {/* Sin URL de Storage todavía (logo diferido): hasta entonces siempre iniciales. */}
-          <span
-            className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-xs font-bold text-primary-800"
-            aria-hidden="true"
-          >
-            {iniciales}
-          </span>
+          <LogoInstitucional className="h-8 w-8" claseFallback="bg-white text-xs text-primary-800" />
           <p>{nombre}</p>
         </div>
 

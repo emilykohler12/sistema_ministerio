@@ -29,4 +29,8 @@ normativas y logo van a tener el mismo problema.
   cuando ya se enviaron todos los bytes («Finalizando…» no ofrece «Cancelar»), el servidor puede haber completado el objeto, que queda
   huérfano y limpia `storage:limpiar`. Los errores de TUS llegan como `{ statusCode }`, sin `code`: `compensar` no los recibe, solo los
   del insert o el update.
+- Logo institucional (#23): `configuracion` es una fila única sin RPC. El reemplazo usa un UPDATE condicional (`.eq('logo_ruta', anterior)`, o
+  `.is(…, null)` si no había logo) que devuelve la fila con `.select().single()`: si otro admin cambió el logo mientras, da `PGRST116` (el
+  servidor rechazó: `compensar` borra el archivo recién subido) y la ruta que se borra después es la que la base confirmó, no la de la caché.
+  `storage:limpiar` también revisa el bucket `logo`.
 - Cada dominio con archivos reutiliza el molde `secuencias.ts` y la sección Storage de la skill `supabase-rls`.

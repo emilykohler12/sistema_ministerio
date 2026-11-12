@@ -1,6 +1,6 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { obtenerConfiguracion } from '@/features/configuracion/consultas'
+import { obtenerConfiguracion, urlLogo } from '@/features/configuracion/consultas'
 import type { Configuracion } from '@/features/configuracion/types'
 import { renderConProviders } from '@/test/utils'
 import { PublicFooter } from './PublicFooter'
@@ -9,6 +9,7 @@ import { PublicFooter } from './PublicFooter'
 vi.mock('@/features/configuracion/consultas', () => ({
   obtenerConfiguracion: vi.fn(),
   guardarConfiguracion: vi.fn(),
+  urlLogo: vi.fn(),
 }))
 
 const base: Configuracion = {
@@ -28,6 +29,7 @@ const base: Configuracion = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(urlLogo).mockImplementation((ruta) => `https://storage.test/logo/${ruta}`)
 })
 
 describe('PublicFooter', () => {
@@ -57,5 +59,16 @@ describe('PublicFooter', () => {
     renderConProviders(<PublicFooter />)
     expect(await screen.findByText('Escuela Modelo')).toBeInTheDocument()
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('con logo muestra la imagen decorativa (alt vacío) en lugar de las iniciales', async () => {
+    vi.mocked(obtenerConfiguracion).mockResolvedValue({ ...base, logo_ruta: 'abc.png' })
+    const { container } = renderConProviders(<PublicFooter />)
+    await waitFor(() => expect(container.querySelector('img')).not.toBeNull())
+    const img = container.querySelector('img')!
+    expect(img).toHaveAttribute('src', 'https://storage.test/logo/abc.png')
+    expect(img).toHaveAttribute('alt', '')
+    expect(screen.getByText('Escuela Modelo')).toBeInTheDocument()
+    expect(screen.queryByText('EM')).not.toBeInTheDocument()
   })
 })

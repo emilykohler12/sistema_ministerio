@@ -43,6 +43,8 @@ En e2e-historial-flaky (2026-11-09) bloqueó `npx playwright test` y `npm run te
 corre e2e. Razoná el test leyendo la app y dejá en la evidencia que las corridas repetidas las confirma el coordinador. `npm run db:reset` sí pasa.
 En limpieza-huerfanos (2026-11-10) bloqueó `npm run storage:limpiar` (simulación incluida) aunque el coordinador lo autorizara: los scripts
 `scripts/*.ts` no los corre el revisor. Dejá la verificación contra la base local al `qa`.
+En logo-institucional (2026-11-11) bloqueó `npm run build` (sigue), `cut`, asignar variables y `grep -o` con `\{0,120\}` (lo toma como
+expansión de llaves). Para leer docs/arquitectura.md usá `grep -c` o Read.
 
 **Why:** una lista blanca de "comandos de lectura" igual deja escribir o ejecutar si no se miran las banderas, y las comillas esconden
 banderas a los lookahead. Y un hook que "funciona a mano" puede no recibir los campos que espera en otro tipo de sesión.
