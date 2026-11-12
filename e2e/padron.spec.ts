@@ -12,6 +12,16 @@ async function crear(page: Page, localidad: string, nombre: string, cue = '') {
   await page.getByRole('button', { name: 'Crear establecimiento' }).click()
 }
 
+/**
+ * Abre la edición de un establecimiento y espera el formulario. «Editar» navega del lado del cliente y la ruta es
+ * `lazy`: sin esperar el encabezado, `getByLabel('Localidad')` puede resolverse contra el filtro de la lista antes
+ * de que monte el formulario (mismo problema que `abrirEdicion` de normativas-admin.spec.ts, #40).
+ */
+async function abrirEdicionEstablecimiento(page: Page, nombre: string) {
+  await page.getByRole('row', { name: new RegExp(nombre) }).getByRole('link', { name: 'Editar' }).click()
+  await expect(page.getByRole('heading', { name: 'Editar establecimiento', level: 1 })).toBeVisible()
+}
+
 test('sin localidad se pide elegir; una localidad vacía muestra el estado vacío y la URL lleva ?localidad=', async ({ page }) => {
   await loginAdmin(page)
   await page.goto('/admin/establecimientos')
@@ -66,7 +76,7 @@ test('nombre y CUE duplicados marcan su campo, al crear y al editar', async ({ p
   // Al editar: otro establecimiento intenta tomar el nombre existente y el CUE existente.
   const otro = `Tercero ${s}`
   await crear(page, 'Oberá', otro)
-  await page.getByRole('row', { name: new RegExp(otro) }).getByRole('link', { name: 'Editar' }).click()
+  await abrirEdicionEstablecimiento(page, otro)
   await page.getByLabel('Nombre del establecimiento').fill(nombre.toLowerCase())
   await page.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(page.getByText(/Ya existe un establecimiento con ese nombre/)).toBeVisible()
@@ -80,7 +90,7 @@ test('editar cambiando la localidad vuelve al listado de la localidad nueva', as
   const nombre = `Escuela Movida ${sufijo()}`
   await loginAdmin(page)
   await crear(page, 'Posadas', nombre)
-  await page.getByRole('row', { name: new RegExp(nombre) }).getByRole('link', { name: 'Editar' }).click()
+  await abrirEdicionEstablecimiento(page, nombre)
   await page.getByLabel('Localidad').selectOption({ label: 'Apóstoles' })
   await page.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(page).toHaveURL(/\/admin\/establecimientos\?localidad=5$/)
