@@ -1,6 +1,6 @@
 ---
 name: e2e-aserciones-de-conteo
-description: Trampas de e2e Playwright que se repiten - conteos de requests sin esperar el evento (#49) y getByLabel ambiguo tras navegar por clic desde una lista con buscador o filtro (#40, padron.spec:84)
+description: Trampas de e2e Playwright que se repiten - conteos de requests sin esperar el evento (#49), getByLabel ambiguo tras navegar por clic desde una lista con buscador o filtro (#40, #64), y git diff main con main local atrasado
 metadata:
   type: project
 ---
@@ -16,8 +16,13 @@ inyectada. Antes de marcarlo vacuo, razoná CUÁNDO saldría la request indebida
 **getByLabel ambiguo tras navegar por clic (#40).** `getByLabel('Título')` sin `exact` es subcadena sin mayúsculas: coincidía con el
 buscador sr-only «Buscar por título, número o etiqueta» de la lista. Las rutas son `lazy` y RR7 navega en transición, así que tras el
 clic en «Editar» la lista sigue en el DOM un momento y el `fill` cae en el buscador (flake ~1/15). Arreglo: esperar el `<h1>` del
-formulario antes de llenar. Mismo patrón pendiente en `padron.spec.ts:83-84` (`getByLabel('Localidad')` coincide con el filtro de la
-lista). Con `page.goto` directo al formulario no hay carrera.
+formulario antes de llenar. Mismo patrón en padron.spec.ts (`getByLabel('Localidad')` = filtro de la lista), resuelto en
+#64 con `abrirEdicionEstablecimiento`. Con `page.goto` directo al formulario no hay carrera. Ojo: un label que NO coincide con nada de
+la lista (p. ej. talleres-admin:42-44, «Estado» y «Nombre» exacto) no es carrera, Playwright espera el campo nuevo: no lo marques.
+El heading sirve de guarda si el formulario monta ya con datos (`defaultValues` al montar); verificalo.
+
+**`git diff main` con main local atrasado** (#64): traía un PR ya mergeado entero. Compará `git log main..HEAD` y, si hace falta,
+revisá `git diff HEAD` (sin commitear) o el merge-base.
 
 **Why:** una URL o un elemento visible no prueban que la red ya respondió ni que la ruta nueva ya se montó.
 **How to apply:** en e2e que cuenten requests, buscá un waitForResponse armado antes de la acción. En e2e que naveguen por clic y

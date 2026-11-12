@@ -11,7 +11,9 @@ export async function loginAdmin(page: Page) {
   await page.getByLabel('Contraseña', { exact: true }).fill(ADMIN.password)
   await page.getByRole('button', { name: 'Ingresar' }).click()
   await expect(page).toHaveURL(/\/admin$/)
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+  // Más margen que el predeterminado: cubre la compilación en frío del servidor de desarrollo bajo CPU saturada
+  // (causa no verificada, #64). Solo alarga la espera cuando el encabezado no aparece.
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15_000 })
 }
 
 /** Vacía `intento_descarga` (tope de frecuencia, 0030) con la clave de servicio del Supabase local. */

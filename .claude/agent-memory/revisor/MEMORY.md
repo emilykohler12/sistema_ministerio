@@ -10,5 +10,5 @@ Errores que se repiten en el proyecto. La mantiene el subagente; se revisa en lo
 - [Extraer un componente compartido](refactors-extraccion-componente.md) — guarda que queda en el padre sin test (#39); juzgar "sin cambio visible" leyendo el handler de la página
 - [Scripts con service_role](scripts-carga-csv.md) — comilla sin cerrar, cp1252, `obj[clave]` con prototipo, resumen planificado; offset con bajas concurrentes borra referenciados (#28)
 - [Permisos por rol de subagentes](hooks-frontmatter-no-invocados.md) — roles.mjs (0021) solo restringe si arrancó con él (sin psql, sed -n, git stash, supabase status, Write al scratchpad); banderas que escriben; ni Playwright ni scripts/*.ts
-- [Trampas de e2e](e2e-aserciones-de-conteo.md) — `toBe(1)` sin waitForResponse flaky (#49); `toBe(0)` vacuo solo si la request sale tarde; getByLabel ambiguo tras clic desde lista (#40, padron:84)
+- [Trampas de e2e](e2e-aserciones-de-conteo.md) — `toBe(1)` sin waitForResponse flaky (#49); `toBe(0)` vacuo solo si la request sale tarde; getByLabel ambiguo tras clic desde lista (#40, #64 resuelto); git diff main con main local atrasado
 - [Evasión de hooks por regex](hooks-denylist-evasion.md) — comillas, `\`+salto, flags intercalados, $(), pipes a bash; y "node" en tsconfig.app
