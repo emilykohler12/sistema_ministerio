@@ -57,6 +57,24 @@ Se aceptó todo. En la crítica del código (2026-10-18) aparecieron patrones de
 - **`role="status"` montado con su texto** (`{msg && <p role="status">}`): dejarlo montado y cambiar solo el texto.
 - `codigosDeError(e).includes(...)`: el acuerdo es migrar `.code` a mano al tocar cada dominio (iba por la sexta copia).
 
+En la spec `logo-institucional` (2026-11-11, #23, primera acción inmediata dentro de una pantalla con formulario):
+- **`ui/Button` no define `type` y `ui/Dialog` no usa portal:** un botón o un `ConfirmDialog` renderizado dentro de un `<form>` lo envía.
+  Molde: la acción va en su propia Card, fuera del `<form>`.
+- **`useForm({ values: data })` + `setQueryData` desde otra mutación** (la del logo) resetea el form y se pierde lo que no se guardó: RHF hace
+  `deepEqual` de toda la fila y `_reset` sin `keepDirtyValues` (`index.esm.mjs:3765`). Pedir `resetOptions: { keepDirtyValues: true }` y un test.
+- `public/favicon.svg` es el logo de Vite (`#863bff`): no sirve como ícono por defecto.
+- Reemplazo de un archivo en una fila única: en lugar de una RPC alcanza el UPDATE condicional `.eq/.is(col, anterior).select().single()`
+  (molde `recursos.actualizarRecurso`): `PGRST116` dispara `compensar`. Postgres local es 17, así que no hay `RETURNING old`.
+En la crítica del código de `logo-institucional` (2026-11-11) aparecieron:
+- **`keepDirtyValues` conserva `dirtyFields` para siempre** (RHF 7.89, `index.esm.mjs:3483-3486`): después de «Guardar», los campos siguen
+  sucios y muestran lo que escribió el admin (sin el recorte de zod). Molde: `reset(fila)` tras un guardado exitoso (`reset()` directo no aplica `resetOptions`).
+- **`staleTime` por hook igual al global** de `AppProviders`, puesto para que un test no cuente una consulta de más: `crearQueryClient` de
+  `src/test/utils.tsx` no fija `staleTime`. Es un parche de test; mirar si se repite.
+- Un mensaje de choque concurrente («Recargá la página») sin invalidar en el error hace que el reintento falle siempre, y recargar pierde
+  lo escrito. Es el mismo caso de `datos.md` (`onSettled: invalidar`).
+- Para deshabilitar en cruz entre una Card y un form: `mutationKey` + `useIsMutating`, sin props.
+- El foco, tras una mutación que deshabilita el botón: un efecto atado a la transición `isPending true → false`, no un flag + otra dependencia.
+
 **Promovido a reglas (2026-10-16):** `isPending`, enums vía `Constants`, mensajes DA00x en `errores.ts`, ruta de la base en las
 bajas, mutación que no mezcla escritura y lectura, hooks que no son hooks e imports entre dominios (a `shared/`) están en
 `.claude/rules/react.md` y `.claude/rules/datos.md`. No los repitas como hallazgo nuevo: si se incumplen, citá la regla.

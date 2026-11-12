@@ -25,6 +25,11 @@ y, si una regla se incumple, citala ("incumple rules/datos.md: …"). Si aparece
   verde si solo hay tests de hooks (mockean `consultas`) y un e2e de una pestaña: pedí `consultas.test.ts` (fix-ruta-recursos,
   2026-10-16; ya está en `rules/datos.md`). `codigosDeError` incluye `code`; `StorageApiError` trae `code` tipo `EntityTooLarge`, que no
   choca con `'413'`/`'415'`. Con `onSettled: invalidar` en `RecursosPage` el aviso no se desmonta (vive en `Pantalla`).
+- **Componente con `useQuery` montado fuera del árbol de rutas** (logo-institucional #23, 2026-11-11: `<Favicon />` hermano de `AuthProvider`):
+  el `queryClient.clear()` de `AuthContext` al loguear saca la query del caché sin avisar a los observers, y el observer queda atado a la
+  query vieja hasta que el componente se vuelve a renderizar (`useBaseQuery` hace `setOptions` en un efecto). Si nada lo vuelve a renderizar,
+  ignora los `setQueryData` posteriores. Buscalo en todo lo que viva en `AppProviders`/`App.tsx`, y pedí un test con `client.clear()`
+  seguido de `setQueryData`. Las páginas no lo sufren porque se remontan al navegar.
 - Un criterio de la spec reescrito durante la implementación que no figura en los desvíos de `notas.md`: `git diff main -- spec.md`.
 - Con entregas en fases, `docs/arquitectura.md` y el "Estado actual" de `CLAUDE.md` quedan desactualizados en `main`. Se repitió en dashboard
   (2026-10-16): faltó la migración en "Base de datos" de arquitectura y no existía `notas.md`, aunque la spec mandaba cosas ahí. Revisá siempre las

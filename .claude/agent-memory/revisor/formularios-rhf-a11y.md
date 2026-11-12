@@ -39,6 +39,9 @@ primero (`DialogoRecurso` se cierra solo al terminar `onSubmit`), su cleanup hac
 de arriba debería restaurar el foco, y el de abajo le pasa su destino. (b) Un test de "sale de la pila aunque no sea la de arriba" que desmonta la de
 arriba antes del Escape es vacuo: pasa con `pop()` y con un token huérfano. Pedí tres trampas (desactivar la del medio, Escape llega a la de arriba;
 desmontar esa, Escape llega a la de abajo).
+En logo-institucional (#23, 2026-11-11): «Cambiar logo» queda `disabled` mientras sube, con el foco puesto. Por el *focus fixup* del
+navegador el foco cae en `body`, y jsdom no lo reproduce: ningún test lo ve. El foco se devolvía solo en la otra acción («Quitar»). En todo
+botón que se deshabilita mientras su propia acción está pendiente, pedí que se devuelva el foco al terminar, con un test `toHaveFocus`.
 También se repite: un test de "carga" que solo comprueba ausencias. `TableSkeleton` no tiene `role`, así que si se saca, el test sigue verde.
 
 En redes-contacto (2026-10-23, `ContactoPage`) las URL de Facebook/Instagram como texto del enlace dentro de `DatoDeContacto` (flex sin
