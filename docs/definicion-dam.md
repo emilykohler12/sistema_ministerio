@@ -237,7 +237,7 @@ Propuesta inicial, a validar con el referente (P-03). Todos los indicadores se c
 | Descargas por nivel y por cargo (cantidad y porcentaje) | Quién usa el sistema. |
 | Descargas y cobertura por localidad (establecimientos alcanzados ÷ establecimientos del padrón) | Dónde no está llegando el material. Diez principales, con opción de ver todas. |
 | Instituciones sin vincular | Aviso con enlace a la pantalla correspondiente. |
-| Descargas de normativas | Contador por normativa. |
+| Descargas de normativas | Por normativa: descargas dentro del período elegido y total histórico (#32). Las descargas anteriores a #32 no tienen día y solo suman al total. |
 
 ---
 

@@ -63,9 +63,9 @@ function base(p: Partial<Metricas> = {}): Metricas {
     ],
     localidades: [{ localidad_id: 1, nombre: 'Posadas', descargas: 12, alcanzados: 4, padron: 8 }],
     normativas: [
-      { id: 1, titulo: 'Resolución 10', numero: '10', anio: 2024, descargas: 5 },
-      { id: 2, titulo: 'Disposición 3', numero: '3', anio: 2023, descargas: 9 },
-      { id: 3, titulo: 'Circular 7', numero: '7', anio: 2025, descargas: 0 },
+      { id: 1, titulo: 'Resolución 10', numero: '10', anio: 2024, descargas: 5, descargas_periodo: 2 },
+      { id: 2, titulo: 'Disposición 3', numero: '3', anio: 2023, descargas: 9, descargas_periodo: 1 },
+      { id: 3, titulo: 'Circular 7', numero: '7', anio: 2025, descargas: 0, descargas_periodo: 0 },
     ],
     ...p,
   }
@@ -507,20 +507,34 @@ describe('DashboardPage: por localidad', () => {
 })
 
 describe('DashboardPage: normativas', () => {
-  it('aclara que es un total histórico y lista cada normativa con su contador', async () => {
+  it('lista cada normativa con «En el período» y, como última columna, «Total histórico», ordenadas por período', async () => {
     await renderPagina()
-    expect(within(region('Normativas')).getByText(/Total histórico/i)).toBeInTheDocument()
+    const encabezados = within(region('Normativas'))
+      .getAllByRole('columnheader')
+      .map((c) => c.textContent)
+    expect(encabezados.slice(-2)).toEqual(['En el período', 'Total histórico'])
     const f = filas('Normativas')
     expect(f).toHaveLength(3)
-    expect(f[0]).toHaveTextContent('Disposición 3')
-    expect(f[0]).toHaveTextContent('9')
-    expect(f[1]).toHaveTextContent('Resolución 10')
+    const celdas = (fila: HTMLElement) => within(fila).getAllByRole('cell').map((c) => c.textContent)
+    expect(celdas(f[0]).slice(-2)).toEqual(['2', '5'])
+    expect(f[0]).toHaveTextContent('Resolución 10')
+    expect(celdas(f[1]).slice(-2)).toEqual(['1', '9'])
+    expect(f[1]).toHaveTextContent('Disposición 3')
+    expect(celdas(f[2]).slice(-2)).toEqual(['0', '0'])
     expect(f[2]).toHaveTextContent('Circular 7')
+  })
+
+  it('un aviso reemplaza la descripción: dice que las descargas anteriores no tienen día y no repite «Total histórico»', async () => {
+    await renderPagina()
+    const r = region('Normativas')
+    expect(within(r).queryByText(/no depende del período/i)).not.toBeInTheDocument()
+    expect(within(r).getByText(/anteriores/i)).toBeInTheDocument()
+    expect(within(r).getAllByText(/Total histórico/i)).toHaveLength(1)
   })
 
   it('muestra número y año de cada normativa', async () => {
     await renderPagina()
-    expect(filas('Normativas')[1]).toHaveTextContent(/10.*2024|2024.*10/)
+    expect(filas('Normativas')[0]).toHaveTextContent(/10.*2024|2024.*10/)
   })
 
   it('sin normativas el KPI es 0 y la sección no muestra filas', async () => {

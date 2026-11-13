@@ -40,7 +40,7 @@
 -- - storage.objects no se borra por SQL salvo que storage.allow_delete_query = 'true' (ver recursos.test.sql).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(112);
+select plan(115);
 
 -- Soporte del test (como postgres) ---------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email)
@@ -308,6 +308,12 @@ select results_eq(
      where titulo in ('N Base', 'N Contador') order by titulo$$,
   $$values ('N Base'::text, 5, false), ('N Contador', 1, true)$$,
   'anon: el contador sube solo la normativa pedida y UPDATE/DELETE de anon no cambian ni borran nada');
+-- #32: el contador y el conteo del dia suben juntos (un id inexistente no deja nada)
+select results_eq(
+  $$select n.titulo::text, d.dia = (now() at time zone 'America/Argentina/Buenos_Aires')::date, d.descargas
+      from public.descarga_normativa_dia d join public.normativa n on n.id = d.normativa_id$$,
+  $$values ('N Contador'::text, true, 1)$$,
+  'anon: una descarga deja un solo conteo diario, el de hoy (Argentina) en 1, solo de la normativa pedida');
 select results_eq(
   $$select count(*)::int from public.normativa$$,
   array[7], 'anon: DELETE en normativa no borra nada');
@@ -371,6 +377,12 @@ select lives_ok(
   'sin marca: contar_descarga_normativa funciona (authenticated sin la marca de admin si cuenta)');
 reset role;
 select results_eq(
+  $$select d.descargas, (select descargas from public.normativa where titulo = 'N Contador')
+      from public.descarga_normativa_dia d join public.normativa n on n.id = d.normativa_id
+     where n.titulo = 'N Contador'$$,
+  $$values (2, 2)$$,
+  'sin marca: la segunda descarga suma 1 al contador y al conteo del dia, que coinciden');
+select results_eq(
   $$select count(*)::int from public.normativa where titulo = 'hack'$$,
   array[0], 'sin marca: UPDATE en normativa no cambia nada');
 select results_eq(
@@ -401,6 +413,13 @@ select lives_ok(
 select lives_ok(
   $$select public.contar_descarga_normativa(current_setting('test.contador')::int)$$,
   'admin: contar_descarga_normativa no falla, pero no cuenta');
+select results_eq(
+  $$select d.descargas, (select descargas from public.normativa where titulo = 'N Contador'),
+           (select count(*)::int from public.descarga_normativa_dia)
+      from public.descarga_normativa_dia d join public.normativa n on n.id = d.normativa_id
+     where n.titulo = 'N Contador'$$,
+  $$values (2, 2, 1)$$,
+  'admin: contar_descarga_normativa no cambia ni el contador ni el conteo del dia (siguen en 2 y una sola fila)');
 
 -- admin: guardar_normativa, alta ----------------------------------------------------------------
 -- Comparte la etiqueta con un taller: guardar_taller y guardar_normativa resuelven con resolver_etiquetas.

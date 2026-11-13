@@ -13,7 +13,7 @@ function leer<T>({ data, error }: Respuesta<T>): T {
 }
 
 /**
- * Las seis RPC del período y el select de normativas (contador acumulado, sin período) en paralelo:
+ * Las siete RPC `metricas_*` en paralelo (la de normativas trae el total histórico y las descargas del período):
  * si una sola falla, falla todo. Sin ordenar ni calcular: eso es de `calculos.ts`.
  */
 export async function obtenerMetricas(periodo: { desde: string; hasta: string; porMes: boolean }): Promise<Metricas> {
@@ -25,7 +25,7 @@ export async function obtenerMetricas(periodo: { desde: string; hasta: string; p
     supabase.rpc('metricas_por_nivel', args),
     supabase.rpc('metricas_por_cargo', args),
     supabase.rpc('metricas_por_localidad', args),
-    supabase.from('normativa').select('id, titulo, numero, anio, descargas'),
+    supabase.rpc('metricas_normativas', args),
   ])
   const [filaResumen] = leer(resumen)
   if (!filaResumen) throw new Error('metricas_resumen no devolvió ninguna fila.')

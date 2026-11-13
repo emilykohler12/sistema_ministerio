@@ -28,3 +28,7 @@
 - Un UPDATE que toque el contador y otra columna, aunque venga de `service_role`, sí se audita.
 - Las guardias globales solo verifican que el trigger exista y no miran el `WHEN`. Cada contador necesita un test de comportamiento.
 - El dashboard (§5.4) y cualquier contador futuro reutilizan este patrón.
+- Nota (#32): las descargas de normativas por período se guardan aparte, en `descarga_normativa_dia` (un conteo por normativa y día,
+  sin `auditar()`, con excepción de los tres eventos en `auditoria_global`). `normativa.descargas` sigue siendo el total histórico y
+  `contar_descarga_normativa` sube los dos en una sola sentencia. No reabre lo decidido arriba: la tabla agrega el día, que el contador
+  no puede dar.

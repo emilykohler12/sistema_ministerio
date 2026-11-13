@@ -16,7 +16,7 @@ import {
  *     // porcentaje sobre la suma de `descargas` de las filas; suma 0 -> porcentaje null en todas; conserva el orden
  *   ordenarTalleres(filas: { taller_id: number; descargas: number }[]): igual   // descargas desc, luego taller_id asc (no muta)
  *   ordenarLocalidades(filas: { nombre: string; descargas: number }[]): igual   // descargas desc, luego nombre (es-AR, sin tildes) (no muta)
- *   ordenarNormativas(filas: { id: number; descargas: number }[]): igual        // descargas desc, luego id asc (no muta)
+ *   ordenarNormativas(filas: { id; descargas; descargas_periodo }[]): igual     // período desc, total desc, id asc (no muta; #32)
  */
 describe('porcentaje', () => {
   it('calcula el porcentaje sobre el total con un decimal', () => {
@@ -121,13 +121,43 @@ describe('ordenarLocalidades', () => {
   })
 })
 
+/*
+ * #32 (criterio 5): ordenarNormativas(filas: { id; descargas; descargas_periodo }[]) ordena por descargas_periodo desc,
+ * luego descargas (total histórico) desc y por último id asc; no muta la entrada.
+ */
 describe('ordenarNormativas', () => {
-  it('ordena por descargas desc y desempata por id asc', () => {
+  it('ordena por descargas del período desc, aunque el total histórico diga otra cosa', () => {
     const entrada = [
-      { id: 5, descargas: 0 },
-      { id: 2, descargas: 7 },
-      { id: 1, descargas: 0 },
+      { id: 1, descargas: 100, descargas_periodo: 0 },
+      { id: 2, descargas: 3, descargas_periodo: 3 },
+      { id: 3, descargas: 50, descargas_periodo: 1 },
     ]
-    expect(ordenarNormativas(entrada).map((n) => n.id)).toEqual([2, 1, 5])
+    expect(ordenarNormativas(entrada).map((n) => n.id)).toEqual([2, 3, 1])
+  })
+
+  it('con el mismo período desempata por total histórico desc', () => {
+    const entrada = [
+      { id: 1, descargas: 4, descargas_periodo: 2 },
+      { id: 2, descargas: 9, descargas_periodo: 2 },
+    ]
+    expect(ordenarNormativas(entrada).map((n) => n.id)).toEqual([2, 1])
+  })
+
+  it('con período y total iguales desempata por id asc', () => {
+    const entrada = [
+      { id: 5, descargas: 0, descargas_periodo: 0 },
+      { id: 2, descargas: 0, descargas_periodo: 0 },
+      { id: 1, descargas: 0, descargas_periodo: 0 },
+    ]
+    expect(ordenarNormativas(entrada).map((n) => n.id)).toEqual([1, 2, 5])
+  })
+
+  it('no muta la entrada', () => {
+    const entrada = [
+      { id: 2, descargas: 0, descargas_periodo: 0 },
+      { id: 1, descargas: 5, descargas_periodo: 5 },
+    ]
+    ordenarNormativas(entrada)
+    expect(entrada[0].id).toBe(2)
   })
 })

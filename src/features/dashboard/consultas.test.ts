@@ -7,8 +7,9 @@ import { obtenerMetricas } from './consultas'
  *   Llama en paralelo (Promise.all) a:
  *     supabase.rpc('metricas_resumen',      { p_desde, p_hasta })
  *     supabase.rpc('metricas_por_periodo',  { p_desde, p_hasta, p_por_mes })
- *     supabase.rpc('metricas_por_taller' | 'metricas_por_nivel' | 'metricas_por_cargo' | 'metricas_por_localidad', { p_desde, p_hasta })
- *     supabase.from('normativa').select('id, titulo, numero, anio, descargas')   // sin período, sin filtros
+ *     supabase.rpc('metricas_por_taller' | 'metricas_por_nivel' | 'metricas_por_cargo' | 'metricas_por_localidad'
+ *                  | 'metricas_normativas', { p_desde, p_hasta })   // #32: reemplaza al from('normativa').select(...)
+ *     Siete llamadas rpc en total; ya no hay supabase.from.
  *   Resultado (types.ts, derivado de Functions[...]['Returns']):
  *     Metricas = { resumen: ResumenMetricas   // la única fila de metricas_resumen, tal cual
  *                  serie: PuntoSerie[]        // metricas_por_periodo
@@ -16,7 +17,7 @@ import { obtenerMetricas } from './consultas'
  *                  niveles: FilaNivel[]       // metricas_por_nivel
  *                  cargos: FilaCargo[]        // metricas_por_cargo
  *                  localidades: FilaLocalidad[] // metricas_por_localidad
- *                  normativas: NormativaConteo[] }  // { id, titulo, numero, anio, descargas }
+ *                  normativas: NormativaConteo[] }  // metricas_normativas: { id, titulo, numero, anio, descargas, descargas_periodo }
  *   Sin ordenar ni calcular: eso es de calculos.ts. Lanza ante cualquier error (el `{ error }` de una RPC o del select,
  *   o un rechazo), conservando el error original. Una sola query que falla hace fallar todo.
  */
@@ -29,9 +30,10 @@ const talleres = [{ taller_id: 1, titulo: 'Taller 1', estado: 'PUBLICADO', desca
 const niveles = [{ nivel_id: 1, nombre: 'Inicial', descargas: 4 }]
 const cargos = [{ cargo: 'Docente', descargas: 4 }]
 const localidades = [{ localidad_id: 1, nombre: 'Posadas', descargas: 3, alcanzados: 2, padron: 10 }]
-const normativas = [{ id: 1, titulo: 'Res. 1', numero: '1', anio: 2024, descargas: 9 }]
+const normativas = [{ id: 1, titulo: 'Res. 1', numero: '1', anio: 2024, descargas: 9, descargas_periodo: 4 }]
 
 const porRpc: Record<string, unknown> = {
+  metricas_normativas: normativas,
   metricas_resumen: [resumen],
   metricas_por_periodo: serie,
   metricas_por_taller: talleres,
@@ -44,7 +46,7 @@ const periodo = { desde: '2026-03-10', hasta: '2026-03-12', porMes: false }
 beforeEach(() => {
   vi.clearAllMocks()
   rpc.mockImplementation(async (nombre: string) => ({ data: porRpc[nombre], error: null }))
-  select.mockResolvedValue({ data: normativas, error: null })
+  select.mockResolvedValue({ data: [], error: null })
   from.mockReturnValue({ select })
 })
 
@@ -57,6 +59,7 @@ describe('obtenerMetricas', () => {
       'metricas_por_nivel',
       'metricas_por_cargo',
       'metricas_por_localidad',
+      'metricas_normativas',
     ]) {
       expect(rpc).toHaveBeenCalledWith(nombre, { p_desde: '2026-03-10', p_hasta: '2026-03-12' })
     }
@@ -73,16 +76,15 @@ describe('obtenerMetricas', () => {
     expect(rpc).toHaveBeenCalledWith('metricas_por_periodo', expect.objectContaining({ p_por_mes: false }))
   })
 
-  it('hace exactamente seis llamadas rpc', async () => {
+  it('hace exactamente siete llamadas rpc', async () => {
     await obtenerMetricas(periodo)
-    expect(rpc).toHaveBeenCalledTimes(6)
+    expect(rpc).toHaveBeenCalledTimes(7)
   })
 
-  it('lee las normativas con un select directo de la tabla normativa, incluyendo descargas', async () => {
+  it('las normativas salen de la RPC del período y no de un select de la tabla normativa', async () => {
     await obtenerMetricas(periodo)
-    expect(from).toHaveBeenCalledWith('normativa')
-    expect(select).toHaveBeenCalledTimes(1)
-    expect(select.mock.calls[0][0]).toEqual(expect.stringContaining('descargas'))
+    expect(from).not.toHaveBeenCalled()
+    expect(select).not.toHaveBeenCalled()
   })
 
   it('devuelve cada resultado en su campo, con el resumen como una sola fila', async () => {
@@ -103,16 +105,6 @@ describe('obtenerMetricas', () => {
       if (nombre === cual) throw new Error('sin red')
       return { data: porRpc[nombre], error: null }
     })
-    await expect(obtenerMetricas(periodo)).rejects.toThrow('sin red')
-  })
-
-  it('lanza si el select de normativas devuelve { error }', async () => {
-    select.mockResolvedValue({ data: null, error: Object.assign(new Error('RLS'), { code: '42501' }) })
-    await expect(obtenerMetricas(periodo)).rejects.toMatchObject({ code: '42501' })
-  })
-
-  it('lanza si el select de normativas rechaza', async () => {
-    select.mockRejectedValue(new Error('sin red'))
     await expect(obtenerMetricas(periodo)).rejects.toThrow('sin red')
   })
 

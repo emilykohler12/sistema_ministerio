@@ -1,4 +1,4 @@
-import type { Database, Tables } from '@/shared/types/database'
+import type { Database } from '@/shared/types/database'
 
 type Funciones = Database['public']['Functions']
 
@@ -10,8 +10,8 @@ export type FilaNivel = Funciones['metricas_por_nivel']['Returns'][number]
 export type FilaCargo = Funciones['metricas_por_cargo']['Returns'][number]
 export type FilaLocalidad = Funciones['metricas_por_localidad']['Returns'][number]
 
-/** Contador acumulado por normativa (sin período). */
-export type NormativaConteo = Pick<Tables<'normativa'>, 'id' | 'titulo' | 'numero' | 'anio' | 'descargas'>
+/** Por normativa: total histórico (`descargas`) y descargas con día dentro del período (`descargas_periodo`). */
+export type NormativaConteo = Funciones['metricas_normativas']['Returns'][number]
 
 export interface Metricas {
   resumen: ResumenMetricas

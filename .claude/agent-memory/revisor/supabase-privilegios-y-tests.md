@@ -102,6 +102,14 @@ IP topeada. Si vuelve, proponé llevarlo a una regla: para probar "X se evalúa 
 También: el `revoke` de la secuencia quedó sin assert (no explotable; observación). Para el lock de concurrencia (no testeable en pgTAP), verificá
 que vaya antes del conteo y que la función sea volátil (READ COMMITTED: foto nueva por sentencia).
 
+En descargas-normativas-periodo (#32, 2026-11-13; tabla agregada `descarga_normativa_dia` con cascada + RPC definer `language sql` con CTE
+update+upsert + `metricas_normativas` invoker) la base salió bien. `service_role` con EXECUTE por **quinta** vez (consistente con toda la familia
+`metricas_*`; menor). Novedades:
+- El test de la **cascada** (`on delete cascade`) borró como `postgres`. El actor real (admin) no tiene DELETE sobre la tabla hija: pedí la baja
+  con claims de admin. Es la misma familia que "entrada que no distingue": el rol del test no es el del criterio.
+- La spec traía un upsert con `default 0` sin pasar la columna (la primera descarga del día quedaba en 0). Leé el SQL de la spec, no solo el de
+  la migración: el implementador lo corrigió con un `1` explícito.
+
 **Trampa propia del revisor:** los pgTAP asumen una base local sin categorías, talleres ni etiquetas. Si pruebo por REST y
 creo filas, `test:db` queda rojo, y el clasificador de permisos bloquea el `delete` masivo con psql. Hay dos salidas: probar por
 REST **dentro** de lo que después se pueda deshacer (mejor, con psql en `begin; ... rollback;` como el crítico), o avisar que hay

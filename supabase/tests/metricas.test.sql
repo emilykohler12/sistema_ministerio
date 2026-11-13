@@ -6,7 +6,7 @@
 -- CONTRATO (lo que debe cumplir la migracion; el test llama por nombre):
 --
 --   Todas las funciones: schema public, nombre `metricas_*`, SECURITY INVOKER, `set search_path = ''`, EXECUTE solo para
---   `authenticated` (ni public ni anon). Son exactamente 7. Las RPC devuelven solo conteos enteros (bigint), sin porcentajes.
+--   `authenticated` (ni public ni anon). Son exactamente 8 (#32 suma metricas_normativas, cubierta a fondo en descarga_normativa.test.sql). Las RPC devuelven solo conteos enteros (bigint), sin porcentajes.
 --   "Fecha local" = fecha en America/Argentina/Buenos_Aires (UTC-3, sin horario de verano).
 --
 --   create index registro_descarga_fecha_hora_idx on public.registro_descarga (fecha_hora);
@@ -117,9 +117,9 @@ select ok(
 select results_eq(
   $$select proname::text collate "default" from pg_proc
      where pronamespace = 'public'::regnamespace and proname like 'metricas\_%' order by proname$$,
-  $$values ('metricas_por_cargo'::text), ('metricas_por_localidad'), ('metricas_por_nivel'), ('metricas_por_periodo'),
-           ('metricas_por_taller'), ('metricas_registros'), ('metricas_resumen')$$,
-  'existen exactamente las siete funciones metricas_*');
+  $$values ('metricas_normativas'::text), ('metricas_por_cargo'), ('metricas_por_localidad'), ('metricas_por_nivel'),
+           ('metricas_por_periodo'), ('metricas_por_taller'), ('metricas_registros'), ('metricas_resumen')$$,
+  'existen exactamente las ocho funciones metricas_* (#32 suma metricas_normativas)');
 
 select is_empty(
   $$select proname::text from pg_proc
@@ -151,7 +151,9 @@ select results_eq(
            pg_get_function_result(oid)::text collate "default" from pg_proc
      where pronamespace = 'public'::regnamespace and proname like 'metricas\_%' and proname <> 'metricas_registros' order by proname$$,
   $$values
-    ('metricas_por_cargo'::text, 'p_desde date, p_hasta date'::text, 'TABLE(cargo character varying, descargas bigint)'::text),
+    ('metricas_normativas'::text, 'p_desde date, p_hasta date'::text,
+       'TABLE(id integer, titulo character varying, numero character varying, anio smallint, descargas integer, descargas_periodo bigint)'::text),
+    ('metricas_por_cargo', 'p_desde date, p_hasta date', 'TABLE(cargo character varying, descargas bigint)'),
     ('metricas_por_localidad', 'p_desde date, p_hasta date',
        'TABLE(localidad_id smallint, nombre character varying, descargas bigint, alcanzados bigint, padron bigint)'),
     ('metricas_por_nivel', 'p_desde date, p_hasta date', 'TABLE(nivel_id smallint, nombre character varying, descargas bigint)'),
@@ -336,7 +338,8 @@ declare
     $c$select count(*) from public.metricas_por_taller('2026-03-10', '2026-03-12')$c$,
     $c$select count(*) from public.metricas_por_nivel('2026-03-10', '2026-03-12')$c$,
     $c$select count(*) from public.metricas_por_cargo('2026-03-10', '2026-03-12')$c$,
-    $c$select count(*) from public.metricas_por_localidad('2026-03-10', '2026-03-12')$c$];
+    $c$select count(*) from public.metricas_por_localidad('2026-03-10', '2026-03-12')$c$,
+    $c$select count(*) from public.metricas_normativas('2026-03-10', '2026-03-12')$c$];
   fallidas text[] := '{}';
 begin
   foreach c in array calls loop
@@ -349,7 +352,7 @@ begin
   end loop;
   perform set_config('test.fallidas_42501_sinmarca', fallidas::text, true);
 end $$;
-select is(current_setting('test.fallidas_42501_sinmarca'), '{}', 'sin marca: las siete funciones dan 42501 (la lista de las que no queda vacia)');
+select is(current_setting('test.fallidas_42501_sinmarca'), '{}', 'sin marca: las ocho funciones dan 42501 (la lista de las que no queda vacia)');
 
 -- Seguridad: admin con periodo invalido -> 22023 (cada RPC lo propaga) ---------------------------------
 set local request.jwt.claims =
@@ -380,7 +383,9 @@ declare
     $c$select count(*) from public.metricas_por_taller('2019-12-31', '2026-03-10')$c$,
     $c$select count(*) from public.metricas_por_nivel('2026-03-10', (now() at time zone 'America/Argentina/Buenos_Aires')::date + 1)$c$,
     $c$select count(*) from public.metricas_por_cargo(null::date, null::date)$c$,
-    $c$select count(*) from public.metricas_por_localidad('2026-03-12', '2026-03-10')$c$];
+    $c$select count(*) from public.metricas_por_localidad('2026-03-12', '2026-03-10')$c$,
+    $c$select count(*) from public.metricas_normativas('2026-03-12', '2026-03-10')$c$,
+    $c$select count(*) from public.metricas_normativas(null::date, null::date)$c$];
   fallidas text[] := '{}';
 begin
   foreach c in array calls loop
@@ -393,7 +398,7 @@ begin
   end loop;
   perform set_config('test.fallidas_22023', fallidas::text, true);
 end $$;
-select is(current_setting('test.fallidas_22023'), '{}', 'admin: las seis RPC propagan el 22023 (por_periodo con dos casos; la lista de las que no queda vacia)');
+select is(current_setting('test.fallidas_22023'), '{}', 'admin: las siete RPC propagan el 22023 (por_periodo con dos casos; la lista de las que no queda vacia)');
 
 reset role;
 
