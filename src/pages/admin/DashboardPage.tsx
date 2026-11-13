@@ -98,7 +98,10 @@ function ContenidoMetricas({ datos, porMes, actualizando }: ContenidoMetricasPro
         <TablaLocalidades localidades={localidades} />
       </Seccion>
 
-      <Seccion titulo="Normativas" descripcion="Total histórico: el contador no depende del período.">
+      <Seccion
+        titulo="Normativas"
+        descripcion="Las descargas anteriores a que se registrara el día no entran en «En el período»: solo suman al acumulado de la última columna."
+      >
         <TablaNormativas normativas={normativas} />
       </Seccion>
     </div>

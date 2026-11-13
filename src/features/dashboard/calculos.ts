@@ -28,6 +28,11 @@ export function ordenarLocalidades<T extends { nombre: string; descargas: number
   return [...filas].sort((a, b) => b.descargas - a.descargas || comparadorTexto.compare(a.nombre, b.nombre))
 }
 
-export function ordenarNormativas<T extends { id: number; descargas: number }>(filas: T[]): T[] {
-  return [...filas].sort((a, b) => b.descargas - a.descargas || a.id - b.id)
+/** Descargas del período desc, total histórico desc e id asc. */
+export function ordenarNormativas<T extends { id: number; descargas: number; descargas_periodo: number }>(
+  filas: T[],
+): T[] {
+  return [...filas].sort(
+    (a, b) => b.descargas_periodo - a.descargas_periodo || b.descargas - a.descargas || a.id - b.id,
+  )
 }

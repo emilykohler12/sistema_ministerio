@@ -21,7 +21,8 @@ async function kpiDescargas(page: Page) {
 
 async function contadorNormativa(page: Page, titulo: string) {
   const fila = page.getByRole('region', { name: 'Normativas' }).getByRole('row', { name: new RegExp(titulo) })
-  return Number((await fila.getByRole('cell').last().innerText()).replace(/\./g, ''))
+  const num = async (i: number) => Number((await fila.getByRole('cell').nth(i).innerText()).replace(/\./g, ''))
+  return { periodo: await num(-2), total: await num(-1) }
 }
 
 /** Lee KPI y contador de la normativa en un /admin recién cargado. */
@@ -88,5 +89,8 @@ test('no contar admin: sus descargas no suben el tablero; las anónimas sí (+1)
   await descargarYAbrir(anon, tallerId, titulo)
   await anon.context().close()
   const trasAnon = await leerTablero(page, titulo)
-  expect(trasAnon).toEqual({ descargas: base.descargas + 1, norma: base.norma + 1 })
+  expect(trasAnon).toEqual({
+    descargas: base.descargas + 1,
+    norma: { periodo: base.norma.periodo + 1, total: base.norma.total + 1 },
+  })
 })

@@ -151,8 +151,12 @@ test('tablero: 3 descargas de talleres y una de normativa se ven en /admin', asy
 
   // Normativa: histórico con 1.
   const normativas = page.getByRole('region', { name: 'Normativas' })
-  await expect(normativas.getByText('Total histórico')).toBeVisible()
-  await expect(normativas.getByRole('row', { name: new RegExp(tituloNorma) }).getByRole('cell').last()).toHaveText('1')
+  const cabeceras = normativas.getByRole('columnheader')
+  await expect(cabeceras.nth(-2)).toHaveText('En el período')
+  await expect(cabeceras.last()).toHaveText('Total histórico')
+  const celdas = normativas.getByRole('row', { name: new RegExp(tituloNorma) }).getByRole('cell')
+  await expect(celdas.nth(-2)).toHaveText('1')
+  await expect(celdas.last()).toHaveText('1')
 })
 
 test('tablero: rango pasado en cero con estados vacíos, URL conservada y desde > hasta con error', async ({ page }) => {

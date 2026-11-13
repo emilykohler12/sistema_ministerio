@@ -57,6 +57,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"descarga_normativa_dia": {
+                  Row: {
+                    "descargas": number,"dia": string,"normativa_id": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "descargas": number,"dia": string,"normativa_id": number
+                  }
+                  Update: {
+                    "descargas"?: number,"dia"?: string,"normativa_id"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "descarga_normativa_dia_normativa_id_fkey"
+      columns: ["normativa_id"]
+isOneToOne: false
+      referencedRelation: "normativa"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"destinatario": {
                   Row: {
                     "id": number,"nombre": string
@@ -355,6 +375,11 @@ isOneToOne: false
                            },
 "ip_cliente":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"metricas_normativas":
+{ Args: { "p_desde": string,"p_hasta": string }; Returns: {
+              "anio": number,"descargas": number,"descargas_periodo": number,"id": number,"numero": string,"titulo": string
+            }[]
                            },
 "metricas_por_cargo":
 { Args: { "p_desde": string,"p_hasta": string }; Returns: {
